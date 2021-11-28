@@ -22,4 +22,5 @@ target_link_libraries(
 
     PRIVATE
     perfkitpp-imgui-bundled 
+    perfkit::core
 )
