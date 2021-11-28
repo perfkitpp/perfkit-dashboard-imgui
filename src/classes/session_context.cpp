@@ -1,5 +1,7 @@
 #include "session_context.hpp"
 
+#include <spdlog/spdlog.h>
+
 #include "messages.hpp"
 #include "perfkit/common/algorithm/base64.hxx"
 #include "perfkit/common/hasher.hxx"
@@ -43,14 +45,54 @@ static constexpr uint64_t STRCASE(char const (&str)[N_])
 
 void session_context::_on_recv(std::string_view route, nlohmann::json const& msg)
 {
-    switch (perfkit::hasher::fnv1a_64(route))
+    try
     {
-        case STRCASE("update:error"):
-            break;
-        case STRCASE("epoch"):
+        switch (perfkit::hasher::fnv1a_64(route))
+        {
+            case STRCASE("update:error"):
+                break;
+
+            case STRCASE("update:epoch"):
+                break;
+
+            case STRCASE("update:session_state"):
+                break;
+
+            case STRCASE("update:shell_output"):
+            {
+                auto& str = msg.at("content").get_ref<std::string const&>();
+                _output.use(
+                        [&](std::string& s)
+                        {
+                            enum
+                            {
+                                BUF_ERASE_SIZE  = 2 << 20,
+                                BUF_RETAIN_SIZE = 1 << 20
+                            };
+
+                            if (s.size() + str.size() > (BUF_ERASE_SIZE)
+                                && s.size() > BUF_RETAIN_SIZE)
+                            {
+                                auto to_erase = s.size() % BUF_RETAIN_SIZE;
+                                s.erase(s.begin(), s.begin() + to_erase);
+                            }
+
+                            s.append(str);
+                        });
+            }
             break;
 
-        default:
-            break;
+            case STRCASE("update:new_config_class"):
+            case STRCASE("update:config_entity"):
+            case STRCASE("update:trace_class_list"):
+            case STRCASE("update:traces"):
+
+            default:
+                break;
+        }
+    }
+    catch (std::out_of_range& e)
+    {
+        SPDLOG_ERROR("invalid protoocol for route {}: {}", route, msg.dump(2));
     }
 }
