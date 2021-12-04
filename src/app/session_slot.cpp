@@ -95,13 +95,14 @@ void session_slot::render_on_list()
             ImGui::Bullet();
             _title_string();
 
-            if (_context->session_info())
+            if (_context->info())
             {
                 _state = state::valid;
             }
             if (_context->status() == session_connection_state::invalid)
             {
-                _state = state::disconnected;
+                _context = {};
+                _state   = state::disconnected;
             }
             else
             {
@@ -124,6 +125,34 @@ void session_slot::render_on_list()
 
         case state::valid:
         {
+            if (_context->status() == session_connection_state::invalid)
+            {
+                _context = {};
+                _state   = state::disconnected;
+                break;
+            }
+
+            bool visible = true;
+
+            if (ImGui::CollapsingHeader(
+                        _fmt.format("{}@{} {}###{}", 
+                                    _context->info()->name, 
+                                    _url,
+                                    "|/-\\"[(int)(ImGui::GetTime() / 0.25f) & 3],
+                                    _url).c_str(),
+                        &visible))
+            {
+                ImGui::TreePush();
+
+                ImGui::TreePop();
+            }
+
+            if (not visible)
+            {
+                _context = {};
+                _state   = state::disconnected;
+                break;
+            }
         }
         break;
 
@@ -131,13 +160,44 @@ void session_slot::render_on_list()
     }
 }
 
+void session_slot::render_windows()
+{
+    if (_state != state::valid)
+        return;
+
+    bool should_active = false;
+
+
+}
+
 void session_slot::_title_string()
 {
     ImGui::Text(_url.c_str());
     ImGui::SameLine();
 
-    if (ImGui::Button(_fmt.format("-##{}", _url).c_str()))
+    bool should_close = false;
+
+    ImGui::PushStyleColor(ImGuiCol_Button, 0xff000077);
+    if (not _prompt_close)
     {
-        throw session_slot_close{this};
+        _prompt_close = ImGui::Button(_fmt.format("delete##{}", _url).c_str());
+        ImGui::PopStyleColor();
     }
+    else
+    {
+        ImGui::PushStyleColor(ImGuiCol_Text, 0xff00ffff);
+        ImGui::Text("really?");
+        ImGui::PopStyleColor();
+
+        ImGui::SameLine();
+        should_close = ImGui::Button("yes");
+
+        ImGui::PopStyleColor();
+
+        ImGui::SameLine();
+        ImGui::Button("no") && (_prompt_close = false);
+    }
+
+    if (should_close)
+        throw session_slot_close{this};
 }

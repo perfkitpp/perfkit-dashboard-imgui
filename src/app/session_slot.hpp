@@ -38,6 +38,7 @@ class session_slot
     explicit session_slot(std::string url, bool from_apiserver);
 
     std::string const& url() { return _url; }
+    bool is_from_apiserver() const { return _from_apiserver; }
 
     /**
      * Performs list label rendering
@@ -61,7 +62,7 @@ class session_slot
      *
      * If terminal window is closed, session slot will move to disconnected state.
      */
-    void render_windows() {}
+    void render_windows();
 
    private:
     void _title_string();
@@ -72,6 +73,9 @@ class session_slot
 
     //
     bool _from_apiserver = false;
+
+    //
+    bool _prompt_close = false;
 
     // entered id and password, which are cached only for single program instance
     char _id[256] = {}, _pw[256] = {};

@@ -1,9 +1,9 @@
 //
 // Created by ki608 on 2021-11-28.
 //
-
 #include "application.hpp"
 
+#include <filesystem>
 #include <thread>
 
 #include <asio/any_io_executor.hpp>
@@ -14,6 +14,7 @@
 #include "imgui.h"
 #include "perfkit/common/algorithm.hxx"
 #include "perfkit/common/utility/cleanup.hxx"
+#include "perfkit/configs.h"
 #include "session_slot.hpp"
 
 #define INTERNAL_CATID_1(A, B) A##B
@@ -23,6 +24,23 @@
     {                                         \
         perfkit::cleanup { &FN }              \
     }
+
+static std::string const CONFIG_PATH = []
+{
+    std::filesystem::path home =
+#ifdef _WIN32
+            getenv("USERPROFILE");
+#else
+            getenv("HOME");
+#endif
+    home = home / ".perfkit_rdinit";
+    return home.string();
+}();
+
+PERFKIT_CATEGORY(backups)
+{
+    PERFKIT_CONFIGURE(urls, std::vector<std::pair<std::string, bool>>{}).confirm();
+}
 
 namespace application
 {
@@ -56,9 +74,16 @@ static struct context_t
 
 void initialize()
 {
-    _context.work_net = asio::require(
-            _context.ioc_net.get_executor(),
-            asio::execution::outstanding_work.tracked);
+    perfkit::configs::import_file(CONFIG_PATH);
+    backups::update();
+
+    for (auto& url : backups::urls.ref())
+        _context.sessions.emplace_back(url.first, url.second);
+
+    _context.work_net
+            = asio::require(
+                    _context.ioc_net.get_executor(),
+                    asio::execution::outstanding_work.tracked);
     ;
     _context.worker_net = std::thread{
             []
@@ -74,6 +99,9 @@ void shutdown()
 
     _context.work_net = {};
     _context.worker_net.join();
+
+    // export backups
+    perfkit::configs::export_to(CONFIG_PATH);
 }
 
 void update()
@@ -114,11 +142,14 @@ void gui::_draw_root_components()
     {  // draw menu
         if (BeginMenu("Files"))
         {
-            if (BeginMenu("Connect To"))
+            if (MenuItem("Save", "Ctrl+S"))
             {
-                _show_connect_indep |= MenuItem("Instance", "Ctrl+O");
-                _show_connect_relay |= MenuItem("Relay Server", "Ctrl+P");
-                ImGui::EndMenu();
+                perfkit::configs::export_to(CONFIG_PATH);
+            }
+            if (MenuItem("Reload"))
+            {
+                perfkit::configs::import_file(CONFIG_PATH);
+                backups::update();
             }
 
             ImGui::EndMenu();
@@ -165,7 +196,7 @@ void gui::_draw_session_list()
     {
         if (ImGui::Begin("Sessions", &_show_sessions_list))
         {
-            if (ImGui::CollapsingHeader("Add New ..."))
+            if (ImGui::TreeNode("Add New ..."))
             {
                 static char buf_url[1024] = {};
                 ImGui::InputText("URL", buf_url, sizeof buf_url);
@@ -186,24 +217,34 @@ void gui::_draw_session_list()
                     {
                         SPDLOG_INFO("new connection candidate {} added.", url);
                         _context.sessions.emplace_back(std::move(url), false);
+
+                        _refresh_session_list_backup();
                     }
                 }
 
                 ImGui::Button("Thru Relay Server", {-1, 0});
+                ImGui::TreePop();
+
                 ImGui::Separator();
             }
 
-            for (auto it = sessions.begin(); it != sessions.end();)
+            if (ImGui::TreeNodeEx("Sessions", ImGuiTreeNodeFlags_DefaultOpen))
             {
-                try
+                for (auto it = sessions.begin(); it != sessions.end();)
                 {
-                    it->render_on_list();
-                    ++it;
+                    try
+                    {
+                        it->render_on_list();
+                        ++it;
+                    }
+                    catch (session_slot_close&)
+                    {
+                        it = sessions.erase(it);
+                        _refresh_session_list_backup();
+                    }
                 }
-                catch (session_slot_close&)
-                {
-                    it = sessions.erase(it);
-                }
+
+                ImGui::TreePop();
             }
         }
         ImGui::End();
@@ -226,6 +267,20 @@ void gui::_draw_session_list()
 void gui::_render_windows()
 {
     // 3D rendering
+}
+
+void gui::_refresh_session_list_backup()
+{
+    // backup list
+    std::vector<std::pair<std::string, bool>> pairs;
+    pairs.reserve(_context.sessions.size());
+
+    for (auto& sess : _context.sessions)
+    {
+        pairs.emplace_back(sess.url(), sess.is_from_apiserver());
+    }
+
+    backups::urls.async_modify(pairs);
 }
 
 void gui::detail::modal_single_server_connect(bool* connStat)

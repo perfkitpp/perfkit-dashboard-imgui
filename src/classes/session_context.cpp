@@ -15,7 +15,7 @@ session_context::session_context(connection_ptr conn)
     _conn->received_message_handler = CPPH_BIND(_on_recv);
 
     _install<outgoing::shell_output>(CPPH_BIND(_on_shell_output));
-
+    _install<outgoing::session_reset>(CPPH_BIND(_on_epoch));
 }
 
 void session_context::login(std::string_view id, std::string_view pw)
@@ -34,7 +34,7 @@ void session_context::login(std::string_view id, std::string_view pw)
     _conn->send_message("auth:login", param);
 }
 
-session_context::info_type const* session_context::session_info() const noexcept
+session_context::info_type const* session_context::info() const noexcept
 {
     return _info.has_value() ? &_info.value() : nullptr;
 }
@@ -56,6 +56,11 @@ void session_context::_on_recv(std::string_view route, nlohmann::json const& msg
     {
         SPDLOG_ERROR("invalid protoocol for route {}", route);
     }
+}
+
+void session_context::_on_epoch(info_type& payload)
+{
+    _info.emplace(std::move(payload));
 }
 
 void session_context::_on_shell_output(messages::outgoing::shell_output const& message)

@@ -36,4 +36,5 @@ target_compile_definitions(
 
         PRIVATE
         -D_WIN32_WINNT=0x0601
+        -D_CRT_SECURE_NO_WARNINGS=1
 )

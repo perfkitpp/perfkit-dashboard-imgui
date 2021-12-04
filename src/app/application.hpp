@@ -40,6 +40,11 @@ void _draw_session_list();
  */
 void _render_windows();
 
+/**
+ * Refresh sessions configs
+ */
+void _refresh_session_list_backup();
+
 namespace detail
 {
 void modal_single_server_connect(bool* connStat);
