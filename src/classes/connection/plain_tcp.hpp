@@ -40,6 +40,8 @@ class plain_tcp : public if_session_connection
     std::vector<char> _rdbuf;
 
     session_connection_state _status = session_connection_state::invalid;
+    nlohmann::json _sendbuf;
+    std::shared_ptr<void> _wr_lock;
 
     perfkit::logger_ptr _logging = perfkit::share_logger("tcp:plain");
 };

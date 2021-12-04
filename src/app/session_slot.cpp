@@ -92,16 +92,33 @@ void session_slot::render_on_list()
 
         case state::pre_login:
         {
+            ImGui::Bullet();
             _title_string();
-            ImGui::TreePush();
 
-            _id.resize(256);
-            _pw.resize(256);
+            if (_context->session_info())
+            {
+                _state = state::valid;
+            }
+            if (_context->status() == session_connection_state::invalid)
+            {
+                _state = state::disconnected;
+            }
+            else
+            {
+                ImGui::TreePush();
 
-            ImGui::InputText("ID", _id.data(), _id.size());
-            ImGui::InputText("PW", _pw.data(), _pw.size(), ImGuiInputTextFlags_Password);
+                ImGui::InputText("ID", _id, sizeof _id);
+                ImGui::InputText("PW", _pw, sizeof _pw, ImGuiInputTextFlags_Password);
 
-            ImGui::TreePop();
+                bool do_login = ImGui::Button(_fmt.format("Login##{}", _url).c_str());
+
+                ImGui::TreePop();
+
+                if (do_login)
+                {
+                    _context->login(_id, _pw);
+                }
+            }
         }
         break;
 

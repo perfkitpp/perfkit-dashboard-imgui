@@ -4,7 +4,6 @@
 
 #include "messages.hpp"
 #include "perfkit/common/algorithm/base64.hxx"
-#include "perfkit/common/hasher.hxx"
 #include "perfkit/common/macros.hxx"
 #include "picosha2.h"
 
@@ -14,6 +13,9 @@ session_context::session_context(connection_ptr conn)
         : _conn(std::move(conn))
 {
     _conn->received_message_handler = CPPH_BIND(_on_recv);
+
+    _install<outgoing::shell_output>(CPPH_BIND(_on_shell_output));
+
 }
 
 void session_context::login(std::string_view id, std::string_view pw)
@@ -47,52 +49,35 @@ void session_context::_on_recv(std::string_view route, nlohmann::json const& msg
 {
     try
     {
-        switch (perfkit::hasher::fnv1a_64(route))
-        {
-            case STRCASE("update:error"):
-                break;
-
-            case STRCASE("update:epoch"):
-                break;
-
-            case STRCASE("update:session_state"):
-                break;
-
-            case STRCASE("update:shell_output"):
-            {
-                auto& str = msg.at("content").get_ref<std::string const&>();
-                _output.use(
-                        [&](std::string& s)
-                        {
-                            enum
-                            {
-                                BUF_ERASE_SIZE  = 2 << 20,
-                                BUF_RETAIN_SIZE = 1 << 20
-                            };
-
-                            if (s.size() + str.size() > (BUF_ERASE_SIZE)
-                                && s.size() > BUF_RETAIN_SIZE)
-                            {
-                                auto to_erase = s.size() % BUF_RETAIN_SIZE;
-                                s.erase(s.begin(), s.begin() + to_erase);
-                            }
-
-                            s.append(str);
-                        });
-            }
-            break;
-
-            case STRCASE("update:new_config_class"):
-            case STRCASE("update:config_entity"):
-            case STRCASE("update:trace_class_list"):
-            case STRCASE("update:traces"):
-
-            default:
-                break;
-        }
+        auto hash = perfkit::hasher::fnv1a_64(route);
+        _handlers.at(hash)(msg);
     }
     catch (std::out_of_range&)
     {
-        SPDLOG_ERROR("invalid protoocol for route {}: {}", route, msg.dump(2));
+        SPDLOG_ERROR("invalid protoocol for route {}", route);
     }
+}
+
+void session_context::_on_shell_output(messages::outgoing::shell_output const& message)
+{
+    auto& str = message.content;
+
+    _output.use(
+            [&](std::string& s)
+            {
+                enum
+                {
+                    BUF_ERASE_SIZE  = 2 << 20,
+                    BUF_RETAIN_SIZE = 1 << 20
+                };
+
+                if (s.size() + str.size() > (BUF_ERASE_SIZE)
+                    && s.size() > BUF_RETAIN_SIZE)
+                {
+                    auto to_erase = s.size() % BUF_RETAIN_SIZE;
+                    s.erase(s.begin(), s.begin() + to_erase);
+                }
+
+                s.append(str);
+            });
 }

@@ -6,11 +6,35 @@
 
 #include <asio/post.hpp>
 #include <asio/read.hpp>
+#include <asio/write.hpp>
+#include <perfkit/common/format.hxx>
 #include <perfkit/common/macros.hxx>
 #include <spdlog/spdlog.h>
 
+using namespace perfkit::literals;
+
 void plain_tcp::send_message(std::string_view route, const nlohmann::json &parameter)
 {
+    _sendbuf["route"]     = route;
+    _sendbuf["parameter"] = parameter;
+
+    while (_wr_lock.use_count() > 1)
+        std::this_thread::yield();
+
+    _wrbuf.clear();
+    _wrbuf.resize(8);
+    nlohmann::json::to_msgpack(_sendbuf, {_wrbuf});
+
+    memcpy(_wrbuf.data(), "o`P%", 4);
+    *(int *)&_wrbuf[4] = (int)_wrbuf.size() - 8;
+
+    asio::async_write(_socket,
+                      asio::buffer(_wrbuf),
+                      asio::transfer_all(),
+                      [wr_lock = _wr_lock](auto &&ec, size_t n)
+                      {
+                          (void)wr_lock;
+                      });
 }
 
 session_connection_state plain_tcp::status() const
@@ -150,9 +174,9 @@ void plain_tcp::_handle_body(asio::error_code const &ec, size_t num_read)
 
     try
     {
-        auto obj = nlohmann::json::from_msgpack(_rdbuf.begin(), _rdbuf.end());
-        route    = obj.at("route").get_ref<std::string &>();
-        payload  = &obj.at("payload");
+        object  = nlohmann::json::from_msgpack(_rdbuf.begin(), _rdbuf.end());
+        route   = object.at("route").get_ref<std::string &>();
+        payload = &object.at("payload");
     }
     catch (nlohmann::json::parse_error &e)
     {

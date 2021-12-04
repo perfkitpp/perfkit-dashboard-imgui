@@ -74,7 +74,7 @@ class session_slot
     bool _from_apiserver = false;
 
     // entered id and password, which are cached only for single program instance
-    std::string _id, _pw;
+    char _id[256] = {}, _pw[256] = {};
 
     // current state
     state _state = {};

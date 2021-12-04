@@ -1,7 +1,17 @@
 #pragma once
+#pragma once
 #include "if_session_connection.hpp"
 #include "messages.hpp"
+#include "perfkit/common/assert.hxx"
+#include "perfkit/common/functional.hxx"
+#include "perfkit/common/hasher.hxx"
 #include "perfkit/common/thread/locked.hxx"
+
+struct session_context_message_marshal_error : std::exception
+{
+};
+
+namespace messages = perfkit::terminal::net;
 
 class session_context
 {
@@ -18,8 +28,38 @@ class session_context
    private:
     void _on_recv(std::string_view route, nlohmann::json const& msg);
 
+    template <class MsgTy_, typename Handler_>
+    void _install(Handler_&& h)
+    {
+        auto is_new = _handlers.try_emplace(
+                perfkit::hasher::fnv1a_64(MsgTy_::ROUTE),
+                [h = std::forward<Handler_>(h), message = MsgTy_{}](nlohmann::json const& object)
+                {
+                    try
+                    {
+                        object.get_to(message);
+                        h(message);
+                    }
+                    catch (std::exception&)
+                    {
+                        throw session_context_message_marshal_error{};
+                    }
+                });
+
+        assert_(is_new);
+    }
+
+    void _on_epoch(info_type const& payload);
+    void _on_session_state(messages::outgoing::session_state const& payload);
+    void _on_shell_output(messages::outgoing::shell_output const& payload);
+
    private:
     connection_ptr _conn;
     perfkit::locked<std::string> _output;
     std::optional<info_type> _info;
+
+    std::unordered_map<
+            uint64_t,
+            perfkit::function<void(nlohmann::json const&)>>
+            _handlers;
 };

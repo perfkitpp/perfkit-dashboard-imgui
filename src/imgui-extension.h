@@ -3,7 +3,7 @@
 
 namespace ImGui
 {
-bool Spinner(const char* label, const ImU32& color, float radius = 6.f, int thickness = 2);
+bool Spinner(const char* label, const ImU32& color, float radius = 5.f, int thickness = 2);
 
 void LoadingIndicatorCircle(
         const char* label,
