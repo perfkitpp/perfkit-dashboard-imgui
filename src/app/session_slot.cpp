@@ -86,6 +86,7 @@ void session_slot::render_on_list()
             else if (_context->status() == session_connection_state::connected)
             {
                 _state = state::pre_login;
+                _context->login(_id, _pw); // simply try with current cache
             }
         }
         break;
