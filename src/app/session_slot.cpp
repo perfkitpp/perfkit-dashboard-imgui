@@ -112,7 +112,7 @@ void session_slot::render_on_list()
                 ImGui::InputText("ID", _id, sizeof _id);
                 ImGui::InputText("PW", _pw, sizeof _pw, ImGuiInputTextFlags_Password);
 
-                bool do_login = ImGui::Button(_fmt.format("Login##{}", _url).c_str());
+                bool do_login = ImGui::Button(_fmt.format("  Login  ##{}", _url).c_str());
 
                 ImGui::TreePop();
 

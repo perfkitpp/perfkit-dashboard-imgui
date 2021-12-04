@@ -11,6 +11,7 @@
 #include <asio/post.hpp>
 #include <spdlog/spdlog.h>
 
+#include "imgui-extension.h"
 #include "imgui.h"
 #include "perfkit/common/algorithm.hxx"
 #include "perfkit/common/utility/cleanup.hxx"
@@ -199,7 +200,7 @@ void gui::_draw_session_list()
             if (ImGui::TreeNode("Add New ..."))
             {
                 static char buf_url[1024] = {};
-                ImGui::InputText("URL", buf_url, sizeof buf_url);
+                ImGui::InputTextLeft("URL", "localhost:5572", buf_url, sizeof buf_url);
 
                 if (ImGui::Button("Direct Connect", {-1, 0}))
                 {

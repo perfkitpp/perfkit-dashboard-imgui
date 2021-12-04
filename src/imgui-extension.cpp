@@ -47,7 +47,7 @@ bool Spinner(const char* label, const ImU32& color, float radius, int thickness)
     return true;
 }
 
-void ImGui::LoadingIndicatorCircle(const char* label, 
+void ImGui::LoadingIndicatorCircle(const char* label,
                                    const ImVec4& main_color, const ImVec4& backdrop_color,
                                    const float indicator_radius,
                                    const int circle_count, const float speed)
@@ -92,4 +92,18 @@ void ImGui::LoadingIndicatorCircle(const char* label,
     }
 }
 
+void InputTextLeft(const char* label,
+                   const char* hint,
+                   char* buf,
+                   size_t bufSize,
+                   ImGuiInputTextFlags flags,
+                   ImGuiInputTextCallback callback,
+                   void* userData)
+{
+    ImGui::Text(label);
+    ImGui::SameLine();
+    ImGui::PushItemWidth(-1);
+    ImGui::InputTextWithHint(label, hint, buf, bufSize, flags, callback, userData);
+    ImGui::PopItemWidth();
+}
 }  // namespace ImGui
