@@ -15,7 +15,7 @@ void plain_tcp::send_message(std::string_view route, const nlohmann::json &param
 
 bool plain_tcp::connection_valid() const
 {
-    return _socket.is_open();
+    return _socket.is_open() && _is_valid;
 }
 
 plain_tcp::plain_tcp(asio::io_context *ioc, const char *address, uint16_t port)
@@ -30,6 +30,7 @@ plain_tcp::plain_tcp(asio::io_context *ioc, const char *address, uint16_t port)
 void plain_tcp::_on_connect(const asio::error_code &ec)
 {
     _rdbuf.resize(8);
+    _is_valid = true;
 
     asio::async_read(
             _socket, _rd(),

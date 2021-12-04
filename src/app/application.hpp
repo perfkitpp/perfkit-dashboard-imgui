@@ -3,12 +3,16 @@
 //
 
 #pragma once
-#include <asio/io_context.hpp>
+#include <perfkit/common/functional.hxx>
 
 namespace application
 {
 void initialize();
+void shutdown();
 void update();
+
+void post_event(perfkit::function<void()> evt);
+
 }  // namespace application
 
 namespace application::gui
@@ -28,4 +32,11 @@ void _draw_session_list();
  * Render custom draw requests via OpenGL, handle resource upload requests, etc.
  */
 void _render_windows();
+
+namespace detail
+{
+void modal_single_server_connect(bool* connStat);
+void modal_api_server_connect(bool* connStat);
+
+}  // namespace detail
 }  // namespace application::gui

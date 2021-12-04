@@ -6,8 +6,9 @@ add_executable(
         main.cpp
         ../third/imgui/imgui_demo.cpp
 
+        app/session_slot.cpp
+        app/application.cpp
         classes/session_context.cpp
-        classes/application.cpp
         classes/connection/plain_tcp.cpp
 )
 
@@ -18,7 +19,7 @@ target_link_libraries(
         perfkitpp-imgui-bundled
         perfkit::core
         perfkit::picosha2
-        perfkit::net::bundled-asio
+        perfkit::net::asio
 )
 
 target_include_directories(
@@ -26,6 +27,7 @@ target_include_directories(
 
         PRIVATE
         ../third/perfkit/extensions/net/include/perfkit/extension/net-internals
+        .
 )
 
 target_compile_definitions(

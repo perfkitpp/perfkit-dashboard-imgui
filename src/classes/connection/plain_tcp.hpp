@@ -4,7 +4,7 @@
 
 #pragma once
 #include <asio/ip/tcp.hpp>
-#include <perfkit/detail/helpers.hpp>
+#include <perfkit/logging.h>
 
 #include "../if_session_connection.hpp"
 
@@ -32,8 +32,9 @@ class plain_tcp : public if_session_connection
 
    private:
     asio::ip::tcp::socket _socket;
+    std::atomic_bool _is_valid = false;
     std::vector<char> _wrbuf;
     std::vector<char> _rdbuf;
 
-    perfkit::logger_ptr _logging = perfkit::logging::find_or("tcp-plain");
+    perfkit::logger_ptr _logging = perfkit::share_logger("tcp - plain");
 };

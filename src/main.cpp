@@ -5,7 +5,7 @@
 
 #include <stdio.h>
 
-#include "classes/application.hpp"
+#include "app/application.hpp"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
@@ -196,6 +196,7 @@ int main(int, char**)
     }
 
     // Cleanup
+    application::shutdown();
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
