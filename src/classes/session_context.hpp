@@ -25,6 +25,7 @@ class session_context
     info_type const* info() const noexcept;
 
     auto& shell_output() const { return _output; }
+    bool consume_recv_char() { return not _shell_latest.test_and_set(); }
 
    private:
     void _on_recv(std::string_view route, nlohmann::json const& msg);
@@ -65,6 +66,7 @@ class session_context
     connection_ptr _conn;
     perfkit::locked<std::string> _output;
     std::optional<info_type> _info;
+    std::atomic_flag _shell_latest;
 
     std::unordered_map<
             uint64_t,

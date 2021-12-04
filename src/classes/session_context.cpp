@@ -61,6 +61,12 @@ void session_context::_on_recv(std::string_view route, nlohmann::json const& msg
 void session_context::_on_epoch(info_type& payload)
 {
     _info.emplace(std::move(payload));
+
+    _output.use(
+            [](auto&& e)
+            {
+                e.clear();
+            });
 }
 
 void session_context::_on_shell_output(messages::outgoing::shell_output const& message)
@@ -85,4 +91,6 @@ void session_context::_on_shell_output(messages::outgoing::shell_output const& m
 
                 s.append(str);
             });
+
+    _shell_latest.clear();
 }

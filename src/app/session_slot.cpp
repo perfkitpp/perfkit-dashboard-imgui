@@ -9,7 +9,7 @@ session_slot::session_slot(std::string url, bool from_apiserver)
         : _url(std::move(url)),
           _from_apiserver(from_apiserver)
 {
-    ;
+    _shell.resize(8192);
 }
 
 void session_slot::render_on_list()
@@ -135,16 +135,21 @@ void session_slot::render_on_list()
             bool visible = true;
 
             if (ImGui::CollapsingHeader(
-                        _fmt.format("{}@{} {}###{}", 
-                                    _context->info()->name, 
+                        _fmt.format("{}@{} ... {}###HEAD:{}",
+                                    _context->info()->name,
                                     _url,
                                     "|/-\\"[(int)(ImGui::GetTime() / 0.25f) & 3],
-                                    _url).c_str(),
+                                    _url)
+                                .c_str(),
                         &visible))
             {
-                ImGui::TreePush();
+                /*   if (ImGui::IsItemFocused())
+                    ImGui::SetWindowFocus(_terminal_window_name());*/
 
-                ImGui::TreePop();
+                ImGui::BeginChild(_key("STAT:{}", _url));
+                ImGui::Text(__FILE__ " (%d): TODO", __LINE__);
+                // TODO: session state visualizer
+                ImGui::EndChild();
             }
 
             if (not visible)
@@ -166,8 +171,56 @@ void session_slot::render_windows()
         return;
 
     bool should_active = false;
+    bool keep_open     = true;
+    if (ImGui::Begin(_terminal_window_name(), &keep_open))
+    {
+        ImGui::BeginChild(_key("SHELLOUT:{}", _url), {-1, -48}, true,
+                          ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_AlwaysHorizontalScrollbar);
 
+        _context->shell_output().use(
+                [&](std::string const& s)
+                {
+                    ImGui::TextUnformatted(s.c_str(), s.c_str() + s.size());
+                });
 
+        if (_do_autoscroll)
+            ImGui::SetScrollY(ImGui::GetScrollMaxY()), _do_autoscroll = false;
+
+        if (_context->consume_recv_char() && not _scroll_lock)
+            _do_autoscroll = true;
+
+        ImGui::EndChild();
+
+        ImGui::Checkbox("Scroll Lock", &_scroll_lock);
+
+        ImGui::PushItemWidth(-1);
+        bool has_enter = ImGui::InputTextWithHint(
+                _key("SHELLIN:{}", _url), "$ enter command here",
+                _shell.data(), _shell.size(),
+                ImGuiInputTextFlags_CallbackCompletion
+                        | ImGuiInputTextFlags_CallbackHistory
+                        | ImGuiInputTextFlags_EnterReturnsTrue,
+                [](ImGuiInputTextCallbackData* data) -> int
+                {
+                    // TODO: history,
+                    // TODO: autocomplete on tab key
+                    return 1;
+                },
+                this);
+
+        if (has_enter)
+        {  // TODO: submit command
+            ImGui::SetKeyboardFocusHere(-1);
+        }
+        ImGui::PopItemWidth();
+    }
+    ImGui::End();
+
+    if (not keep_open)
+    {
+        _context = {};
+        _state   = state::disconnected;
+    }
 }
 
 void session_slot::_title_string()

@@ -67,15 +67,24 @@ class session_slot
    private:
     void _title_string();
 
+    template <typename... Args_>
+    char const* _key(Args_&&... args)
+    {
+        return _fmt.format(std::forward<Args_>(args)...).c_str();
+    }
+
+    char const* _terminal_window_name()
+    {
+        return _fmt.format("{}@{} ##TERM:{}", _context->info()->name, _url, _url).c_str();
+    }
+
    private:
     // url
     std::string _url;
 
     //
     bool _from_apiserver = false;
-
-    //
-    bool _prompt_close = false;
+    bool _prompt_close   = false;
 
     // entered id and password, which are cached only for single program instance
     char _id[256] = {}, _pw[256] = {};
@@ -88,4 +97,9 @@ class session_slot
 
     //
     perfkit::format_buffer _fmt;
+
+    // shell input
+    std::string _shell;
+    bool _scroll_lock   = false;
+    bool _do_autoscroll = false;
 };
