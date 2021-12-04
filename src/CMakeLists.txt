@@ -4,6 +4,7 @@ add_executable(
         ${PROJECT_NAME}
 
         main.cpp
+        imgui-extension.cpp
         ../third/imgui/imgui_demo.cpp
 
         app/session_slot.cpp

@@ -13,25 +13,60 @@ void plain_tcp::send_message(std::string_view route, const nlohmann::json &param
 {
 }
 
-bool plain_tcp::connection_valid() const
+session_connection_state plain_tcp::status() const
 {
-    return _socket.is_open() && _is_valid;
+    if (not _socket.is_open())
+        return session_connection_state::invalid;
+
+    return _status;
 }
 
 plain_tcp::plain_tcp(asio::io_context *ioc, const char *address, uint16_t port)
         : _socket{*ioc}
 {
-    _socket.open(asio::ip::tcp::v4());
+    asio::ip::tcp::resolver resolver{*ioc};
 
-    auto ep = asio::ip::tcp::endpoint{asio::ip::make_address(address), port};
-    _socket.async_connect(ep, CPPH_BIND(_on_connect));
+    auto iter = resolver.resolve(address, std::to_string(port));
+    if (not iter.empty())
+    {
+        // auto ep = asio::ip::tcp::endpoint{asio::ip::make_address(address), port};
+        auto ep   = (*iter.begin()).endpoint();
+        _endpoint = ep;
+        _socket.open(ep.protocol());
+
+        _socket.async_connect(ep, CPPH_BIND(_on_connect));
+        _status = session_connection_state::connecting;
+    }
+}
+
+plain_tcp::~plain_tcp()
+{
+    if (_socket.is_open())
+    {
+        _socket.shutdown(asio::socket_base::shutdown_both);
+        _socket.close();
+    }
 }
 
 void plain_tcp::_on_connect(const asio::error_code &ec)
 {
+    if (ec)
+    {
+        auto ep = _endpoint;
+        CPPH_ERROR("{}:{} connection aborted: ({}) {}",
+                   ep.address().to_string(),
+                   ep.port(),
+                   ec.value(),
+                   ec.message());
+
+        _socket.close();
+        return;
+    }
+
     _rdbuf.resize(8);
     _is_valid = true;
 
+    _status = session_connection_state::connected;
     asio::async_read(
             _socket, _rd(),
             asio::transfer_all(),
@@ -40,9 +75,14 @@ void plain_tcp::_on_connect(const asio::error_code &ec)
 
 void plain_tcp::_handle_header(asio::error_code const &ec, size_t num_read)
 {
+    if (ec && ec.value() == asio::error::operation_aborted)
+    {
+        return;
+    }
+
     if (ec)
     {  // any error
-        auto ep = _socket.remote_endpoint();
+        auto ep = _endpoint;
         CPPH_ERROR("{}:{} connection aborted: ({}) {}",
                    ep.address().to_string(),
                    ep.port(),
@@ -78,9 +118,14 @@ void plain_tcp::_handle_header(asio::error_code const &ec, size_t num_read)
 
 void plain_tcp::_handle_body(asio::error_code const &ec, size_t num_read)
 {
+    if (ec && ec.value() == asio::error::operation_aborted)
+    {
+        return;
+    }
+
     if (ec)
     {  // any error
-        auto ep = _socket.remote_endpoint();
+        auto ep = _endpoint;
         CPPH_ERROR("{}:{} connection aborted: ({}) {}",
                    ep.address().to_string(),
                    ep.port(),

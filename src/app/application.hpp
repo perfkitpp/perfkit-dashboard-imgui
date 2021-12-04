@@ -5,11 +5,18 @@
 #pragma once
 #include <perfkit/common/functional.hxx>
 
+namespace asio
+{
+class io_context;
+}
+
 namespace application
 {
 void initialize();
 void shutdown();
 void update();
+
+asio::io_context& ioc_net();
 
 void post_event(perfkit::function<void()> evt);
 

@@ -70,6 +70,8 @@ void initialize()
 void shutdown()
 {
     // shutdown dedicated network thread
+    _context.sessions.clear();
+
     _context.work_net = {};
     _context.worker_net.join();
 }
@@ -87,10 +89,17 @@ void update()
     gui::_render_windows();
 }
 
+asio::io_context& ioc_net()
+{
+    return _context.ioc_net;
+}
+
 void post_event(perfkit::function<void()> evt)
 {
     asio::post(std::move(evt));
 }
+
+static bool _show_sessions_list = true;
 
 void gui::_draw_root_components()
 {
@@ -107,8 +116,8 @@ void gui::_draw_root_components()
         {
             if (BeginMenu("Connect To"))
             {
-                _show_connect_indep |= MenuItem("Instance");
-                _show_connect_relay |= MenuItem("Relay Server");
+                _show_connect_indep |= MenuItem("Instance", "Ctrl+O");
+                _show_connect_relay |= MenuItem("Relay Server", "Ctrl+P");
                 ImGui::EndMenu();
             }
 
@@ -123,8 +132,17 @@ void gui::_draw_root_components()
             ImGui::EndMenu();
         }
 
+        if (BeginMenu("View"))
+        {
+            MenuItem("Session List", "Alt+1", &_show_sessions_list);
+
+            ImGui::EndMenu();
+        }
+
         EndMainMenuBar();
     }
+
+    ImGui::DockSpaceOverViewport();
 
     if (_show_demo)
         ShowDemoWindow(&_show_demo);
@@ -141,10 +159,73 @@ void gui::_draw_root_components()
 
 void gui::_draw_session_list()
 {
+    auto& sessions = _context.sessions;
+
+    if (_show_sessions_list)
+    {
+        if (ImGui::Begin("Sessions", &_show_sessions_list))
+        {
+            if (ImGui::CollapsingHeader("Add New ..."))
+            {
+                static char buf_url[1024] = {};
+                ImGui::InputText("URL", buf_url, sizeof buf_url);
+
+                if (ImGui::Button("Direct Connect", {-1, 0}))
+                {
+                    // create new connection
+                    std::string url = buf_url;
+
+                    auto is_unique = perfkit::none_of(
+                            _context.sessions,
+                            [&](auto&& sess)
+                            {
+                                return sess.url() == buf_url;
+                            });
+
+                    if (not url.empty() && is_unique)
+                    {
+                        SPDLOG_INFO("new connection candidate {} added.", url);
+                        _context.sessions.emplace_back(std::move(url), false);
+                    }
+                }
+
+                ImGui::Button("Thru Relay Server", {-1, 0});
+                ImGui::Separator();
+            }
+
+            for (auto it = sessions.begin(); it != sessions.end();)
+            {
+                try
+                {
+                    it->render_on_list();
+                    ++it;
+                }
+                catch (session_slot_close&)
+                {
+                    it = sessions.erase(it);
+                }
+            }
+        }
+        ImGui::End();
+    }
+
+    for (auto it = sessions.begin(); it != sessions.end();)
+    {
+        try
+        {
+            it->render_windows();
+            ++it;
+        }
+        catch (session_slot_close&)
+        {
+            it = sessions.erase(it);
+        }
+    }
 }
 
 void gui::_render_windows()
 {
+    // 3D rendering
 }
 
 void gui::detail::modal_single_server_connect(bool* connStat)
@@ -171,7 +252,7 @@ void gui::detail::modal_single_server_connect(bool* connStat)
         if (not url.empty() && is_unique)
         {
             SPDLOG_INFO("new connection candidate {} added.", url);
-            _context.sessions.emplace_back(std::move(url));
+            _context.sessions.emplace_back(std::move(url), false);
         }
 
         *connStat = false;

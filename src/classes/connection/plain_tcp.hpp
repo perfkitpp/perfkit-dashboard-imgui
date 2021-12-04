@@ -12,11 +12,12 @@ class plain_tcp : public if_session_connection
 {
    public:
     plain_tcp(asio::io_context* ioc, char const* address, uint16_t port);
+    ~plain_tcp() override;
 
     void send_message(
             std::string_view route, const nlohmann::json& parameter) override;
 
-    bool connection_valid() const override;
+    session_connection_state status() const override;
 
    private:
     void _on_connect(asio::error_code const& ec);
@@ -32,9 +33,13 @@ class plain_tcp : public if_session_connection
 
    private:
     asio::ip::tcp::socket _socket;
+    asio::ip::tcp::endpoint _endpoint;
+
     std::atomic_bool _is_valid = false;
     std::vector<char> _wrbuf;
     std::vector<char> _rdbuf;
 
-    perfkit::logger_ptr _logging = perfkit::share_logger("tcp - plain");
+    session_connection_state _status = session_connection_state::invalid;
+
+    perfkit::logger_ptr _logging = perfkit::share_logger("tcp:plain");
 };

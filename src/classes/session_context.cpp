@@ -32,9 +32,9 @@ void session_context::login(std::string_view id, std::string_view pw)
     _conn->send_message("auth:login", param);
 }
 
-bool session_context::expired() const
+session_context::info_type const* session_context::session_info() const noexcept
 {
-    return not _conn->connection_valid();
+    return _info.has_value() ? &_info.value() : nullptr;
 }
 
 template <size_t N_>
@@ -91,7 +91,7 @@ void session_context::_on_recv(std::string_view route, nlohmann::json const& msg
                 break;
         }
     }
-    catch (std::out_of_range& e)
+    catch (std::out_of_range&)
     {
         SPDLOG_ERROR("invalid protoocol for route {}: {}", route, msg.dump(2));
     }
