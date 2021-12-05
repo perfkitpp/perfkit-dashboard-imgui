@@ -15,11 +15,14 @@ namespace messages = perfkit::terminal::net;
 class session_context
 {
    public:
-    using info_type = perfkit::terminal::net::outgoing::session_reset;
+    using info_type          = perfkit::terminal::net::outgoing::session_reset;
+    using config_type        = messages::outgoing::new_config_class::category_scheme;
+    using config_entity_type = messages::outgoing::new_config_class::entity_scheme;
 
    public:
     session_context(connection_ptr conn);
     void login(std::string_view id, std::string_view pw);
+    void push_command(std::string_view command);
 
     session_connection_state status() const noexcept { return _conn->status(); }
     info_type const* info() const noexcept;
@@ -35,8 +38,7 @@ class session_context
     {
         auto wrapped_handler{
                 [h = std::forward<Handler_>(h), message = MsgTy_{}]  //
-                (nlohmann::json const& object) mutable
-                {
+                (nlohmann::json const& object) mutable {
                     try
                     {
                         object.get_to(message);
@@ -61,9 +63,12 @@ class session_context
     void _on_epoch(info_type& payload);
     void _on_session_state(messages::outgoing::session_state const& payload);
     void _on_shell_output(messages::outgoing::shell_output const& payload);
+    void _on_new_config_class(messages::outgoing::new_config_class const& payload);
+    void _on_config_entity_update(messages::outgoing::config_entity const& payload);
 
    private:
     connection_ptr _conn;
+
     perfkit::locked<std::string> _output;
     std::optional<info_type> _info;
     std::atomic_flag _shell_latest;
@@ -72,4 +77,10 @@ class session_context
             uint64_t,
             perfkit::function<void(nlohmann::json const&)>>
             _handlers;
+
+    std::map<std::string, config_type, std::less<>>
+            _configs;
+
+    std::unordered_map<uint64_t, config_entity_type*>
+            _entity_indexes;
 };

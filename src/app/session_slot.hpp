@@ -99,7 +99,7 @@ class session_slot
     perfkit::format_buffer _fmt;
 
     // shell input
-    std::string _shell;
+    std::string _command;
     bool _scroll_lock   = false;
     bool _do_autoscroll = false;
 };

@@ -25,4 +25,12 @@ class if_session_connection
             std::string_view route, nlohmann::json const& parameter) {}
 
     virtual session_connection_state status() const { return session_connection_state::invalid; }
+
+    template <typename MsgTy_>
+    void send(MsgTy_&& msg)
+    {
+        send_message(
+                std::remove_reference_t<MsgTy_>::ROUTE,
+                std::forward<MsgTy_>(msg));
+    }
 };

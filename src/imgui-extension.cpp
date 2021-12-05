@@ -5,8 +5,7 @@
 
 #include "imgui_internal.h"
 
-namespace ImGui
-{
+namespace ImGui {
 bool Spinner(const char* label, const ImU32& color, float radius, int thickness)
 {
     ImGuiWindow* window = GetCurrentWindow();

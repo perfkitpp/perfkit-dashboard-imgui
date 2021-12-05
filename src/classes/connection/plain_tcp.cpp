@@ -31,8 +31,7 @@ void plain_tcp::send_message(std::string_view route, const nlohmann::json &param
     asio::async_write(_socket,
                       asio::buffer(_wrbuf),
                       asio::transfer_all(),
-                      [wr_lock = _wr_lock](auto &&ec, size_t n)
-                      {
+                      [wr_lock = _wr_lock](auto &&ec, size_t n) {
                           (void)wr_lock;
                       });
 }

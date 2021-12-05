@@ -5,13 +5,11 @@
 #pragma once
 #include <perfkit/common/functional.hxx>
 
-namespace asio
-{
+namespace asio {
 class io_context;
 }
 
-namespace application
-{
+namespace application {
 void initialize();
 void shutdown();
 void update();
@@ -22,8 +20,7 @@ void post_event(perfkit::function<void()> evt);
 
 }  // namespace application
 
-namespace application::gui
-{
+namespace application::gui {
 /**
  * Render ImGui windows
  */
@@ -45,8 +42,7 @@ void _render_windows();
  */
 void _refresh_session_list_backup();
 
-namespace detail
-{
+namespace detail {
 void modal_single_server_connect(bool* connStat);
 void modal_api_server_connect(bool* connStat);
 

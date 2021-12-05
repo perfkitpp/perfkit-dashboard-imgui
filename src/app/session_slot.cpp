@@ -9,7 +9,7 @@ session_slot::session_slot(std::string url, bool from_apiserver)
         : _url(std::move(url)),
           _from_apiserver(from_apiserver)
 {
-    _shell.resize(8192);
+    _command.resize(8192);
 }
 
 void session_slot::render_on_list()
@@ -86,7 +86,7 @@ void session_slot::render_on_list()
             else if (_context->status() == session_connection_state::connected)
             {
                 _state = state::pre_login;
-                _context->login(_id, _pw); // simply try with current cache
+                _context->login(_id, _pw);  // simply try with current cache
             }
         }
         break;
@@ -171,16 +171,17 @@ void session_slot::render_windows()
     if (_state != state::valid)
         return;
 
-    bool should_active = false;
-    bool keep_open     = true;
+    bool has_focus = false;
+    bool keep_open = true;
     if (ImGui::Begin(_terminal_window_name(), &keep_open))
     {
+        has_focus = ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows);
+
         ImGui::BeginChild(_key("SHELLOUT:{}", _url), {-1, -48}, true,
                           ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_AlwaysHorizontalScrollbar);
 
         _context->shell_output().use(
-                [&](std::string const& s)
-                {
+                [&](std::string const& s) {
                     ImGui::TextUnformatted(s.c_str(), s.c_str() + s.size());
                 });
 
@@ -197,12 +198,11 @@ void session_slot::render_windows()
         ImGui::PushItemWidth(-1);
         bool has_enter = ImGui::InputTextWithHint(
                 _key("SHELLIN:{}", _url), "$ enter command here",
-                _shell.data(), _shell.size(),
+                _command.data(), _command.size(),
                 ImGuiInputTextFlags_CallbackCompletion
                         | ImGuiInputTextFlags_CallbackHistory
                         | ImGuiInputTextFlags_EnterReturnsTrue,
-                [](ImGuiInputTextCallbackData* data) -> int
-                {
+                [](ImGuiInputTextCallbackData* data) -> int {
                     // TODO: history,
                     // TODO: autocomplete on tab key
                     return 1;
@@ -212,10 +212,23 @@ void session_slot::render_windows()
         if (has_enter)
         {  // TODO: submit command
             ImGui::SetKeyboardFocusHere(-1);
+            _context->push_command(_command.c_str());
+            _command[0] = '\0';
         }
         ImGui::PopItemWidth();
     }
     ImGui::End();
+
+    static session_slot* selected_session = nullptr;
+
+    if (ImGui::Begin("Configurations") && selected_session == this)
+    {
+        ImGui::Text(_key("owning: {}", _url));
+    }
+    ImGui::End();
+
+    if (has_focus)
+        selected_session = this;
 
     if (not keep_open)
     {

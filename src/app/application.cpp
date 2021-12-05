@@ -26,8 +26,7 @@
         perfkit::cleanup { &FN }              \
     }
 
-static std::string const CONFIG_PATH = []
-{
+static std::string const CONFIG_PATH = [] {
     std::filesystem::path home =
 #ifdef _WIN32
             getenv("USERPROFILE");
@@ -43,8 +42,7 @@ PERFKIT_CATEGORY(backups)
     PERFKIT_CONFIGURE(urls, std::vector<std::pair<std::string, bool>>{}).confirm();
 }
 
-namespace application
-{
+namespace application {
 static struct context_t
 {
     /**
@@ -87,8 +85,7 @@ void initialize()
                     asio::execution::outstanding_work.tracked);
     ;
     _context.worker_net = std::thread{
-            []
-            {
+            [] {
                 _context.ioc_net.run();
             }};
 }
@@ -209,8 +206,7 @@ void gui::_draw_session_list()
 
                     auto is_unique = perfkit::none_of(
                             _context.sessions,
-                            [&](auto&& sess)
-                            {
+                            [&](auto&& sess) {
                                 return sess.url() == buf_url;
                             });
 
@@ -300,8 +296,7 @@ void gui::detail::modal_single_server_connect(bool* connStat)
 
         auto is_unique = perfkit::none_of(
                 _context.sessions,
-                [&](auto&& sess)
-                {
+                [&](auto&& sess) {
                     return sess.url() == buf_url;
                 });
 
