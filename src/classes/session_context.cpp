@@ -169,9 +169,14 @@ void session_context::_on_config_entity_update(messages::outgoing::config_entity
     for (auto& update : payload.content)
     {
         auto it = _entity_indexes.find(make_key(payload.class_key, update.config_key));
+
         if (it == _entity_indexes.end())
         {
             SPDLOG_WARN("unrecognized entity index from registry {}", payload.class_key);
+            continue;
         }
+
+        // apply update
+        it->second->value = update.value;
     }
 }

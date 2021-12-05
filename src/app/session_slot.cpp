@@ -3,6 +3,8 @@
 #include "application.hpp"
 #include "classes/connection/plain_tcp.hpp"
 #include "imgui-extension.h"
+#include "imgui_internal.h"
+#include "perfkit/common/utility/cleanup.hxx"
 #include "spdlog/spdlog.h"
 
 session_slot::session_slot(std::string url, bool from_apiserver)
@@ -147,10 +149,10 @@ void session_slot::render_on_list()
                 /*   if (ImGui::IsItemFocused())
                     ImGui::SetWindowFocus(_terminal_window_name());*/
 
-                ImGui::BeginChild(_key("STAT:{}", _url));
+                ImGui::TreePush();
                 ImGui::Text(__FILE__ " (%d): TODO", __LINE__);
                 // TODO: session state visualizer
-                ImGui::EndChild();
+                ImGui::TreePop();
             }
 
             if (not visible)
@@ -222,8 +224,15 @@ void session_slot::render_windows()
     static session_slot* selected_session = nullptr;
 
     if (ImGui::Begin("Configurations") && selected_session == this)
-    {
-        ImGui::Text(_key("owning: {}", _url));
+    {  // Visualize configuration category
+        auto& conf = _context->configs();
+        for (auto& [name, category] : conf)
+        {
+            if (ImGui::CollapsingHeader(_key("{}##{}", name, _url)))
+            {
+                _draw_category_recursive(category);
+            }
+        }
     }
     ImGui::End();
 
@@ -267,4 +276,87 @@ void session_slot::_title_string()
 
     if (should_close)
         throw session_slot_close{this};
+}
+
+static std::optional<nlohmann::json> prop_editor(
+        uint64_t context,
+        session_context::config_entity_type const& e)
+{
+}
+
+void session_slot::_draw_category_recursive(
+        session_context::config_type const& target)
+{
+    for (auto& sub : target.subcategories)
+    {
+        if (not ImGui::TreeNodeEx(
+                    _key("{}##{}", sub.name.c_str(), (void*)&sub),
+                    ImGuiTreeNodeFlags_SpanFullWidth))
+            continue;
+
+        _draw_category_recursive(sub);
+
+        ImGui::TreePop();
+    }
+
+    static uint64_t selected_item = 0;
+
+    for (auto& elem : target.entities)
+    {
+        bool render_modify_view = elem.config_key == selected_item;
+
+        ImGui::PushStyleColor(
+                ImGuiCol_Text,
+                render_modify_view ? 0xff11ff11
+                                   : 0xffaaaaaa);
+
+        ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.3f);
+        bool open = ImGui::Selectable(_key("   {}##{}", elem.name, elem.config_key));
+        ImGui::PopStyleColor(1);
+
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::PushTextWrapPos(ImGui::GetWindowWidth());
+            ImGui::BeginTooltip();
+            ImGui::Text(elem.metadata.dump(2).c_str());
+            ImGui::EndTooltip();
+            ImGui::PopTextWrapPos();
+        }
+
+        ImGui::SameLine();
+        ImGui::PushStyleColor(
+                ImGuiCol_Text,
+                elem.value.is_number() || elem.value.is_boolean() ? 0xff56bf6f
+                : elem.value.is_string()                          ? 0xff4c87c7
+                                                                  : 0xffc7794c);
+
+        if (not elem.value.is_structured())
+            ImGui::Text(elem.value.dump().c_str());
+        else if (elem.value.is_array())
+            ImGui::Text("[array]");
+        else
+            ImGui::Text("[object]");
+
+        ImGui::PopStyleColor();
+
+        open && (selected_item = elem.config_key);
+
+        if (not render_modify_view)
+            continue;
+
+        if (open && render_modify_view)
+        {
+            selected_item = 0;
+            continue;
+        }
+
+        ImGui::TreePush();
+        auto result = prop_editor(selected_item, elem);
+
+        if (result)
+        {
+            // TODO: send modify request
+        }
+        ImGui::TreePop();
+    }
 }

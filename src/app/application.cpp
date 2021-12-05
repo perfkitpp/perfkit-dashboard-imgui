@@ -194,7 +194,7 @@ void gui::_draw_session_list()
     {
         if (ImGui::Begin("Sessions", &_show_sessions_list))
         {
-            if (ImGui::TreeNode("Add New ..."))
+            if (ImGui::TreeNodeEx("Add New ...", ImGuiTreeNodeFlags_SpanFullWidth))
             {
                 static char buf_url[1024] = {};
                 ImGui::InputTextLeft("URL", "localhost:5572", buf_url, sizeof buf_url);
@@ -225,7 +225,7 @@ void gui::_draw_session_list()
                 ImGui::Separator();
             }
 
-            if (ImGui::TreeNodeEx("Sessions", ImGuiTreeNodeFlags_DefaultOpen))
+            if (ImGui::TreeNodeEx("Sessions", ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanFullWidth))
             {
                 for (auto it = sessions.begin(); it != sessions.end();)
                 {

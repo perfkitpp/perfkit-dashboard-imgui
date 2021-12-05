@@ -26,6 +26,7 @@ class session_context
 
     session_connection_state status() const noexcept { return _conn->status(); }
     info_type const* info() const noexcept;
+    auto const& configs() const noexcept { return _configs; }
 
     auto& shell_output() const { return _output; }
     bool consume_recv_char() { return not _shell_latest.test_and_set(); }

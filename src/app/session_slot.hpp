@@ -78,6 +78,8 @@ class session_slot
         return _fmt.format("{}@{} ##TERM:{}", _context->info()->name, _url, _url).c_str();
     }
 
+    void _draw_category_recursive(session_context::config_type const&);
+
    private:
     // url
     std::string _url;
