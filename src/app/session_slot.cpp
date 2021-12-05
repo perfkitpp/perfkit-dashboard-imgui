@@ -135,16 +135,23 @@ void session_slot::render_on_list()
                 break;
             }
 
-            bool visible = true;
+            bool visible      = true;
+            bool show_submenu = ImGui::CollapsingHeader(
+                    _fmt.format("{}@{} ... {}###HEAD:{}",
+                                _context->info()->name,
+                                _url,
+                                "|/-\\"[(int)(ImGui::GetTime() / 0.25f) & 3],
+                                _url)
+                            .c_str(),
+                    &visible,
+                    ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick);
 
-            if (ImGui::CollapsingHeader(
-                        _fmt.format("{}@{} ... {}###HEAD:{}",
-                                    _context->info()->name,
-                                    _url,
-                                    "|/-\\"[(int)(ImGui::GetTime() / 0.25f) & 3],
-                                    _url)
-                                .c_str(),
-                        &visible))
+            if (ImGui::IsItemClicked())
+            {
+                ImGui::FocusWindow(ImGui::FindWindowByName(_terminal_window_name()));
+            }
+
+            if (show_submenu)
             {
                 /*   if (ImGui::IsItemFocused())
                     ImGui::SetWindowFocus(_terminal_window_name());*/
@@ -173,11 +180,10 @@ void session_slot::render_windows()
     if (_state != state::valid)
         return;
 
-    bool has_focus = false;
     bool keep_open = true;
     if (ImGui::Begin(_terminal_window_name(), &keep_open))
     {
-        has_focus = ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows);
+        _has_focus = ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows);
 
         ImGui::BeginChild(_key("SHELLOUT:{}", _url), {-1, -48}, true,
                           ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_AlwaysHorizontalScrollbar);
@@ -225,6 +231,9 @@ void session_slot::render_windows()
 
     if (ImGui::Begin("Configurations") && selected_session == this)
     {  // Visualize configuration category
+        ImGui::Text(_key("{}@{}", _context->info()->name, _url));
+
+        ImGui::BeginChild("");
         auto& conf = _context->configs();
         for (auto& [name, category] : conf)
         {
@@ -233,10 +242,11 @@ void session_slot::render_windows()
                 _draw_category_recursive(category);
             }
         }
+        ImGui::EndChild();
     }
     ImGui::End();
 
-    if (has_focus)
+    if (_has_focus)
         selected_session = this;
 
     if (not keep_open)
@@ -282,6 +292,7 @@ static std::optional<nlohmann::json> prop_editor(
         uint64_t context,
         session_context::config_entity_type const& e)
 {
+    return {};
 }
 
 void session_slot::_draw_category_recursive(

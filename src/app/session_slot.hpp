@@ -83,10 +83,11 @@ class session_slot
    private:
     // url
     std::string _url;
+    bool _from_apiserver = false;
 
     //
-    bool _from_apiserver = false;
     bool _prompt_close   = false;
+    bool _has_focus = false;
 
     // entered id and password, which are cached only for single program instance
     char _id[256] = {}, _pw[256] = {};
@@ -104,4 +105,5 @@ class session_slot
     std::string _command;
     bool _scroll_lock   = false;
     bool _do_autoscroll = false;
+
 };
