@@ -683,6 +683,11 @@ static std::optional<nlohmann::json> prop_editor(
 
         if (one_of && one_of->is_array())
         {
+            if (context.combo_value.empty())
+            {
+                context.combo_value = context.editing.dump();
+            }
+
             ImGui::SetNextItemWidth(-1);
             if (ImGui::BeginCombo("##Edit Combo", context.combo_value.c_str()))
             {
