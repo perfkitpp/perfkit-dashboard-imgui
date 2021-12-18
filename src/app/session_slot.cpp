@@ -299,17 +299,24 @@ static bool prop_editor_recursive_impl(
 
     if (e->is_object() || e->is_array())
     {
-        auto find_ptr = [](auto from, auto key) {
+        size_t idx    = 0;
+        auto find_ptr = [&](auto from, auto key) {
             nlohmann::json const* r = {};
 
-            if (from)
+            if (from && from->is_object())
                 if (auto it = from->find(key); it != from->end())
                 {
                     r = &*it;
                 }
 
+            if (from && from->is_array() && from->size() > idx)
+                r = &(*from)[idx];
+
             return r;
         };
+
+        ImGui::Text("<object>");
+        ImGui::TreePush();
 
         for (auto& [key, value] : e->items())
         {
@@ -326,7 +333,11 @@ static bool prop_editor_recursive_impl(
                     &value,
                     find_ptr(min, key),
                     find_ptr(max, key));
+
+            ++idx;
         }
+
+        ImGui::TreePop();
     }
     else if (e->is_boolean())
     {
@@ -422,6 +433,7 @@ static bool prop_editor_recursive_impl(
 }
 
 static std::optional<nlohmann::json> prop_editor(
+        bool* dirty,
         uint64_t item_key,
         session_context::config_entity_type const& e)
 {
@@ -446,12 +458,21 @@ static std::optional<nlohmann::json> prop_editor(
 
     if (is_changed)
     {
+        *dirty                  = false;
         context.editing         = e.value;
         context.enable_edit_raw = false;
     }
     else if (force_refresh)
     {
-        context.editing = e.value;
+        *dirty = false;
+        if (context.enable_edit_raw)
+        {
+            context.editing_raw = e.value.dump(2);
+        }
+        else
+        {
+            context.editing = e.value;
+        }
     }
 
     ImGui::BeginDisabled(context.enable_edit_raw);
@@ -481,7 +502,11 @@ static std::optional<nlohmann::json> prop_editor(
     bool apply_changes = false;
     if (context.enable_edit_raw || not context.enable_apply_on_change)
     {
+        ImGui::PushStyleColor(ImGuiCol_Button, 0xff356b28);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xff55a142);
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xff67ba52);
         apply_changes = ImGui::Button("Apply##Edit Changes", {-1, 0});
+        ImGui::PopStyleColor(3);
     }
 
     ImGui::Separator();
@@ -560,6 +585,7 @@ static std::optional<nlohmann::json> prop_editor(
     }
 
     ImGui::EndChild();
+    *dirty |= has_change;
 
     if (not context.enable_edit_raw && context.enable_apply_on_change)
     {
@@ -578,6 +604,7 @@ static std::optional<nlohmann::json> prop_editor(
             }
         }
 
+        *dirty = false;
         return context.editing;
     }
 
@@ -650,11 +677,15 @@ void session_slot::_draw_category_recursive(
             continue;
         }
 
+        static bool is_dirty = false;
         char buf[256];
-        snprintf(buf, sizeof buf, "editing [%s]###Property Editor", elem.name.c_str());
+        snprintf(buf, sizeof buf,
+                 "editing [%s]%s###Property Editor",
+                 elem.name.c_str(),
+                 is_dirty ? "*" : "");
         ImGui::Begin(buf);
 
-        if (auto result = prop_editor(selected_item, elem))
+        if (auto result = prop_editor(&is_dirty, selected_item, elem))
         {
             _context->configure(target.name, elem.config_key, *result);
         }
