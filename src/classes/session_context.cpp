@@ -177,6 +177,9 @@ void session_context::_on_new_config_class(messages::outgoing::new_config_class 
 
 void session_context::_on_config_entity_update(messages::outgoing::config_entity const& payload)
 {
+    if (payload.content.empty())
+        return;
+
     for (auto& update : payload.content)
     {
         auto it = _entity_indexes.find(make_key(payload.class_key, update.config_key));

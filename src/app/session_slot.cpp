@@ -290,27 +290,135 @@ void session_slot::_title_string()
 }
 
 static bool prop_editor_recursive_impl(
-        nlohmann::json& e,
+        char const* label_base,
+        nlohmann::json* e,
         nlohmann::json const* min,
         nlohmann::json const* max)
 {
-    if (e.is_object())
+    bool has_change = false;
+
+    if (e->is_object() || e->is_array())
     {
-        for (auto& [key, value] : e.items())
+        auto find_ptr = [](auto from, auto key) {
+            nlohmann::json const* r = {};
+
+            if (from)
+                if (auto it = from->find(key); it != from->end())
+                {
+                    r = &*it;
+                }
+
+            return r;
+        };
+
+        for (auto& [key, value] : e->items())
         {
+            char label[256];
+            snprintf(label, sizeof label, "%s.%s", label_base, key.c_str());
+
             ImGui::PushStyleColor(ImGuiCol_Text, 0xffab8446);
             ImGui::Text(key.c_str());
-            ImGui::PushStyleColor(ImGuiCol_Text, 0xffffffff);
+            ImGui::PopStyleColor(1);
+
             ImGui::SameLine();
-            ImGui::Text(": ");
-            ImGui::PopStyleColor(2);
+            has_change |= prop_editor_recursive_impl(
+                    label,
+                    &value,
+                    find_ptr(min, key),
+                    find_ptr(max, key));
         }
     }
-    else if (e.is_array())
+    else if (e->is_boolean())
     {
+        has_change |= ImGui::Checkbox(label_base, e->get_ptr<bool*>());
+    }
+    else if (e->is_string())
+    {
+        auto str = e->get_ptr<std::string*>();
+
+        ImGui::SetNextItemWidth(-1);
+        has_change |= ImGui::InputTextMultiline(
+                label_base,
+                str->data(),
+                str->capacity(),
+                {},
+                ImGuiInputTextFlags_CallbackResize,
+                [](ImGuiInputTextCallbackData* data) -> int {
+                    if (data->EventFlag == ImGuiInputTextFlags_CallbackResize)
+                    {
+                        auto str = static_cast<std::string*>(data->UserData);
+                        str->reserve(data->BufSize);
+                        data->Buf = str->data();
+                    }
+
+                    return 0;
+                },
+                str);
+
+        if (has_change)
+        {
+            // 1. str을 dynamic buffer 대용으로 사용 중.
+            // 2. 버퍼 크기보다 크게 resize 시
+            static std::string copy_buf;
+            auto len = strlen(str->c_str());
+
+            if (len > str->size())
+            {
+                copy_buf = str->data() + str->size();
+                str->append(copy_buf.begin(), copy_buf.end());
+            }
+            else
+            {
+                str->resize(len);
+            }
+        }
+    }
+    else if (e->is_number())
+    {
+        void* ptr;
+        void const *pmin = {}, *pmax = {};
+        int data_type = 0;
+
+        if (e->is_number_integer())
+        {
+            ptr = e->get_ptr<int64_t*>();
+            min && (pmin = min->get_ptr<int64_t const*>());
+            max && (pmax = max->get_ptr<int64_t const*>());
+            data_type = ImGuiDataType_S64;
+        }
+        else if (e->is_number_float())
+        {
+            ptr = e->get_ptr<double*>();
+            min && (pmin = min->get_ptr<double const*>());
+            max && (pmax = max->get_ptr<double const*>());
+            data_type = ImGuiDataType_Double;
+        }
+
+        ImGui::SetNextItemWidth(-1);
+
+        if (pmin && pmax)
+        {
+            has_change |= ImGui::SliderScalar(label_base, data_type, ptr, pmin, pmax);
+        }
+        else
+        {
+            has_change |= ImGui::DragScalar(label_base, data_type, ptr, 1, pmin, pmax);
+        }
+    }
+    else if (e->is_binary())
+    {
+        ImGui::Text("<binary>");
+    }
+    else if (e->is_null())
+    {
+        ImGui::Text("<null>");
+    }
+    else
+    {
+        ImGui::Text("-- invalid --");
     }
 
-    return false;
+    return has_change;
 }
 
 static std::optional<nlohmann::json> prop_editor(
@@ -333,10 +441,17 @@ static std::optional<nlohmann::json> prop_editor(
     if (item_key == 0)
         return {};
 
+    auto force_refresh = ImGui::Button("Refresh##PropEdit");
+    ImGui::SameLine();
+
     if (is_changed)
     {
         context.editing         = e.value;
         context.enable_edit_raw = false;
+    }
+    else if (force_refresh)
+    {
+        context.editing = e.value;
     }
 
     ImGui::BeginDisabled(context.enable_edit_raw);
@@ -362,6 +477,15 @@ static std::optional<nlohmann::json> prop_editor(
             }
         }
     }
+
+    bool apply_changes = false;
+    if (context.enable_edit_raw || not context.enable_apply_on_change)
+    {
+        apply_changes = ImGui::Button("Apply##Edit Changes", {-1, 0});
+    }
+
+    ImGui::Separator();
+    ImGui::BeginChild("Editor Child");
 
     if (context.enable_edit_raw)
     {
@@ -417,7 +541,13 @@ static std::optional<nlohmann::json> prop_editor(
                     sample = elem.dump();
 
                     if (ImGui::Selectable(sample.c_str()))
+                    {
                         context.combo_value = sample;
+                        context.editing     = nlohmann::json::parse(context.combo_value);
+                        context.editing_raw = context.combo_value;
+
+                        has_change = true;
+                    }
                 }
 
                 ImGui::EndCombo();
@@ -425,15 +555,11 @@ static std::optional<nlohmann::json> prop_editor(
         }
         else
         {
-            has_change |= prop_editor_recursive_impl(context.editing, min, max);
+            has_change |= prop_editor_recursive_impl("##EDIT_PROPERTY", &context.editing, min, max);
         }
     }
 
-    bool apply_changes = false;
-    if (context.enable_edit_raw || not context.enable_apply_on_change)
-    {
-        apply_changes = ImGui::Button("Apply##Edit Changes", {-1, 0});
-    }
+    ImGui::EndChild();
 
     if (not context.enable_edit_raw && context.enable_apply_on_change)
     {
@@ -497,8 +623,8 @@ void session_slot::_draw_category_recursive(
             ImGui::PopTextWrapPos();
         }
 
-        ImGui::SameLine(); 
-        ImGui::PushStyleColor( 
+        ImGui::SameLine();
+        ImGui::PushStyleColor(
                 ImGuiCol_Text,
                 elem.value.is_number() || elem.value.is_boolean() ? 0xff56bf6f
                 : elem.value.is_string()                          ? 0xff4c87c7
@@ -507,9 +633,9 @@ void session_slot::_draw_category_recursive(
         if (not elem.value.is_structured())
             ImGui::Text(elem.value.dump().c_str());
         else if (elem.value.is_array())
-            ImGui::Text("[array]");
+            ImGui::Text("[array] - %d args", elem.value.size());
         else
-            ImGui::Text("[object]");
+            ImGui::Text("[object] - %d entries", elem.value.size());
 
         ImGui::PopStyleColor();
 
@@ -524,15 +650,15 @@ void session_slot::_draw_category_recursive(
             continue;
         }
 
-        ImGui::TreePush();
-        ImGui::SeparatorEx(ImGuiSeparatorFlags_Horizontal | ImGuiSeparatorFlags_SpanAllColumns);
+        char buf[256];
+        snprintf(buf, sizeof buf, "editing [%s]###Property Editor", elem.name.c_str());
+        ImGui::Begin(buf);
 
         if (auto result = prop_editor(selected_item, elem))
         {
             _context->configure(target.name, elem.config_key, *result);
         }
 
-        ImGui::Separator();
-        ImGui::TreePop();
+        ImGui::End();
     }
 }

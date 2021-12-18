@@ -127,7 +127,7 @@ asio::io_context& ioc_net()
 
 void post_event(perfkit::function<void()> evt)
 {
-    asio::post(std::move(evt));
+    asio::post(_context.ioc_evt, std::move(evt));
 }
 
 static bool _show_sessions_list = true;
