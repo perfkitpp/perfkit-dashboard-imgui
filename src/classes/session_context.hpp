@@ -23,6 +23,7 @@ class session_context
     session_context(connection_ptr conn);
     void login(std::string_view id, std::string_view pw);
     void push_command(std::string_view command);
+    void configure(std::string_view class_key, uint64_t key, nlohmann::json const& new_value);
 
     session_connection_state status() const noexcept { return _conn->status(); }
     info_type const* info() const noexcept;

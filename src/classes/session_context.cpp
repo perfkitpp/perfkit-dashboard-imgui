@@ -44,6 +44,17 @@ void session_context::push_command(std::string_view command)
     _conn->send(cmd);
 }
 
+void session_context::configure(
+        std::string_view class_key,
+        uint64_t key,
+        nlohmann::json const& new_value)
+{
+    incoming::configure_entity conf;
+    conf.class_key = class_key;
+    conf.content.push_back({key, new_value});
+    _conn->send(conf);
+}
+
 session_context::info_type const* session_context::info() const noexcept
 {
     return _info.has_value() ? &_info.value() : nullptr;

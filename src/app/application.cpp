@@ -115,6 +115,11 @@ void update()
     gui::_render_windows();
 }
 
+void push_message_0(message_level level, std::string content)
+{
+    // TODO
+}
+
 asio::io_context& ioc_net()
 {
     return _context.ioc_net;
@@ -213,6 +218,7 @@ void gui::_draw_session_list()
                     if (not url.empty() && is_unique)
                     {
                         SPDLOG_INFO("new connection candidate {} added.", url);
+                        push_message(message_level::info, "new connection candidate {} added.", url);
                         _context.sessions.emplace_back(std::move(url), false);
 
                         _refresh_session_list_backup();

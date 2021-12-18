@@ -171,7 +171,8 @@ void session_slot::render_on_list()
         }
         break;
 
-        default:;
+        default:
+            break;
     }
 }
 
@@ -288,10 +289,172 @@ void session_slot::_title_string()
         throw session_slot_close{this};
 }
 
+static bool prop_editor_recursive_impl(
+        nlohmann::json& e,
+        nlohmann::json const* min,
+        nlohmann::json const* max)
+{
+    if (e.is_object())
+    {
+        for (auto& [key, value] : e.items())
+        {
+            ImGui::PushStyleColor(ImGuiCol_Text, 0xffab8446);
+            ImGui::Text(key.c_str());
+            ImGui::PushStyleColor(ImGuiCol_Text, 0xffffffff);
+            ImGui::SameLine();
+            ImGui::Text(": ");
+            ImGui::PopStyleColor(2);
+        }
+    }
+    else if (e.is_array())
+    {
+    }
+
+    return false;
+}
+
 static std::optional<nlohmann::json> prop_editor(
-        uint64_t context,
+        uint64_t item_key,
         session_context::config_entity_type const& e)
 {
+    static uint64_t selected_item = 0;
+    bool const is_changed         = selected_item != item_key;
+    selected_item                 = item_key;
+
+    static struct _context_data_t
+    {
+        nlohmann::json editing;
+        std::string editing_raw;
+        std::string combo_value;
+        bool enable_apply_on_change = false;
+        bool enable_edit_raw        = false;
+    } context;
+
+    if (item_key == 0)
+        return {};
+
+    if (is_changed)
+    {
+        context.editing         = e.value;
+        context.enable_edit_raw = false;
+    }
+
+    ImGui::BeginDisabled(context.enable_edit_raw);
+    ImGui::Checkbox("Apply On Change", &context.enable_apply_on_change);
+    ImGui::EndDisabled();
+    ImGui::SameLine();
+
+    bool has_change = false;
+
+    if (ImGui::Checkbox("Edit Raw", &context.enable_edit_raw))
+    {
+        if (context.enable_edit_raw)
+        {
+            context.editing_raw = context.editing.dump(2);
+        }
+        else
+        {
+            context.editing = nlohmann::json::parse(context.editing_raw, nullptr, false);
+
+            if (context.editing.is_discarded())
+            {
+                context.editing = e.value;
+            }
+        }
+    }
+
+    if (context.enable_edit_raw)
+    {
+        ImGui::SetNextItemWidth(-1);
+        has_change |= ImGui::InputTextMultiline(
+                "Edit Raw ##box",
+                context.editing_raw.data(),
+                context.editing_raw.size() + 1,
+                {},
+                ImGuiInputTextFlags_CallbackResize,
+                [](ImGuiInputTextCallbackData* data) -> int {
+                    if (data->EventFlag == ImGuiInputTextFlags_CallbackResize)
+                    {
+                        context.editing_raw.resize(data->BufSize + 1);
+                        data->Buf = context.editing_raw.data();
+                    }
+
+                    return 0;
+                });
+    }
+    else
+    {
+        nlohmann::json const *min = {}, *max = {}, *one_of = {};
+        auto find_ptr
+                = [&](auto key) {
+                      auto it = e.metadata.find(key);
+                      nlohmann::json const* rval;
+
+                      if (it != e.metadata.end())
+                          rval = &*it;
+                      else
+                          rval = nullptr;
+
+                      return rval;
+                  };
+
+        min    = find_ptr("min");
+        max    = find_ptr("max");
+        one_of = find_ptr("one_of");
+
+        if (one_of && one_of->is_array())
+        {
+            ImGui::SetNextItemWidth(-1);
+            if (ImGui::BeginCombo("##Edit Combo", context.combo_value.c_str()))
+            {
+                std::string sample;
+                sample.reserve(context.combo_value.capacity());
+
+                ImGui::SetItemDefaultFocus();
+
+                for (auto& elem : *one_of)
+                {
+                    sample = elem.dump();
+
+                    if (ImGui::Selectable(sample.c_str()))
+                        context.combo_value = sample;
+                }
+
+                ImGui::EndCombo();
+            }
+        }
+        else
+        {
+            has_change |= prop_editor_recursive_impl(context.editing, min, max);
+        }
+    }
+
+    bool apply_changes = false;
+    if (context.enable_edit_raw || not context.enable_apply_on_change)
+    {
+        apply_changes = ImGui::Button("Apply##Edit Changes", {-1, 0});
+    }
+
+    if (not context.enable_edit_raw && context.enable_apply_on_change)
+    {
+        apply_changes |= has_change;
+    }
+
+    if (apply_changes)
+    {
+        if (context.enable_edit_raw)
+        {
+            context.editing = nlohmann::json::parse(context.editing_raw, nullptr, false);
+
+            if (context.editing.is_discarded())
+            {
+                return {};
+            }
+        }
+
+        return context.editing;
+    }
+
     return {};
 }
 
@@ -314,7 +477,7 @@ void session_slot::_draw_category_recursive(
 
     for (auto& elem : target.entities)
     {
-        bool render_modify_view = elem.config_key == selected_item;
+        const bool render_modify_view = elem.config_key == selected_item;
 
         ImGui::PushStyleColor(
                 ImGuiCol_Text,
@@ -334,8 +497,8 @@ void session_slot::_draw_category_recursive(
             ImGui::PopTextWrapPos();
         }
 
-        ImGui::SameLine();
-        ImGui::PushStyleColor(
+        ImGui::SameLine(); 
+        ImGui::PushStyleColor( 
                 ImGuiCol_Text,
                 elem.value.is_number() || elem.value.is_boolean() ? 0xff56bf6f
                 : elem.value.is_string()                          ? 0xff4c87c7
@@ -362,12 +525,14 @@ void session_slot::_draw_category_recursive(
         }
 
         ImGui::TreePush();
-        auto result = prop_editor(selected_item, elem);
+        ImGui::SeparatorEx(ImGuiSeparatorFlags_Horizontal | ImGuiSeparatorFlags_SpanAllColumns);
 
-        if (result)
+        if (auto result = prop_editor(selected_item, elem))
         {
-            // TODO: send modify request
+            _context->configure(target.name, elem.config_key, *result);
         }
+
+        ImGui::Separator();
         ImGui::TreePop();
     }
 }
