@@ -7,11 +7,13 @@
 #include "perfkit/common/utility/cleanup.hxx"
 #include "spdlog/spdlog.h"
 
+using namespace std::literals;
+
 session_slot::session_slot(std::string url, bool from_apiserver)
         : _url(std::move(url)),
           _from_apiserver(from_apiserver)
 {
-    _command.resize(8192);
+    _history.emplace_back();
 }
 
 void session_slot::render_on_list()
@@ -205,24 +207,152 @@ void session_slot::render_windows()
         ImGui::Checkbox("Scroll Lock", &_scroll_lock);
 
         ImGui::PushItemWidth(-1);
+
+        auto* current_command = &_history.back();
+        if (current_command->size() < 1024)
+            current_command->resize(1024);
+
+        auto* command  = current_command->data();
         bool has_enter = ImGui::InputTextWithHint(
                 _key("SHELLIN:{}", _url), "$ enter command here",
-                _command.data(), _command.size(),
+                command, current_command->size() - 1,
                 ImGuiInputTextFlags_CallbackCompletion
                         | ImGuiInputTextFlags_CallbackHistory
-                        | ImGuiInputTextFlags_EnterReturnsTrue,
+                        | ImGuiInputTextFlags_EnterReturnsTrue
+                        | ImGuiInputTextFlags_CallbackCharFilter
+                        | ImGuiInputTextFlags_CallbackAlways,
                 [](ImGuiInputTextCallbackData* data) -> int {
                     // TODO: history,
                     // TODO: autocomplete on tab key
+                    auto self = (session_slot*)data->UserData;
+
+                    if (data->EventFlag == ImGuiInputTextFlags_CallbackCompletion)
+                    {
+                        try
+                        {
+                            self->_active_suggest.reset();
+                            self->_waiting_suggest = self->_context->suggest_command(
+                                    data->Buf, data->BufTextLen);
+                        }
+                        catch (std::future_error& e)
+                        {
+                            SPDLOG_INFO(e.what());
+                        }
+                    }
+                    else if (data->EventFlag == ImGuiInputTextFlags_CallbackHistory)
+                    {
+                        auto* pcursor = &self->_history_cursor;
+                        self->_active_suggest.reset();
+
+                        if (data->EventKey == ImGuiKey_UpArrow)
+                        {
+                            ++*pcursor;
+                        }
+                        else if (data->EventKey == ImGuiKey_DownArrow)
+                        {
+                            --*pcursor;
+                        }
+
+                        *pcursor = std::clamp<int64_t>(
+                                *pcursor, 0, self->_history.size() - 1);
+
+                        data->DeleteChars(0, data->BufTextLen);
+                        data->InsertChars(0, self->_history.end()[-1 - *pcursor].c_str());
+                    }
+                    else if (data->EventFlag == ImGuiInputTextFlags_CallbackCharFilter)
+                    {
+                        if (data->EventChar == L' ')
+                        {
+                            self->_active_suggest.reset();
+                        }
+
+                        return 0;
+                    }
+                    else if (
+                            self->_waiting_suggest.valid()
+                            && self->_waiting_suggest.wait_for(0ms) == std::future_status::ready)
+                    {
+                        try
+                        {
+                            self->_active_suggest.reset();
+                            self->_active_suggest = self->_waiting_suggest.get();
+
+                            data->DeleteChars(0, data->BufTextLen);
+                            data->InsertChars(0, self->_active_suggest->new_command.c_str());
+                        }
+                        catch (std::future_error& e)
+                        {
+                            SPDLOG_INFO(e.what());
+                        }
+                    }
+
+                    self->_cmd_prev_cursor = data->CursorPos;
                     return 1;
                 },
                 this);
 
+        if (_active_suggest && not _active_suggest->candidates.empty())
+        {
+            std::string_view last_word = command;
+            auto i_space               = last_word.find_last_of(' ');
+
+            if (i_space != ~size_t{})
+                last_word = last_word.substr(i_space + 1);
+
+            auto where = ImGui::GetItemRectMin();
+            where.y += 20;
+            where.x += ImGui::CalcTextSize(command, command + i_space).x;
+            ImGui::SetNextWindowPos(where);
+            ImGui::SetNextWindowBgAlpha(0.3);
+            ImGui::Begin("AUTOCOMPLETE_POPUP", nullptr,
+                         ImGuiWindowFlags_NoDecoration
+                                 | ImGuiWindowFlags_AlwaysAutoResize
+                                 | ImGuiWindowFlags_NoNavFocus
+                                 | ImGuiWindowFlags_NoInputs
+                                 | ImGuiWindowFlags_NoMouseInputs
+                                 | ImGuiWindowFlags_NoFocusOnAppearing);
+
+            bool has_any_match = false;
+            for (std::string_view suggest : _active_suggest->candidates)
+            {
+                if (suggest.find(last_word) == 0)
+                {
+                    ImGui::PushStyleColor(ImGuiCol_Text, 0xff45fc42);
+                    ImGui::TextEx(last_word.data(), last_word.data() + last_word.size());
+                    ImGui::PopStyleColor();
+                    ImGui::SameLine(0, 0);
+                    ImGui::TextEx(suggest.data() + last_word.size(), suggest.data() + suggest.size());
+
+                    has_any_match |= true;
+                }
+            }
+
+            if (not has_any_match)
+                _active_suggest.reset();
+
+            ImGui::End();
+        }
+        else
+        {
+            _active_suggest.reset();
+        }
+
         if (has_enter)
         {  // TODO: submit command
             ImGui::SetKeyboardFocusHere(-1);
-            _context->push_command(_command.c_str());
-            _command[0] = '\0';
+            current_command->resize(strlen(current_command->c_str()));
+
+            if (not current_command->empty())
+            {
+                _context->push_command(*current_command);
+
+                if (_history.size() > 2 && _history.end()[-1] == _history.end()[-2])
+                    (*current_command)[0] = '\0';
+                else
+                    _history.emplace_back();
+
+                _history_cursor = 0;
+            }
         }
         ImGui::PopItemWidth();
     }
@@ -446,8 +576,8 @@ static std::optional<nlohmann::json> prop_editor(
         nlohmann::json editing;
         std::string editing_raw;
         std::string combo_value;
-        bool enable_apply_on_change = false;
-        bool enable_edit_raw        = false;
+        bool mode_apply_on_change = false;
+        bool mode_edit_raw        = false;
     } context;
 
     if (item_key == 0)
@@ -458,14 +588,14 @@ static std::optional<nlohmann::json> prop_editor(
 
     if (is_changed)
     {
-        *dirty                  = false;
-        context.editing         = e.value;
-        context.enable_edit_raw = false;
+        *dirty                = false;
+        context.editing       = e.value;
+        context.mode_edit_raw = false;
     }
     else if (force_refresh)
     {
         *dirty = false;
-        if (context.enable_edit_raw)
+        if (context.mode_edit_raw)
         {
             context.editing_raw = e.value.dump(2);
         }
@@ -475,16 +605,16 @@ static std::optional<nlohmann::json> prop_editor(
         }
     }
 
-    ImGui::BeginDisabled(context.enable_edit_raw);
-    ImGui::Checkbox("Apply On Change", &context.enable_apply_on_change);
+    ImGui::BeginDisabled(context.mode_edit_raw);
+    ImGui::Checkbox("Apply On Change", &context.mode_apply_on_change);
     ImGui::EndDisabled();
     ImGui::SameLine();
 
     bool has_change = false;
 
-    if (ImGui::Checkbox("Edit Raw", &context.enable_edit_raw))
+    if (ImGui::Checkbox("Edit Raw", &context.mode_edit_raw))
     {
-        if (context.enable_edit_raw)
+        if (context.mode_edit_raw)
         {
             context.editing_raw = context.editing.dump(2);
         }
@@ -500,7 +630,7 @@ static std::optional<nlohmann::json> prop_editor(
     }
 
     bool apply_changes = false;
-    if (context.enable_edit_raw || not context.enable_apply_on_change)
+    if (context.mode_edit_raw || not context.mode_apply_on_change)
     {
         ImGui::PushStyleColor(ImGuiCol_Button, 0xff356b28);
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xff55a142);
@@ -512,7 +642,7 @@ static std::optional<nlohmann::json> prop_editor(
     ImGui::Separator();
     ImGui::BeginChild("Editor Child");
 
-    if (context.enable_edit_raw)
+    if (context.mode_edit_raw)
     {
         ImGui::SetNextItemWidth(-1);
         has_change |= ImGui::InputTextMultiline(
@@ -587,14 +717,14 @@ static std::optional<nlohmann::json> prop_editor(
     ImGui::EndChild();
     *dirty |= has_change;
 
-    if (not context.enable_edit_raw && context.enable_apply_on_change)
+    if (not context.mode_edit_raw && context.mode_apply_on_change)
     {
         apply_changes |= has_change;
     }
 
     if (apply_changes)
     {
-        if (context.enable_edit_raw)
+        if (context.mode_edit_raw)
         {
             context.editing = nlohmann::json::parse(context.editing_raw, nullptr, false);
 

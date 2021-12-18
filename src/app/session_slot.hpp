@@ -1,5 +1,6 @@
 #pragma once
 
+#include <perfkit/common/circular_queue.hxx>
 #include <perfkit/common/format.hxx>
 #include <perfkit/common/functional.hxx>
 #include <perfkit/common/macros.hxx>
@@ -52,8 +53,6 @@ class session_slot
      *       login request to remote server, and waits for server's reply.
      *      Thus if user entered invalid id/pw, simply nothing happens.
      *   4. After received 'epoch' message, show session information.
-     *
-     * \return true if selected
      */
     void render_on_list();
 
@@ -86,8 +85,8 @@ class session_slot
     bool _from_apiserver = false;
 
     //
-    bool _prompt_close   = false;
-    bool _has_focus = false;
+    bool _prompt_close = false;
+    bool _has_focus    = false;
 
     // entered id and password, which are cached only for single program instance
     char _id[256] = {}, _pw[256] = {};
@@ -100,10 +99,15 @@ class session_slot
 
     //
     perfkit::format_buffer _fmt;
+    perfkit::circular_queue<std::string> _history{63};
+    int64_t _history_cursor = 0;
+    int _cmd_prev_cursor    = 0;
+
+    // suggestions
+    std::future<messages::outgoing::suggest_command> _waiting_suggest;
+    std::optional<messages::outgoing::suggest_command> _active_suggest;
 
     // shell input
-    std::string _command;
     bool _scroll_lock   = false;
     bool _do_autoscroll = false;
-
 };

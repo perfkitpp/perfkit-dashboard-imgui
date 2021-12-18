@@ -1,4 +1,6 @@
 #pragma once
+#include <future>
+
 #include "if_session_connection.hpp"
 #include "messages.hpp"
 #include "perfkit/common/assert.hxx"
@@ -8,7 +10,7 @@
 
 struct session_context_message_marshal_error : std::exception
 {
-};
+}; 
 
 namespace messages = perfkit::terminal::net;
 
@@ -24,6 +26,8 @@ class session_context
     void login(std::string_view id, std::string_view pw);
     void push_command(std::string_view command);
     void configure(std::string_view class_key, uint64_t key, nlohmann::json const& new_value);
+    auto suggest_command(std::string command, int16_t position)
+            -> std::future<messages::outgoing::suggest_command>;
 
     session_connection_state status() const noexcept { return _conn->status(); }
     info_type const* info() const noexcept;
@@ -67,6 +71,7 @@ class session_context
     void _on_shell_output(messages::outgoing::shell_output const& payload);
     void _on_new_config_class(messages::outgoing::new_config_class const& payload);
     void _on_config_entity_update(messages::outgoing::config_entity const& payload);
+    void on_suggest_result(messages::outgoing::suggest_command const& payload);
 
    private:
     connection_ptr _conn;
@@ -74,6 +79,9 @@ class session_context
     perfkit::locked<std::string> _output;
     std::optional<info_type> _info;
     std::atomic_flag _shell_latest;
+
+    int64_t _waiting_suggest = 0;
+    std::optional<std::promise<messages::outgoing::suggest_command>> _suggest_promise;
 
     std::unordered_map<
             uint64_t,

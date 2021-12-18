@@ -19,6 +19,7 @@ session_context::session_context(connection_ptr conn)
     _install<outgoing::session_reset>(CPPH_BIND(_on_epoch));
     _install<outgoing::new_config_class>(CPPH_BIND(_on_new_config_class));
     _install<outgoing::config_entity>(CPPH_BIND(_on_config_entity_update));
+    _install<outgoing::suggest_command>(CPPH_BIND(on_suggest_result));
 }
 
 void session_context::login(std::string_view id, std::string_view pw)
@@ -52,7 +53,20 @@ void session_context::configure(
     incoming::configure_entity conf;
     conf.class_key = class_key;
     conf.content.push_back({key, new_value});
-    _conn->send(conf);
+    _conn->send(std::move(conf));
+}
+
+auto session_context::suggest_command(std::string command, int16_t position)
+        -> std::future<messages::outgoing::suggest_command>
+{
+    incoming::suggest_command cmd;
+    cmd.reply_to = ++_waiting_suggest;
+    cmd.position = position;
+    cmd.command  = std::move(command);
+    _conn->send(std::move(cmd));
+
+    _suggest_promise.reset();
+    return _suggest_promise.emplace().get_future();
 }
 
 session_context::info_type const* session_context::info() const noexcept
@@ -192,5 +206,13 @@ void session_context::_on_config_entity_update(messages::outgoing::config_entity
 
         // apply update
         it->second->value = update.value;
+    }
+}
+
+void session_context::on_suggest_result(messages::outgoing::suggest_command const& payload)
+{
+    if (payload.reply_to == _waiting_suggest)
+    {
+        _suggest_promise->set_value(payload);
     }
 }
