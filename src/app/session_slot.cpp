@@ -780,7 +780,7 @@ void session_slot::_draw_category_recursive(
         {
             ImGui::PushTextWrapPos(ImGui::GetWindowWidth());
             ImGui::BeginTooltip();
-            ImGui::Text(elem.metadata.dump(2).c_str());
+            ImGui::Text("%s", elem.metadata.dump(2).c_str());
             ImGui::EndTooltip();
             ImGui::PopTextWrapPos();
         }
@@ -795,9 +795,9 @@ void session_slot::_draw_category_recursive(
         if (not elem.value.is_structured())
             ImGui::Text(elem.value.dump().c_str());
         else if (elem.value.is_array())
-            ImGui::Text("[array] - %d args", elem.value.size());
+            ImGui::Text("[array] - %llu args", elem.value.size());
         else
-            ImGui::Text("[object] - %d entries", elem.value.size());
+            ImGui::Text("[object] - %llu entries", elem.value.size());
 
         ImGui::PopStyleColor();
 

@@ -46,10 +46,10 @@ bool Spinner(const char* label, const ImU32& color, float radius, int thickness)
     return true;
 }
 
-void ImGui::LoadingIndicatorCircle(const char* label,
-                                   const ImVec4& main_color, const ImVec4& backdrop_color,
-                                   const float indicator_radius,
-                                   const int circle_count, const float speed)
+void LoadingIndicatorCircle(const char* label,
+                            const ImVec4& main_color, const ImVec4& backdrop_color,
+                            const float indicator_radius,
+                            const int circle_count, const float speed)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
