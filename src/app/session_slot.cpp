@@ -445,7 +445,7 @@ static bool prop_editor_recursive_impl(
             return r;
         };
 
-        ImGui::Text("<object>");
+        ImGui::Text(e->is_object() ? "<object>" : "<array>");
         ImGui::TreePush();
 
         for (auto& [key, value] : e->items())

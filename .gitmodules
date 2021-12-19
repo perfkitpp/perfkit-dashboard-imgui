@@ -4,3 +4,6 @@
 [submodule "third/perfkit"]
 	path = third/perfkit
 	url = git@github.com:perfkitpp/perfkit.git
+[submodule "third/ImGuiColorTextEdit"]
+	path = third/ImGuiColorTextEdit
+	url = git@github.com:BalazsJako/ImGuiColorTextEdit.git
