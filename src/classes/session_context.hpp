@@ -22,7 +22,7 @@ class session_context
     using config_entity_type = messages::outgoing::new_config_class::entity_scheme;
 
    public:
-    session_context(connection_ptr conn);
+    explicit session_context(connection_ptr conn);
     void login(std::string_view id, std::string_view pw);
     void push_command(std::string_view command);
     void configure(std::string_view class_key, uint64_t key, nlohmann::json const& new_value);
@@ -33,7 +33,23 @@ class session_context
     info_type const* info() const noexcept;
     auto const& configs() const noexcept { return _configs; }
 
-    auto& shell_output() const { return _output; }
+    std::string_view shell_output(size_t* fence = nullptr) const
+    {
+        if (fence)
+        {
+            assert_(*fence <= _output_fence);
+
+            auto diff = _output_fence - *fence;
+            diff      = std::min(diff, _output.size());
+            *fence    = _output_fence;
+            return std::string_view{_output}.substr(_output.size() - diff);
+        }
+        else
+        {
+            return _output;
+        }
+    }
+
     bool consume_recv_char() { return not _shell_latest.test_and_set(); }
 
    private:
@@ -77,6 +93,8 @@ class session_context
     connection_ptr _conn;
 
     std::string _output;
+    size_t _output_fence = 0;
+
     std::optional<info_type> _info;
     std::atomic_flag _shell_latest;
 

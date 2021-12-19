@@ -6,6 +6,7 @@
 #include "imgui_internal.h"
 #include "perfkit/common/utility/cleanup.hxx"
 #include "spdlog/spdlog.h"
+#include "utility.hpp"
 
 using namespace std::literals;
 
@@ -14,6 +15,7 @@ session_slot::session_slot(std::string url, bool from_apiserver)
           _from_apiserver(from_apiserver)
 {
     _history.emplace_back();
+    _shello.SetShowWhitespaces(false);
 }
 
 void session_slot::render_on_list()
@@ -132,6 +134,9 @@ void session_slot::render_on_list()
         {
             if (_context->status() == session_connection_state::invalid)
             {
+                _shello_fence = 0;
+                _shello.SetText({});
+
                 _context = {};
                 _state   = state::disconnected;
                 break;
@@ -185,15 +190,17 @@ void session_slot::render_windows()
 
     bool keep_open = true;
     if (ImGui::Begin(_terminal_window_name(), &keep_open))
-    {
+    {  // Shell output
         _has_focus = ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows);
 
         ImGui::BeginChild(_key("SHELLOUT:{}", _url), {-1, -48}, true,
                           ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_AlwaysHorizontalScrollbar);
+        {
+            if (auto s = _context->shell_output(&_shello_fence); not s.empty())
+                xterm_colorized_append(&_shello, s);
 
-        [&](std::string const& s) {
-            ImGui::TextUnformatted(s.c_str(), s.c_str() + s.size());
-        }(_context->shell_output());
+            _shello.Render(_key("Terminal:{}", _url));
+        }
 
         if (_do_autoscroll)
             ImGui::SetScrollY(ImGui::GetScrollMaxY()), _do_autoscroll = false;
@@ -205,6 +212,7 @@ void session_slot::render_windows()
 
         ImGui::Checkbox("Scroll Lock", &_scroll_lock);
 
+        // Commandline
         ImGui::PushItemWidth(-1);
 
         auto* current_command = &_history.back();

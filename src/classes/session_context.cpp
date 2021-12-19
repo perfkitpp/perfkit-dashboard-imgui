@@ -127,6 +127,7 @@ void session_context::_on_shell_output(messages::outgoing::shell_output const& m
     }
 
     s.append(str);
+    _output_fence += str.size();
     _shell_latest.clear();
 }
 

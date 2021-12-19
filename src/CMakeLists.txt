@@ -5,13 +5,16 @@ set(
 
         main.cpp
         imgui-extension.cpp
+        platform.cpp
+
         ../third/imgui/imgui_demo.cpp
 
         app/session_slot.cpp
         app/application.cpp
+        app/utility.cpp
+
         classes/session_context.cpp
         classes/connection/plain_tcp.cpp
-        platform.cpp
 )
 
 if (MSVC)

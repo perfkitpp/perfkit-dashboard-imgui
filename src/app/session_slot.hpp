@@ -103,6 +103,7 @@ class session_slot
     perfkit::circular_queue<std::string> _history{63};
     int64_t _history_cursor = 0;
     int _cmd_prev_cursor    = 0;
+    size_t _shello_fence    = 0;
     TextEditor _shello;
 
     // suggestions
