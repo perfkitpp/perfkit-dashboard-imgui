@@ -149,7 +149,7 @@ void session_slot::render_on_list()
                 _context = {};
                 _trace_context.reset();
 
-                _state   = state::disconnected;
+                _state = state::disconnected;
                 break;
             }
 
@@ -255,14 +255,10 @@ void session_slot::_draw_shell()
 {
     this->_has_focus = ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows);
 
-    ImGui::BeginChild(this->_key("SHELLOUT:{}", this->_url), {-1, -48}, true,
-                      ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_AlwaysHorizontalScrollbar);
-    {
-        if (auto s = this->_context->shell_output(&this->_shello_fence); not s.empty())
-            xterm_colorized_append(&this->_shello, s);
+    if (auto s = this->_context->shell_output(&this->_shello_fence); not s.empty())
+        xterm_colorized_append(&this->_shello, s);
 
-        this->_shello.Render(this->_key("Terminal:{}", this->_url));
-    }
+    this->_shello.Render(this->_key("Terminal:{}", this->_url), {-1, -40}, true);
 
     if (this->_do_autoscroll)
     {
@@ -273,8 +269,6 @@ void session_slot::_draw_shell()
 
     if (this->_context->consume_recv_char() && not this->_scroll_lock)
         this->_do_autoscroll = true;
-
-    ImGui::EndChild();
 
     ImGui::Checkbox("Scroll Lock", &this->_scroll_lock);
 
