@@ -110,6 +110,7 @@ void session_slot::render_on_list()
             if (_context->info())
             {
                 _state = state::valid;
+                _trace_context.emplace(_url, &*_context);
             }
             if (_context->status() == session_connection_state::invalid)
             {
@@ -142,7 +143,12 @@ void session_slot::render_on_list()
                 _shello_fence = 0;
                 _shello.SetText({});
 
+                // since _trace_context's pending future results depends on
+                //  context's promises, context must be disposed first to incur
+                //  'future_error' when disposing trace_context.
                 _context = {};
+                _trace_context.reset();
+
                 _state   = state::disconnected;
                 break;
             }
@@ -195,203 +201,45 @@ void session_slot::render_windows()
 
     bool keep_open = true;
     if (ImGui::Begin(_terminal_window_name(), &keep_open))
-    {  // Shell output
-        _has_focus = ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows);
+        _draw_shell();
 
-        ImGui::BeginChild(_key("SHELLOUT:{}", _url), {-1, -48}, true,
-                          ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_AlwaysHorizontalScrollbar);
-        {
-            if (auto s = _context->shell_output(&_shello_fence); not s.empty())
-                xterm_colorized_append(&_shello, s);
-
-            _shello.Render(_key("Terminal:{}", _url));
-        }
-
-        if (_do_autoscroll)
-        {
-            _shello.MoveBottom();
-            _shello.MoveEnd();
-            ImGui::SetScrollY(ImGui::GetScrollMaxY()), _do_autoscroll = false;
-        }
-
-        if (_context->consume_recv_char() && not _scroll_lock)
-            _do_autoscroll = true;
-
-        ImGui::EndChild();
-
-        ImGui::Checkbox("Scroll Lock", &_scroll_lock);
-
-        // Commandline
-        ImGui::PushItemWidth(-1);
-
-        auto* current_command = &_history.back();
-        if (current_command->size() < 1024)
-            current_command->resize(1024);
-
-        auto* command  = current_command->data();
-        bool has_enter = ImGui::InputTextWithHint(
-                _key("SHELLIN:{}", _url), "$ enter command here",
-                command, current_command->size() - 1,
-                ImGuiInputTextFlags_CallbackCompletion
-                        | ImGuiInputTextFlags_CallbackHistory
-                        | ImGuiInputTextFlags_EnterReturnsTrue
-                        | ImGuiInputTextFlags_CallbackCharFilter
-                        | ImGuiInputTextFlags_CallbackAlways,
-                [](ImGuiInputTextCallbackData* data) -> int {
-                    // TODO: history,
-                    // TODO: autocomplete on tab key
-                    auto self = (session_slot*)data->UserData;
-
-                    if (data->EventFlag == ImGuiInputTextFlags_CallbackCompletion)
-                    {
-                        try
-                        {
-                            self->_active_suggest.reset();
-                            self->_waiting_suggest = self->_context->suggest_command(
-                                    data->Buf, data->BufTextLen);
-                        }
-                        catch (std::future_error& e)
-                        {
-                            SPDLOG_INFO(e.what());
-                        }
-                    }
-                    else if (data->EventFlag == ImGuiInputTextFlags_CallbackHistory)
-                    {
-                        auto* pcursor = &self->_history_cursor;
-                        self->_active_suggest.reset();
-
-                        if (data->EventKey == ImGuiKey_UpArrow)
-                        {
-                            ++*pcursor;
-                        }
-                        else if (data->EventKey == ImGuiKey_DownArrow)
-                        {
-                            --*pcursor;
-                        }
-
-                        *pcursor = std::clamp<int64_t>(
-                                *pcursor, 0, self->_history.size() - 1);
-
-                        data->DeleteChars(0, data->BufTextLen);
-                        data->InsertChars(0, self->_history.end()[-1 - *pcursor].c_str());
-                    }
-                    else if (data->EventFlag == ImGuiInputTextFlags_CallbackCharFilter)
-                    {
-                        if (data->EventChar == L' ')
-                        {
-                            self->_active_suggest.reset();
-                        }
-
-                        return 0;
-                    }
-                    else if (
-                            self->_waiting_suggest.valid()
-                            && self->_waiting_suggest.wait_for(0ms) == std::future_status::ready)
-                    {
-                        try
-                        {
-                            self->_active_suggest.reset();
-                            self->_active_suggest = self->_waiting_suggest.get();
-
-                            data->DeleteChars(0, data->BufTextLen);
-                            data->InsertChars(0, self->_active_suggest->new_command.c_str());
-                        }
-                        catch (std::future_error& e)
-                        {
-                            SPDLOG_INFO(e.what());
-                        }
-                    }
-
-                    self->_cmd_prev_cursor = data->CursorPos;
-                    return 1;
-                },
-                this);
-
-        if (_active_suggest && not _active_suggest->candidates.empty())
-        {
-            std::string_view last_word = command;
-            auto i_space               = last_word.find_last_of(' ');
-
-            if (i_space != ~size_t{})
-                last_word = last_word.substr(i_space + 1);
-
-            auto where = ImGui::GetItemRectMin();
-            where.y += 20;
-            where.x += ImGui::CalcTextSize(command, command + i_space).x;
-            ImGui::SetNextWindowPos(where);
-            ImGui::SetNextWindowBgAlpha(0.6);
-            ImGui::Begin("AUTOCOMPLETE_POPUP", nullptr,
-                         ImGuiWindowFlags_NoDecoration
-                                 | ImGuiWindowFlags_AlwaysAutoResize
-                                 | ImGuiWindowFlags_NoNavFocus
-                                 | ImGuiWindowFlags_NoInputs
-                                 | ImGuiWindowFlags_NoMouseInputs
-                                 | ImGuiWindowFlags_NoFocusOnAppearing);
-
-            bool has_any_match = false;
-            for (std::string_view suggest : _active_suggest->candidates)
-            {
-                if (suggest.find(last_word) == 0)
-                {
-                    ImGui::PushStyleColor(ImGuiCol_Text, 0xff45fc42);
-                    ImGui::TextEx(last_word.data(), last_word.data() + last_word.size());
-                    ImGui::PopStyleColor();
-                    ImGui::SameLine(0, 0);
-                    ImGui::TextEx(suggest.data() + last_word.size(), suggest.data() + suggest.size());
-
-                    has_any_match |= true;
-                }
-            }
-
-            if (not has_any_match)
-                _active_suggest.reset();
-
-            ImGui::End();
-        }
-        else
-        {
-            _active_suggest.reset();
-        }
-
-        if (has_enter)
-        {  // TODO: submit command
-            ImGui::SetKeyboardFocusHere(-1);
-            current_command->resize(strlen(current_command->c_str()));
-
-            if (not current_command->empty())
-            {
-                _context->push_command(*current_command);
-
-                if (_history.size() > 2 && _history.end()[-1] == _history.end()[-2])
-                    (*current_command)[0] = '\0';
-                else
-                    _history.emplace_back();
-
-                _history_cursor = 0;
-            }
-        }
-        ImGui::PopItemWidth();
-    }
     ImGui::End();
 
     static session_slot* selected_session = nullptr;
 
-    if (ImGui::Begin("Configurations") && selected_session == this)
+    if (selected_session == this)
     {  // Visualize configuration category
-        ImGui::Text(_key("{}@{}", _context->info()->name, _url));
-
-        ImGui::BeginChild("");
-        auto& conf = _context->configs();
-        for (auto& [name, category] : conf)
+        if (ImGui::Begin("Configurations"))
         {
-            if (ImGui::CollapsingHeader(_key("{}##{}", name, _url)))
+            ImGui::TextEx(_key("{}@{}", _context->info()->name, _url));
+
+            ImGui::BeginChild("");
+            auto& conf = _context->configs();
+            for (auto& [name, category] : conf)
             {
-                _draw_category_recursive(category);
+                ImGui::PushStyleColor(ImGuiCol_Header, 0xff361d1d);
+                ImGui::PushStyleColor(ImGuiCol_HeaderHovered, 0xff804545);
+                ImGui::PushStyleColor(ImGuiCol_HeaderActive, 0xff5e3d3d);
+                auto enter = ImGui::CollapsingHeader(_key("{}##{}", name, _url));
+                ImGui::PopStyleColor(3);
+
+                if (enter)
+                    _draw_category_recursive(category);
             }
+            ImGui::EndChild();
         }
-        ImGui::EndChild();
+        ImGui::End();
     }
-    ImGui::End();
+
+    _trace_context->update_always();
+
+    if (selected_session == this)
+    {
+        if (ImGui::Begin("Traces"))
+            _trace_context->update_selected();
+
+        ImGui::End();
+    }
 
     if (_has_focus)
         selected_session = this;
@@ -403,9 +251,188 @@ void session_slot::render_windows()
     }
 }
 
+void session_slot::_draw_shell()
+{
+    this->_has_focus = ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows);
+
+    ImGui::BeginChild(this->_key("SHELLOUT:{}", this->_url), {-1, -48}, true,
+                      ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_AlwaysHorizontalScrollbar);
+    {
+        if (auto s = this->_context->shell_output(&this->_shello_fence); not s.empty())
+            xterm_colorized_append(&this->_shello, s);
+
+        this->_shello.Render(this->_key("Terminal:{}", this->_url));
+    }
+
+    if (this->_do_autoscroll)
+    {
+        this->_shello.MoveBottom();
+        this->_shello.MoveEnd();
+        ImGui::SetScrollY(ImGui::GetScrollMaxY()), this->_do_autoscroll = false;
+    }
+
+    if (this->_context->consume_recv_char() && not this->_scroll_lock)
+        this->_do_autoscroll = true;
+
+    ImGui::EndChild();
+
+    ImGui::Checkbox("Scroll Lock", &this->_scroll_lock);
+
+    // Commandline
+    ImGui::PushItemWidth(-1);
+
+    auto* current_command = &this->_history.back();
+    if (current_command->size() < 1024)
+        current_command->resize(1024);
+
+    auto* command  = current_command->data();
+    bool has_enter = ImGui::InputTextWithHint(
+            this->_key("SHELLIN:{}", this->_url), "$ enter command here",
+            command, current_command->size() - 1,
+            ImGuiInputTextFlags_CallbackCompletion
+                    | ImGuiInputTextFlags_CallbackHistory
+                    | ImGuiInputTextFlags_EnterReturnsTrue
+                    | ImGuiInputTextFlags_CallbackCharFilter
+                    | ImGuiInputTextFlags_CallbackAlways,
+            [](ImGuiInputTextCallbackData* data) -> int {
+                // TODO: history,
+                // TODO: autocomplete on tab key
+                auto self = (session_slot*)data->UserData;
+
+                if (data->EventFlag == ImGuiInputTextFlags_CallbackCompletion)
+                {
+                    try
+                    {
+                        self->_active_suggest.reset();
+                        self->_waiting_suggest = self->_context->suggest_command(
+                                data->Buf, data->BufTextLen);
+                    }
+                    catch (std::future_error& e)
+                    {
+                        SPDLOG_INFO(e.what());
+                    }
+                }
+                else if (data->EventFlag == ImGuiInputTextFlags_CallbackHistory)
+                {
+                    auto* pcursor = &self->_history_cursor;
+                    self->_active_suggest.reset();
+
+                    if (data->EventKey == ImGuiKey_UpArrow)
+                    {
+                        ++*pcursor;
+                    }
+                    else if (data->EventKey == ImGuiKey_DownArrow)
+                    {
+                        --*pcursor;
+                    }
+
+                    *pcursor = std::clamp<int64_t>(
+                            *pcursor, 0, self->_history.size() - 1);
+
+                    data->DeleteChars(0, data->BufTextLen);
+                    data->InsertChars(0, self->_history.end()[-1 - *pcursor].c_str());
+                }
+                else if (data->EventFlag == ImGuiInputTextFlags_CallbackCharFilter)
+                {
+                    if (data->EventChar == L' ')
+                    {
+                        self->_active_suggest.reset();
+                    }
+
+                    return 0;
+                }
+                else if (
+                        self->_waiting_suggest.valid()
+                        && self->_waiting_suggest.wait_for(0ms) == std::future_status::ready)
+                {
+                    try
+                    {
+                        self->_active_suggest.reset();
+                        self->_active_suggest = self->_waiting_suggest.get();
+
+                        data->DeleteChars(0, data->BufTextLen);
+                        data->InsertChars(0, self->_active_suggest->new_command.c_str());
+                    }
+                    catch (std::future_error& e)
+                    {
+                        SPDLOG_INFO(e.what());
+                    }
+                }
+
+                self->_cmd_prev_cursor = data->CursorPos;
+                return 1;
+            },
+            this);
+
+    if (this->_active_suggest && not this->_active_suggest->candidates.empty())
+    {
+        std::string_view last_word = command;
+        auto i_space               = last_word.find_last_of(' ');
+
+        if (i_space != ~size_t{})
+            last_word = last_word.substr(i_space + 1);
+
+        auto where = ImGui::GetItemRectMin();
+        where.y += 20;
+        where.x += ImGui::CalcTextSize(command, command + i_space).x;
+        ImGui::SetNextWindowPos(where);
+        ImGui::SetNextWindowBgAlpha(0.6);
+        ImGui::Begin("AUTOCOMPLETE_POPUP", nullptr,
+                     ImGuiWindowFlags_NoDecoration
+                             | ImGuiWindowFlags_AlwaysAutoResize
+                             | ImGuiWindowFlags_NoNavFocus
+                             | ImGuiWindowFlags_NoInputs
+                             | ImGuiWindowFlags_NoMouseInputs
+                             | ImGuiWindowFlags_NoFocusOnAppearing);
+
+        bool has_any_match = false;
+        for (std::string_view suggest : this->_active_suggest->candidates)
+        {
+            if (suggest.find(last_word) == 0)
+            {
+                ImGui::PushStyleColor(ImGuiCol_Text, 0xff45fc42);
+                ImGui::TextEx(last_word.data(), last_word.data() + last_word.size());
+                ImGui::PopStyleColor();
+                ImGui::SameLine(0, 0);
+                ImGui::TextEx(suggest.data() + last_word.size(), suggest.data() + suggest.size());
+
+                has_any_match |= true;
+            }
+        }
+
+        if (not has_any_match)
+            this->_active_suggest.reset();
+
+        ImGui::End();
+    }
+    else
+    {
+        this->_active_suggest.reset();
+    }
+
+    if (has_enter)
+    {  // TODO: submit command
+        ImGui::SetKeyboardFocusHere(-1);
+        current_command->resize(strlen(current_command->c_str()));
+
+        if (not current_command->empty())
+        {
+            this->_context->push_command(*current_command);
+
+            if (this->_history.size() > 2 && this->_history.end()[-1] == this->_history.end()[-2])
+                (*current_command)[0] = '\0';
+            else
+                this->_history.emplace_back();
+
+            this->_history_cursor = 0;
+        }
+    }
+    ImGui::PopItemWidth();
+}
+
 void session_slot::_title_string()
 {
-    ImGui::Text(_url.c_str());
+    ImGui::TextEx(_url.c_str());
     ImGui::SameLine();
 
     bool should_close = false;
@@ -428,7 +455,7 @@ void session_slot::_title_string()
         ImGui::PopStyleColor();
 
         ImGui::SameLine();
-        ImGui::Button("no") && (_prompt_close = false);
+        if (ImGui::Button("no")) { _prompt_close = false; }
     }
 
     if (should_close)

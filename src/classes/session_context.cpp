@@ -19,7 +19,9 @@ session_context::session_context(connection_ptr conn)
     _install<outgoing::session_reset>(CPPH_BIND(_on_epoch));
     _install<outgoing::new_config_class>(CPPH_BIND(_on_new_config_class));
     _install<outgoing::config_entity>(CPPH_BIND(_on_config_entity_update));
-    _install<outgoing::suggest_command>(CPPH_BIND(on_suggest_result));
+    _install<outgoing::suggest_command>(CPPH_BIND(_on_suggest_result));
+    _install<outgoing::trace_class_list>(CPPH_BIND(_on_trace_list));
+    _install<outgoing::traces>(CPPH_BIND(_on_trace));
 }
 
 void session_context::login(std::string_view id, std::string_view pw)
@@ -210,10 +212,59 @@ void session_context::_on_config_entity_update(messages::outgoing::config_entity
     }
 }
 
-void session_context::on_suggest_result(messages::outgoing::suggest_command const& payload)
+void session_context::_on_suggest_result(messages::outgoing::suggest_command const& payload)
 {
     if (payload.reply_to == _waiting_suggest)
     {
         _suggest_promise->set_value(payload);
+    }
+}
+
+auto session_context::signal_fetch_trace(std::string_view trace) -> std::future<messages::outgoing::traces>
+{
+    messages::incoming::signal_fetch_traces message;
+    message.targets.emplace_back(trace);
+    _conn->send(std::move(message));
+
+    auto it = _pending_trace_results.lower_bound(trace);
+    if (it->first == trace)
+    {
+        // invalidate existing promise before set value
+        it->second = {};
+    }
+    else
+    {
+        it = _pending_trace_results.emplace_hint(
+                it, std::string{trace}, std::promise<messages::outgoing::traces>{});
+    }
+
+    return it->second.get_future();
+}
+
+void session_context::_on_trace_list(const outgoing::trace_class_list& payload)
+{
+    _trace_classes.assign(payload.content.begin(), payload.content.end());
+    _trace_class_dirty = true;
+}
+
+void session_context::_on_trace(const outgoing::traces& payload)
+{
+    auto it = _pending_trace_results.find(payload.class_name);
+    if (it == _pending_trace_results.end())
+        return;
+
+    it->second.set_value(payload);
+    _pending_trace_results.erase(it);
+}
+auto session_context::check_trace_class_change() -> std::vector<std::string> const*
+{
+    if (_trace_class_dirty)
+    {
+        _trace_class_dirty = false;
+        return &_trace_classes;
+    }
+    else
+    {
+        return nullptr;
     }
 }

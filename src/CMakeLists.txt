@@ -10,6 +10,7 @@ set(
         ../third/imgui/imgui_demo.cpp
 
         app/session_slot.cpp
+        app/session_slot_trace_context.cpp
         app/application.cpp
         app/utility.cpp
 

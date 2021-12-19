@@ -4,9 +4,11 @@
 #include <perfkit/common/format.hxx>
 #include <perfkit/common/functional.hxx>
 #include <perfkit/common/macros.hxx>
+#include <perfkit/common/utility/ownership.hxx>
 
 #include "TextEditor.h"
 #include "classes/session_context.hpp"
+#include "session_slot_trace_context.hpp"
 
 class session_slot_close : public std::exception
 {
@@ -82,7 +84,7 @@ class session_slot
 
    private:
     // url
-    std::string _url;
+    std::string const _url;
     bool _from_apiserver = false;
 
     //
@@ -106,6 +108,9 @@ class session_slot
     size_t _shello_fence    = 0;
     TextEditor _shello;
 
+    // trace
+    perfkit::ownership<session_slot_trace_context> _trace_context;
+
     // suggestions
     std::future<messages::outgoing::suggest_command> _waiting_suggest;
     std::optional<messages::outgoing::suggest_command> _active_suggest;
@@ -113,4 +118,5 @@ class session_slot
     // shell input
     bool _scroll_lock   = false;
     bool _do_autoscroll = false;
+    void _draw_shell();
 };

@@ -29,4 +29,5 @@ target_link_libraries(
         PUBLIC
         glfw
         ${OPENGL_LIBRARIES}
+        range-v3::range-v3
 )
