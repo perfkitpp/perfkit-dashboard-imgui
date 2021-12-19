@@ -40,6 +40,7 @@ class session_slot
 
    public:
     explicit session_slot(std::string url, bool from_apiserver);
+    ~session_slot();
 
     std::string const& url() { return _url; }
     bool is_from_apiserver() const { return _from_apiserver; }

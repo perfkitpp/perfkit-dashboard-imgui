@@ -7,7 +7,20 @@
 #include <imgui-extension.h>
 #include <range/v3/view/transform.hpp>
 
+#include "imgui_internal.h"
 #include "perfkit/common/algorithm.hxx"
+
+static void push_button_color_series(ImGuiCol index, int32_t code)
+{
+    ImGui::PushStyleColor(index, code);
+    ImGui::PushStyleColor(index + 1, code + 0x111111);
+    ImGui::PushStyleColor(index + 2, code + 0x222222);
+}
+
+static void pop_button_color_series()
+{
+    ImGui::PopStyleColor(3);
+}
 
 void session_slot_trace_context::update_selected()
 {
@@ -37,11 +50,62 @@ void session_slot_trace_context::update_selected()
 
     for (auto& trace : _traces)
     {
-        if (not ImGui::CollapsingHeader(_label("{}", trace.class_name)))
+        if (trace.tracing)
+            push_button_color_series(ImGuiCol_Header, 0xff407857);
+        else
+            push_button_color_series(ImGuiCol_Header, 0xff3d3d3d);
+
+        {  // draw trace class label
+            auto spin = ":.-'\\|/*="sv;
+
+            ImGui::AlignTextToFramePadding();
+            ImGui::Selectable(
+                    _label("{}", trace.class_name),
+                    &trace.tracing,
+                    ImGuiSelectableFlags_SpanAllColumns);
+            ImGui::SameLine();
+            ImGui::Text("%c", trace.tracing ? spin[trace.update_index % spin.size()] : '*');
+        }
+
+        pop_button_color_series();
+
+        if (not trace.tracing)
             continue;
 
-        ImGui::TreePush();
+        if (trace.fut_result.valid())
+        {
+            auto r_wait = trace.fut_result.wait_for(0ms);
 
-        ImGui::TreePop();
+            if (r_wait == std::future_status::ready)
+            {
+                try
+                {
+                    trace.result = trace.fut_result.get();
+                }
+                catch (std::future_error& e)
+                {
+                    SPDLOG_ERROR(
+                            "failed to retrive trace result somewhat mysterious error {}",
+                            e.what());
+                }
+            }
+            else if (r_wait == std::future_status::timeout)
+            {
+                ImGui::SameLine();
+                ImGui::Spinner(_label("loading symbol"), 0xffffffff);
+            }
+        }
+
+        auto too_old = trace.tim_last_request.elapsed() > 1s;  // 무응답 시 타임아웃 처리
+        if ((too_old || not trace.fut_result.valid()) && trace.tim_next_signal.check())
+        {
+            trace.fut_result = _context->signal_fetch_trace(trace.class_name);
+            trace.tim_last_request.reset();
+        }
+
+        if (not trace.result)
+        {
+            ImGui::Text("-- fetching --");
+        }
     }
 }

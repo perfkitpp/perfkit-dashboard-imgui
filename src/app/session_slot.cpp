@@ -861,3 +861,9 @@ void session_slot::_draw_category_recursive(
         ImGui::End();
     }
 }
+
+session_slot::~session_slot()
+{
+    _context = {};           // always be first
+    _trace_context.reset();  // then next
+}
