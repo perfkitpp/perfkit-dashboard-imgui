@@ -16,27 +16,27 @@ void xterm_colorized_append(TextEditor *edit, std::string_view content)
     {
         if (is_escape && content[index] == 'm')
         {
-            content   = content.substr(index + 1);
-            index     = 0;
-            
+            content = content.substr(index + 1);
+            index   = 0;
+
             is_escape = false;
         }
         else if (content[index] == '\033')
         {
             is_escape = true;
 
-            buffer  = content.substr(0, index);
+            buffer = content.substr(0, index);
 
             content = content.substr(index + 1);
             index   = 0;
 
-            edit->InsertText(buffer);
+            edit->AppendTextAtEnd(buffer.c_str());
         }
     }
 
     if (not content.empty())
     {
         buffer = content;
-        edit->InsertText(buffer);
+        edit->AppendTextAtEnd(buffer.c_str());
     }
 }

@@ -6,4 +6,4 @@
 	url = git@github.com:perfkitpp/perfkit.git
 [submodule "third/ImGuiColorTextEdit"]
 	path = third/ImGuiColorTextEdit
-	url = git@github.com:BalazsJako/ImGuiColorTextEdit.git
+	url = git@github.com:perfkitpp/ImGuiColorTextEdit.git

@@ -203,7 +203,11 @@ void session_slot::render_windows()
         }
 
         if (_do_autoscroll)
+        {
+            _shello.MoveBottom();
+            _shello.MoveEnd();
             ImGui::SetScrollY(ImGui::GetScrollMaxY()), _do_autoscroll = false;
+        }
 
         if (_context->consume_recv_char() && not _scroll_lock)
             _do_autoscroll = true;
@@ -576,13 +580,16 @@ static std::optional<nlohmann::json> prop_editor(
 {
     static uint64_t selected_item = 0;
     bool const is_changed         = selected_item != item_key;
-    selected_item                 = item_key;
+    bool has_change               = false;
+    bool apply_changes            = false;
+
+    selected_item = item_key;
 
     static struct _context_data_t
     {
         nlohmann::json editing;
-        std::string editing_raw;
         std::string combo_value;
+        TextEditor edit_raw;
         bool mode_apply_on_change = false;
         bool mode_edit_raw        = false;
     } context;
@@ -604,7 +611,7 @@ static std::optional<nlohmann::json> prop_editor(
         *dirty = false;
         if (context.mode_edit_raw)
         {
-            context.editing_raw = e.value.dump(2);
+            context.edit_raw.SetText(e.value.dump(2));
         }
         else
         {
@@ -613,21 +620,26 @@ static std::optional<nlohmann::json> prop_editor(
     }
 
     ImGui::BeginDisabled(context.mode_edit_raw);
-    ImGui::Checkbox("Apply On Change", &context.mode_apply_on_change);
+    if (ImGui::Checkbox("Apply On Change", &context.mode_apply_on_change))
+    {
+        if (*dirty)
+        {
+            apply_changes = true;
+            *dirty        = false;
+        }
+    }
     ImGui::EndDisabled();
     ImGui::SameLine();
-
-    bool has_change = false;
 
     if (ImGui::Checkbox("Edit Raw", &context.mode_edit_raw))
     {
         if (context.mode_edit_raw)
         {
-            context.editing_raw = context.editing.dump(2);
+            context.edit_raw.SetText(e.value.dump(2));
         }
         else
         {
-            context.editing = nlohmann::json::parse(context.editing_raw, nullptr, false);
+            context.editing = nlohmann::json::parse(context.edit_raw.GetText(), nullptr, false);
 
             if (context.editing.is_discarded())
             {
@@ -636,7 +648,6 @@ static std::optional<nlohmann::json> prop_editor(
         }
     }
 
-    bool apply_changes = false;
     if (context.mode_edit_raw || not context.mode_apply_on_change)
     {
         ImGui::PushStyleColor(ImGuiCol_Button, 0xff356b28);
@@ -651,22 +662,7 @@ static std::optional<nlohmann::json> prop_editor(
 
     if (context.mode_edit_raw)
     {
-        ImGui::SetNextItemWidth(-1);
-        has_change |= ImGui::InputTextMultiline(
-                "Edit Raw ##box",
-                context.editing_raw.data(),
-                context.editing_raw.size() + 1,
-                {},
-                ImGuiInputTextFlags_CallbackResize,
-                [](ImGuiInputTextCallbackData* data) -> int {
-                    if (data->EventFlag == ImGuiInputTextFlags_CallbackResize)
-                    {
-                        context.editing_raw.resize(data->BufSize + 1);
-                        data->Buf = context.editing_raw.data();
-                    }
-
-                    return 0;
-                });
+        context.edit_raw.Render("Property Raw Editor");
     }
     else
     {
@@ -711,7 +707,7 @@ static std::optional<nlohmann::json> prop_editor(
                     {
                         context.combo_value = sample;
                         context.editing     = nlohmann::json::parse(context.combo_value);
-                        context.editing_raw = context.combo_value;
+                        context.edit_raw.SetText(context.combo_value);
 
                         has_change = true;
                     }
@@ -738,7 +734,7 @@ static std::optional<nlohmann::json> prop_editor(
     {
         if (context.mode_edit_raw)
         {
-            context.editing = nlohmann::json::parse(context.editing_raw, nullptr, false);
+            context.editing = nlohmann::json::parse(context.edit_raw.GetText(), nullptr, false);
 
             if (context.editing.is_discarded())
             {
