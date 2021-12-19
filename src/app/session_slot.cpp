@@ -607,9 +607,12 @@ static std::optional<nlohmann::json> prop_editor(
 
     if (is_changed)
     {
-        *dirty                = false;
-        context.editing       = e.value;
-        context.mode_edit_raw = false;
+        *dirty = false;
+
+        if (context.mode_edit_raw)
+            context.edit_raw.SetText(e.value.dump(2));
+        else
+            context.editing = e.value;
     }
     else if (force_refresh)
     {
