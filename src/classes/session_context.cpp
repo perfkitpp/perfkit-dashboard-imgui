@@ -249,8 +249,6 @@ void session_context::_on_trace_list(const outgoing::trace_class_list& payload)
 
 void session_context::_on_trace(const outgoing::traces& payload)
 {
-    SPDLOG_INFO("trace {} received.", payload.class_name);
-
     auto it = _pending_trace_results.find(payload.class_name);
     if (it == _pending_trace_results.end())
         return;

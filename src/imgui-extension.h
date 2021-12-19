@@ -4,7 +4,14 @@
 #include "imgui.h"
 
 namespace ImGui {
-bool Spinner(const char* label, const ImU32& color, float radius = 5.f, int thickness = 2);
+double GetGlobalTime();
+
+bool Spinner(
+        const char* label,
+        const ImU32& color,
+        float radius  = 5.f,
+        int thickness = 2,
+        double time   = GetGlobalTime());
 
 void LoadingIndicatorCircle(
         const char* label,

@@ -81,6 +81,7 @@ void session_slot_trace_context::update_selected()
                 try
                 {
                     trace.result = trace.fut_result.get();
+                    ++trace.update_index;
                 }
                 catch (std::future_error& e)
                 {
@@ -89,14 +90,19 @@ void session_slot_trace_context::update_selected()
                             e.what());
                 }
             }
-            else if (r_wait == std::future_status::timeout)
+            else if (r_wait == std::future_status::timeout
+                     && trace.tim_last_request.elapsed() > 0.25s)
             {
-                ImGui::SameLine();
-                ImGui::Spinner(_label("loading symbol"), 0xffffffff);
+                ImGui::SameLine(ImGui::GetWindowWidth() - 25.f);
+                ImGui::Spinner(
+                        _label("loading symbol"),
+                        0xffffffff,
+                        5.,
+                        2, trace.tim_last_request.elapsed().count());
             }
         }
 
-        auto too_old = trace.tim_last_request.elapsed() > 1s;  // 무응답 시 타임아웃 처리
+        auto too_old = trace.tim_last_request.elapsed() > 10s;  // 무응답 시 타임아웃 처리
         if ((too_old || not trace.fut_result.valid()) && trace.tim_next_signal.check())
         {
             trace.fut_result = _context->signal_fetch_trace(trace.class_name);

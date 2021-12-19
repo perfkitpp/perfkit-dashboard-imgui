@@ -20,22 +20,19 @@ void plain_tcp::send_message(std::string_view route, const nlohmann::json &param
     _sendbuf["route"]     = route;
     _sendbuf["parameter"] = parameter;
 
-    while (_wr_lock.use_count() > 1)
-        std::this_thread::yield();
+    auto buffer = _wrpool.checkout();
+    buffer->clear();
+    buffer->resize(8);
+    nlohmann::json::to_msgpack(_sendbuf, {*buffer});
 
-    _wrbuf.clear();
-    _wrbuf.resize(8);
-    nlohmann::json::to_msgpack(_sendbuf, {_wrbuf});
+    memcpy(buffer->data(), "o`P%", 4);
+    *(int *)&(*buffer)[4] = (int)buffer->size() - 8;
 
-    memcpy(_wrbuf.data(), "o`P%", 4);
-    *(int *)&_wrbuf[4] = (int)_wrbuf.size() - 8;
-
+    auto pbuf = &*buffer;
     asio::async_write(_socket,
-                      asio::buffer(_wrbuf),
+                      asio::buffer(*pbuf),
                       asio::transfer_all(),
-                      [wr_lock = _wr_lock](auto &&ec, size_t n) {
-                          (void)wr_lock;
-                      });
+                      [buffer = std::move(buffer)](auto &&ec, size_t n) {});
 }
 
 session_connection_state plain_tcp::status() const

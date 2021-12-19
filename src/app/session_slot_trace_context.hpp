@@ -22,7 +22,7 @@ class session_slot_trace_context
         std::string class_name;
         bool tracing        = 0;
         size_t update_index = 0;
-        perfkit::poll_timer tim_next_signal{200ms};
+        perfkit::poll_timer tim_next_signal{50ms};
         perfkit::stopwatch tim_last_request;
         std::future<session_context::trace_result_type> fut_result;
         perfkit::ownership<session_context::trace_result_type> result;
