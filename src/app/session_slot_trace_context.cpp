@@ -56,15 +56,19 @@ void session_slot_trace_context::update_selected()
             push_button_color_series(ImGuiCol_Header, 0xff3d3d3d);
 
         {  // draw trace class label
-            auto spin = ":.-'\\|/*="sv;
+            auto spin = ":._-^'\"~\\|/*"sv;
 
             ImGui::AlignTextToFramePadding();
+            ImGui::PushStyleColor(ImGuiCol_Text, trace.tracing ? 0xffaaffff : 0xff0000ff);
+            ImGui::Text("%c", trace.tracing ? spin[trace.update_index % spin.size()] : '*');
+            ImGui::PopStyleColor();
+
+            ImGui::AlignTextToFramePadding();
+            ImGui::SameLine();
             ImGui::Selectable(
                     _label("{}", trace.class_name),
                     &trace.tracing,
-                    ImGuiSelectableFlags_SpanAllColumns);
-            ImGui::SameLine();
-            ImGui::Text("%c", trace.tracing ? spin[trace.update_index % spin.size()] : '*');
+                    ImGuiSelectableFlags_SpanAvailWidth);
         }
 
         pop_button_color_series();
