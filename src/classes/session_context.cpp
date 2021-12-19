@@ -89,8 +89,15 @@ void session_context::_on_recv(std::string_view route, nlohmann::json const& msg
                  hash = perfkit::hasher::fnv1a_64(route),
                  msg,
                  alive_marker = std::weak_ptr{_conn}] {
-                    if (not alive_marker.expired())
-                        _handlers.at(hash)(msg);
+                    try
+                    {
+                        if (not alive_marker.expired())
+                            _handlers.at(hash)(msg);
+                    }
+                    catch (std::out_of_range&)
+                    {
+                        SPDLOG_ERROR("undefined event type received. contents: {}", msg.dump(2));
+                    }
                 });
     }
     catch (std::out_of_range&)

@@ -16,6 +16,11 @@ session_slot::session_slot(std::string url, bool from_apiserver)
 {
     _history.emplace_back();
     _shello.SetShowWhitespaces(false);
+    _shello.SetColorizerEnable(false);
+
+    auto palette = _shello.GetPalette();
+    palette[0]   = 0xffffffff;
+    _shello.SetPalette(palette);
 }
 
 void session_slot::render_on_list()
