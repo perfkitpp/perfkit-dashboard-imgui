@@ -20,6 +20,7 @@ target_include_directories(
         imgui
         imgui/backends
         ${OpenGL_INCLUDE_DIRS}
+        ImGuiColorTextEdit
 )
 
 target_link_libraries(

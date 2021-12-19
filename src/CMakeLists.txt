@@ -1,7 +1,7 @@
 project(perfkit-dashboard)
 
-add_executable(
-        ${PROJECT_NAME}
+set(
+        PERFKIT_DASHBOARD_SOURCES
 
         main.cpp
         imgui-extension.cpp
@@ -11,7 +11,23 @@ add_executable(
         app/application.cpp
         classes/session_context.cpp
         classes/connection/plain_tcp.cpp
+        platform.cpp
 )
+
+if (MSVC)
+    add_executable(
+            ${PROJECT_NAME}
+
+            WIN32
+            ${PERFKIT_DASHBOARD_SOURCES}
+    )
+else ()
+    add_executable(
+            ${PROJECT_NAME}
+
+            ${PERFKIT_DASHBOARD_SOURCES}
+    )
+endif ()
 
 target_link_libraries(
         ${PROJECT_NAME}

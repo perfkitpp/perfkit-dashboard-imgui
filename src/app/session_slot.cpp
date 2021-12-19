@@ -191,10 +191,9 @@ void session_slot::render_windows()
         ImGui::BeginChild(_key("SHELLOUT:{}", _url), {-1, -48}, true,
                           ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_AlwaysHorizontalScrollbar);
 
-        _context->shell_output().use(
-                [&](std::string const& s) {
-                    ImGui::TextUnformatted(s.c_str(), s.c_str() + s.size());
-                });
+        [&](std::string const& s) {
+            ImGui::TextUnformatted(s.c_str(), s.c_str() + s.size());
+        }(_context->shell_output());
 
         if (_do_autoscroll)
             ImGui::SetScrollY(ImGui::GetScrollMaxY()), _do_autoscroll = false;
@@ -303,7 +302,7 @@ void session_slot::render_windows()
             where.y += 20;
             where.x += ImGui::CalcTextSize(command, command + i_space).x;
             ImGui::SetNextWindowPos(where);
-            ImGui::SetNextWindowBgAlpha(0.3);
+            ImGui::SetNextWindowBgAlpha(0.6);
             ImGui::Begin("AUTOCOMPLETE_POPUP", nullptr,
                          ImGuiWindowFlags_NoDecoration
                                  | ImGuiWindowFlags_AlwaysAutoResize

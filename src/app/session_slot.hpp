@@ -5,6 +5,7 @@
 #include <perfkit/common/functional.hxx>
 #include <perfkit/common/macros.hxx>
 
+#include "TextEditor.h"
 #include "classes/session_context.hpp"
 
 class session_slot_close : public std::exception
@@ -102,6 +103,7 @@ class session_slot
     perfkit::circular_queue<std::string> _history{63};
     int64_t _history_cursor = 0;
     int _cmd_prev_cursor    = 0;
+    TextEditor _shello;
 
     // suggestions
     std::future<messages::outgoing::suggest_command> _waiting_suggest;

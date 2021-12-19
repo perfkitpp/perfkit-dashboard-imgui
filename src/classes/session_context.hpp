@@ -10,7 +10,7 @@
 
 struct session_context_message_marshal_error : std::exception
 {
-}; 
+};
 
 namespace messages = perfkit::terminal::net;
 
@@ -76,7 +76,7 @@ class session_context
    private:
     connection_ptr _conn;
 
-    perfkit::locked<std::string> _output;
+    std::string _output;
     std::optional<info_type> _info;
     std::atomic_flag _shell_latest;
 

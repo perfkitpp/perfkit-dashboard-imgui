@@ -103,11 +103,7 @@ void session_context::_on_epoch(info_type& payload)
 {
     _info.emplace(std::move(payload));
 
-    _output.use(
-            [](auto&& e) {
-                e.clear();
-            });
-
+    _output.clear();
     _configs.clear();
     _entity_indexes.clear();
 }
@@ -115,25 +111,22 @@ void session_context::_on_epoch(info_type& payload)
 void session_context::_on_shell_output(messages::outgoing::shell_output const& message)
 {
     auto& str = message.content;
+    auto& s   = _output;
 
-    _output.use(
-            [&](std::string& s) {
-                enum
-                {
-                    BUF_ERASE_SIZE  = 2 << 20,
-                    BUF_RETAIN_SIZE = 1 << 20
-                };
+    enum
+    {
+        BUF_ERASE_SIZE  = 2 << 20,
+        BUF_RETAIN_SIZE = 1 << 20
+    };
 
-                if (s.size() + str.size() > (BUF_ERASE_SIZE)
-                    && s.size() > BUF_RETAIN_SIZE)
-                {
-                    auto to_erase = s.size() % BUF_RETAIN_SIZE;
-                    s.erase(s.begin(), s.begin() + to_erase);
-                }
+    if (s.size() + str.size() > (BUF_ERASE_SIZE)
+        && s.size() > BUF_RETAIN_SIZE)
+    {
+        auto to_erase = s.size() % BUF_RETAIN_SIZE;
+        s.erase(s.begin(), s.begin() + to_erase);
+    }
 
-                s.append(str);
-            });
-
+    s.append(str);
     _shell_latest.clear();
 }
 
