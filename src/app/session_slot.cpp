@@ -768,7 +768,7 @@ void session_slot::_draw_category_recursive(
 
     for (auto& elem : target.entities)
     {
-        const bool render_modify_view = elem.config_key == selected_item;
+        bool render_modify_view = elem.config_key == selected_item;
 
         ImGui::PushStyleColor(
                 ImGuiCol_Text,
@@ -804,16 +804,17 @@ void session_slot::_draw_category_recursive(
 
         ImGui::PopStyleColor();
 
-        open && (selected_item = elem.config_key);
+        if (open)
+        {
+            if (render_modify_view)
+                selected_item = 0;
+            else
+                selected_item = elem.config_key;
+        }
 
+        render_modify_view = elem.config_key == selected_item;
         if (not render_modify_view)
             continue;
-
-        if (open && render_modify_view)
-        {
-            selected_item = 0;
-            continue;
-        }
 
         static bool is_dirty = false;
         char buf[256];

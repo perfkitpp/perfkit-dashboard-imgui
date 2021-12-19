@@ -8,10 +8,14 @@
 
 void xterm_colorized_append(TextEditor *edit, std::string_view content)
 {
+    if (content.empty())
+        return;
+
     size_t index   = 0;
     bool is_escape = false;
     std::string buffer;
 
+    auto line_begin = edit->GetTotalLines();
     for (; not content.empty() && index < content.size(); ++index)
     {
         if (is_escape && content[index] == 'm')
@@ -39,4 +43,6 @@ void xterm_colorized_append(TextEditor *edit, std::string_view content)
         buffer = content;
         edit->AppendTextAtEnd(buffer.c_str());
     }
+
+    edit->ForceColorize(line_begin - 1);
 }
