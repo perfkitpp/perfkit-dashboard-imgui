@@ -15,7 +15,10 @@ void xterm_leap_escape(TextEditor *edit, std::string_view content)
     bool is_escape = false;
     std::string buffer;
 
-    auto line_begin = edit->GetTotalLines();
+    auto line_begin   = edit->GetTotalLines();
+    auto is_read_only = edit->IsReadOnly();
+    edit->SetReadOnly(false);
+
     for (; not content.empty() && index < content.size(); ++index)
     {
         if (is_escape && content[index] == 'm')
@@ -43,4 +46,6 @@ void xterm_leap_escape(TextEditor *edit, std::string_view content)
         buffer = content;
         edit->AppendTextAtEnd(buffer.c_str());
     }
+
+    edit->SetReadOnly(is_read_only);
 }

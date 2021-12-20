@@ -16,6 +16,7 @@ session_slot::session_slot(std::string url, bool from_apiserver)
 {
     _history.emplace_back();
     _shello.SetShowWhitespaces(false);
+    _shello.SetReadOnly(true);
 
     //_shello.SetColorizerEnable(false);
     //
@@ -261,6 +262,7 @@ void session_slot::_draw_shell()
 
     if (_shello.GetTotalLines() != _shello_color_fence && _shello_colorize_timer.check())
     {
+        _shello_color_fence = std::max(_shello_color_fence, _shello.GetTotalLines() - 250);
         _shello.ForceColorize(_shello_color_fence - 1);
         _shello_color_fence = _shello.GetTotalLines();
     }
