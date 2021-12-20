@@ -101,12 +101,11 @@ void session_slot_trace_context::update_selected()
         ImGui::SetNextItemWidth(-1);
         if (double interv = trace.tim_next_signal.interval_sec().count() * 1000.,
             min           = 0.,
-            max           = 3000.;
+            max           = 1000.;
             ImGui::SliderScalar(
                     _label("Update Interval##{}", trace.class_name),
                     ImGuiDataType_Double,
-                    &interv, &min, &max, "Interval: %lf ms",
-                    ImGuiSliderFlags_Logarithmic))
+                    &interv, &min, &max, "Interval: %lf ms"))
         {
             trace.tim_next_signal.reset(1.ms * interv);
         }
@@ -186,7 +185,6 @@ void session_slot_trace_context::_recursive_draw_trace(
         }
 
         bool show_plot_button = false;
-        double plot_value     = 0.;
 
         std::string_view text;
         ImGuiCol text_color = 0xffcccccc;
@@ -206,9 +204,6 @@ void session_slot_trace_context::_recursive_draw_trace(
                 text_color       = 0xff00a5ab;
                 show_plot_button = true;
 
-                if (ctx->plotting)
-                    plot_value = value / 1e6;
-
                 break;
             }
 
@@ -216,9 +211,6 @@ void session_slot_trace_context::_recursive_draw_trace(
             case TRACE_VALUE_FLOATING_POINT:
                 text             = node->value;
                 show_plot_button = true;
-
-                if (ctx->plotting)
-                    std::from_chars(begin, end, plot_value);
 
                 text_color = 0xff5cb565;
                 break;
@@ -276,7 +268,7 @@ void session_slot_trace_context::_recursive_draw_trace(
         {
             ImGui::SameLine();
 
-            auto offset = ImGui::GetWindowWidth() - text_extent.x - 10.f;
+            auto offset = ImGui::GetWindowWidth() - text_extent.x - 35.f;
             if (offset < ImGui::GetCursorPosX())
                 offset = 0.;
 
@@ -298,6 +290,12 @@ void session_slot_trace_context::_recursive_draw_trace(
             // 1. collect value
             if (_cur_has_update)
             {
+                double plot_value = 0.;
+                std::from_chars(begin, end, plot_value);
+
+                if (node->value_type == TRACE_VALUE_DURATION_USEC)
+                    plot_value *= 1e-6;
+
                 auto arg = &ctx->graph.emplace_back();
                 arg->timestamp.reset();
                 arg->value = plot_value;
@@ -323,7 +321,10 @@ void session_slot_trace_context::_recursive_draw_trace(
 
                     auto it = ctx->graph.begin();
                     ImPlot::SetupAxes("Timestamp", "Value");
+
+                    ImPlot::PushStyleColor(ImPlotCol_Line, text_color);
                     ImPlot::PlotLineG("History", data_getter, &it, ctx->graph.size());
+                    ImPlot::PopStyleColor();
 
                     ImPlot::EndPlot();
                 }

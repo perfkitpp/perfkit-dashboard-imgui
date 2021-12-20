@@ -833,7 +833,17 @@ void session_slot::_draw_category_recursive(
             if (auto it = elem.metadata.find("description");
                 it != elem.metadata.end() && it->is_string())
             {
-                ImGui::TextEx(it->get_ref<std::string const&>().c_str());
+                auto& str = it->get_ref<std::string const&>();
+                if (not str.empty())
+                {
+                    ImGui::TextEx(str.c_str());
+                }
+                else
+                {
+                    ImGui::PushStyleColor(ImGuiCol_Text, 0xffaaaaaa);
+                    ImGui::TextEx("-- no description --");
+                    ImGui::PopStyleColor();
+                }
             }
 
             ImGui::Separator();
