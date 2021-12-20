@@ -373,5 +373,8 @@ void session_slot_trace_context::_fetch_update_traces()
 void session_slot_trace_context::_plot_window()
 {
     // TODO: Plotting Window
-    //       - 모든 트레이스 클래스의
+    //       - 모든 트레이스 클래스에서 plotting 활성화된 노드 리스트
+    //       - 다수의 노드 선택 시 중첩 그리기
+    //       - 각 노드의 그리기 모드 지정
+    //       - 두 개의 서로 다른 노드 x, y 병합 (타임스탬프로)
 }
