@@ -40,6 +40,7 @@ class session_slot_trace_context
 
     struct node_context
     {
+        std::string display_key;
         bool plotting = false;
         perfkit::stopwatch tim_plot_begin;
         perfkit::poll_timer tim_plot_push_interval;
@@ -74,6 +75,11 @@ class session_slot_trace_context
     void update_always() {}
 
    private:
+    void _check_new_classes();
+    void _fetch_update_traces();
+    void _plot_window();
+
+   private:
     template <typename Str_, typename... Args_>
     char const* _label(Str_&& fmt, Args_&&... args)
     {
@@ -92,6 +98,7 @@ class session_slot_trace_context
 
     perfkit::format_buffer _fmt_label, _tmp;
     std::unordered_map<uint64_t, node_context> _nodes;
+    std::vector<node_type const*> _node_stack;
 
     std::string_view _cur_class;
     bool _cur_has_update = false;
