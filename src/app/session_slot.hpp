@@ -104,9 +104,11 @@ class session_slot
     //
     perfkit::format_buffer _fmt;
     perfkit::circular_queue<std::string> _history{63};
-    int64_t _history_cursor = 0;
-    int _cmd_prev_cursor    = 0;
-    size_t _shello_fence    = 0;
+    perfkit::poll_timer _shello_colorize_timer{1s};
+    int64_t _history_cursor      = 0;
+    int _cmd_prev_cursor         = 0;
+    int _shello_color_fence      = 0;
+    size_t _shello_fence         = 0;
     TextEditor _shello;
 
     // trace

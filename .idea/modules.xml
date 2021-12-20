@@ -2,6 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/perfkit-dashboard-imgui.iml" filepath="$PROJECT_DIR$/.idea/perfkit-dashboard-imgui.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/perfkitpp-remote-imgui.iml" filepath="$PROJECT_DIR$/.idea/perfkitpp-remote-imgui.iml" />
     </modules>
   </component>

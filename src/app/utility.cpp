@@ -6,7 +6,7 @@
 
 #include "TextEditor.h"
 
-void xterm_colorized_append(TextEditor *edit, std::string_view content)
+void xterm_leap_escape(TextEditor *edit, std::string_view content)
 {
     if (content.empty())
         return;
@@ -43,6 +43,4 @@ void xterm_colorized_append(TextEditor *edit, std::string_view content)
         buffer = content;
         edit->AppendTextAtEnd(buffer.c_str());
     }
-
-    edit->ForceColorize(line_begin - 1);
 }

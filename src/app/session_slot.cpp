@@ -16,11 +16,12 @@ session_slot::session_slot(std::string url, bool from_apiserver)
 {
     _history.emplace_back();
     _shello.SetShowWhitespaces(false);
-    _shello.SetColorizerEnable(false);
 
-    auto palette = _shello.GetPalette();
-    palette[0]   = 0xffffffff;
-    _shello.SetPalette(palette);
+    //_shello.SetColorizerEnable(false);
+    //
+    // auto palette = _shello.GetPalette();
+    // palette[0]   = 0xffffffff;
+    //_shello.SetPalette(palette);
 }
 
 void session_slot::render_on_list()
@@ -256,7 +257,13 @@ void session_slot::_draw_shell()
     this->_has_focus = ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows);
 
     if (auto s = this->_context->shell_output(&this->_shello_fence); not s.empty())
-        xterm_colorized_append(&this->_shello, s);
+        xterm_leap_escape(&this->_shello, s);
+
+    if (_shello.GetTotalLines() != _shello_color_fence && _shello_colorize_timer.check())
+    {
+        _shello.ForceColorize(_shello_color_fence - 1);
+        _shello_color_fence = _shello.GetTotalLines();
+    }
 
     this->_shello.Render(this->_key("Terminal:{}", this->_url), {-1, -40}, true);
 
