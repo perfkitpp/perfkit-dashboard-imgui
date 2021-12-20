@@ -7,6 +7,7 @@
 #include <charconv>
 
 #include <imgui-extension.h>
+#include <implot.h>
 #include <range/v3/view/transform.hpp>
 
 #include "imgui_internal.h"
@@ -185,7 +186,7 @@ void session_slot_trace_context::_recursive_draw_trace(
         }
 
         bool show_plot_button = false;
-        bool is_fold          = node->folded;
+        double plot_value     = 0.;
 
         std::string_view text;
         ImGuiCol text_color = 0xffcccccc;
@@ -205,6 +206,9 @@ void session_slot_trace_context::_recursive_draw_trace(
                 text_color       = 0xff00a5ab;
                 show_plot_button = true;
 
+                if (ctx->plotting)
+                    plot_value = value / 1e6;
+
                 break;
             }
 
@@ -212,7 +216,11 @@ void session_slot_trace_context::_recursive_draw_trace(
             case TRACE_VALUE_FLOATING_POINT:
                 text             = node->value;
                 show_plot_button = true;
-                text_color       = 0xff5cb565;
+
+                if (ctx->plotting)
+                    std::from_chars(begin, end, plot_value);
+
+                text_color = 0xff5cb565;
                 break;
 
             case TRACE_VALUE_STRING:
@@ -234,6 +242,7 @@ void session_slot_trace_context::_recursive_draw_trace(
         auto tree_label_color = node->subscribing ? 0xff00ff00 : 0xffcccccc;
         ImGui::PushStyleColor(ImGuiCol_Text, tree_label_color + fresh_offset);
         auto tree_open        = ImGui::TreeNodeEx(_label("{}##{}.", node->name, node->trace_key));
+        auto should_popup     = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup);
         auto fold_toggled     = ImGui::IsItemToggledOpen();
         auto toggle_subscribe = ImGui::IsItemClicked(ImGuiMouseButton_Right);
         ImGui::PopStyleColor();
@@ -252,7 +261,14 @@ void session_slot_trace_context::_recursive_draw_trace(
             push_button_color_series(ImGuiCol_Button, plot_button_color);
             ImGui::SameLine();
             if (ImGui::SmallButton(_label(" % ##{}.", node->trace_key)))
+            {
                 ctx->plotting = not ctx->plotting;
+                if (ctx->plotting)
+                {
+                    ctx->tim_plot_begin.reset();
+                    ctx->graph.clear();
+                }
+            }
             pop_button_color_series();
         }
 
@@ -280,8 +296,39 @@ void session_slot_trace_context::_recursive_draw_trace(
         if (ctx->plotting)
         {
             // 1. collect value
+            if (_cur_has_update)
+            {
+                auto arg = &ctx->graph.emplace_back();
+                arg->timestamp.reset();
+                arg->value = plot_value;
+            }
 
-            // 2. draw
+            // 2. draw if popped up
+            if (should_popup)
+            {
+                ImGui::SetNextWindowSize({480, 320});
+                ImGui::BeginTooltip();
+
+                ImPlot::SetNextAxesToFit();
+                if (ImPlot::BeginPlot("History"))
+                {
+                    using iterator = decltype(ctx->graph.begin());
+
+                    auto constexpr data_getter
+                            = ([](void* data, int i) -> ImPlotPoint {
+                                  auto iter  = (iterator*)data;
+                                  auto& pair = (*iter)[i];
+                                  return ImPlotPoint{-pair.timestamp.elapsed().count(), pair.value};
+                              });
+
+                    auto it = ctx->graph.begin();
+                    ImPlot::SetupAxes("Timestamp", "Value");
+                    ImPlot::PlotLineG("History", data_getter, &it, ctx->graph.size());
+
+                    ImPlot::EndPlot();
+                }
+                ImGui::EndTooltip();
+            }
         }
 
         if (not tree_open)

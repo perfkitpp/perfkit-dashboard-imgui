@@ -6,6 +6,15 @@
       <file path="$PROJECT_DIR$/.vs" />
       <file path="$PROJECT_DIR$/_ReSharper.Caches" />
       <file path="$PROJECT_DIR$/out/build" />
+      <file path="$PROJECT_DIR$/third/glfw-3.3.5/CMake" />
+      <file path="$PROJECT_DIR$/third/glfw-3.3.5/deps" />
+      <file path="$PROJECT_DIR$/third/glfw-3.3.5/docs" />
+      <file path="$PROJECT_DIR$/third/glfw-3.3.5/examples" />
+      <file path="$PROJECT_DIR$/third/glfw-3.3.5/src" />
+      <file path="$PROJECT_DIR$/third/glfw-3.3.5/tests" />
+      <file path="$PROJECT_DIR$/third/imgui/examples" />
+      <file path="$PROJECT_DIR$/third/spdlog-1.9.2/example" />
+      <file path="$PROJECT_DIR$/third/spdlog-1.9.2/tests" />
     </excludeRoots>
   </component>
 </project>

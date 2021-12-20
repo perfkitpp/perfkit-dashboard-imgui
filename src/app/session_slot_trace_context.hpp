@@ -34,14 +34,15 @@ class session_slot_trace_context
 
     struct plot_arg
     {
-        double time_offset;  // x axis
-        double value;        // y axis
+        perfkit::stopwatch timestamp;  // x axis
+        double value;                  // y axis
     };
 
     struct node_context
     {
         bool plotting = false;
         perfkit::stopwatch tim_plot_begin;
+        perfkit::poll_timer tim_plot_push_interval;
         perfkit::circular_queue<plot_arg> graph{256};
     };
 
