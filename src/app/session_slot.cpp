@@ -574,6 +574,8 @@ static bool prop_editor_recursive_impl(
             ptr       = data;
             min && (pmin = min->get_ptr<int64_t const*>());
             max && (pmax = max->get_ptr<int64_t const*>());
+
+            step = std::max(0.001, std::abs(*data) / 1000.);
         }
         else if (e->is_number_float())
         {
