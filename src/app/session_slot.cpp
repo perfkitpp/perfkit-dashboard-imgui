@@ -215,7 +215,7 @@ void session_slot::render_windows()
         {
             ImGui::TextEx(_key("{}@{}", _context->info()->name, _url));
 
-            ImGui::BeginChild("");
+            ImGui::BeginChild("ConfigurationsChild");
             auto& conf = _context->configs();
             for (auto& [name, category] : conf)
             {
