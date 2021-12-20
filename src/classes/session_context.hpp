@@ -1,6 +1,9 @@
 #pragma once
+#include <future>
+
 #include "if_session_connection.hpp"
 #include "messages.hpp"
+#include "perfkit/common/array_view.hxx"
 #include "perfkit/common/assert.hxx"
 #include "perfkit/common/functional.hxx"
 #include "perfkit/common/hasher.hxx"
@@ -18,17 +21,40 @@ class session_context
     using info_type          = perfkit::terminal::net::outgoing::session_reset;
     using config_type        = messages::outgoing::new_config_class::category_scheme;
     using config_entity_type = messages::outgoing::new_config_class::entity_scheme;
+    using trace_result_type  = messages::outgoing::traces;
 
    public:
-    session_context(connection_ptr conn);
+    explicit session_context(connection_ptr conn);
     void login(std::string_view id, std::string_view pw);
     void push_command(std::string_view command);
+    void configure(std::string_view class_key, uint64_t key, nlohmann::json const& new_value);
+    auto signal_fetch_trace(std::string_view trace)
+            -> std::future<messages::outgoing::traces>;
+    auto suggest_command(std::string command, int16_t position)
+            -> std::future<messages::outgoing::suggest_command>;
 
+    auto check_trace_class_change() -> std::vector<std::string> const*;
     session_connection_state status() const noexcept { return _conn->status(); }
     info_type const* info() const noexcept;
     auto const& configs() const noexcept { return _configs; }
 
-    auto& shell_output() const { return _output; }
+    std::string_view shell_output(size_t* fence = nullptr) const
+    {
+        if (fence)
+        {
+            assert_(*fence <= _output_fence);
+
+            auto diff = _output_fence - *fence;
+            diff      = std::min(diff, _output.size());
+            *fence    = _output_fence;
+            return std::string_view{_output}.substr(_output.size() - diff);
+        }
+        else
+        {
+            return _output;
+        }
+    }
+
     bool consume_recv_char() { return not _shell_latest.test_and_set(); }
 
    private:
@@ -66,13 +92,21 @@ class session_context
     void _on_shell_output(messages::outgoing::shell_output const& payload);
     void _on_new_config_class(messages::outgoing::new_config_class const& payload);
     void _on_config_entity_update(messages::outgoing::config_entity const& payload);
+    void _on_suggest_result(messages::outgoing::suggest_command const& payload);
+    void _on_trace_list(messages::outgoing::trace_class_list const& payload);
+    void _on_trace(messages::outgoing::traces const& payload);
 
    private:
     connection_ptr _conn;
 
-    perfkit::locked<std::string> _output;
+    std::string _output;
+    size_t _output_fence = 0;
+
     std::optional<info_type> _info;
     std::atomic_flag _shell_latest;
+
+    int64_t _waiting_suggest = 0;
+    std::optional<std::promise<messages::outgoing::suggest_command>> _suggest_promise;
 
     std::unordered_map<
             uint64_t,
@@ -84,4 +118,12 @@ class session_context
 
     std::unordered_map<uint64_t, config_entity_type*>
             _entity_indexes;
+
+    bool _trace_class_dirty = false;
+    std::vector<std::string> _trace_classes;
+    std::map<
+            std::string,
+            std::promise<messages::outgoing::traces>,
+            std::less<>>
+            _pending_trace_results;
 };

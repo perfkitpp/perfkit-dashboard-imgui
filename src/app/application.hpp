@@ -4,15 +4,35 @@
 
 #pragma once
 #include <perfkit/common/functional.hxx>
+#include <spdlog/fmt/bundled/format.h>
 
 namespace asio {
 class io_context;
 }
 
+enum class message_level
+{
+    verbose,
+    debug,
+    info,
+    warning,
+    error,
+    fatal
+};
+
 namespace application {
+
 void initialize();
 void shutdown();
 void update();
+
+void push_message_0(message_level level, std::string content);
+
+template <typename Str_, typename... Args_>
+void push_message(message_level level, Str_ format, Args_&&... args)
+{
+    push_message_0(level, fmt::format(format, std::forward<Args_>(args)...));
+}
 
 asio::io_context& ioc_net();
 

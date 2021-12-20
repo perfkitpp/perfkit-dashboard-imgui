@@ -19,6 +19,9 @@ session_context::session_context(connection_ptr conn)
     _install<outgoing::session_reset>(CPPH_BIND(_on_epoch));
     _install<outgoing::new_config_class>(CPPH_BIND(_on_new_config_class));
     _install<outgoing::config_entity>(CPPH_BIND(_on_config_entity_update));
+    _install<outgoing::suggest_command>(CPPH_BIND(_on_suggest_result));
+    _install<outgoing::trace_class_list>(CPPH_BIND(_on_trace_list));
+    _install<outgoing::traces>(CPPH_BIND(_on_trace));
 }
 
 void session_context::login(std::string_view id, std::string_view pw)
@@ -44,6 +47,30 @@ void session_context::push_command(std::string_view command)
     _conn->send(cmd);
 }
 
+void session_context::configure(
+        std::string_view class_key,
+        uint64_t key,
+        nlohmann::json const& new_value)
+{
+    incoming::configure_entity conf;
+    conf.class_key = class_key;
+    conf.content.push_back({key, new_value});
+    _conn->send(std::move(conf));
+}
+
+auto session_context::suggest_command(std::string command, int16_t position)
+        -> std::future<messages::outgoing::suggest_command>
+{
+    incoming::suggest_command cmd;
+    cmd.reply_to = ++_waiting_suggest;
+    cmd.position = position;
+    cmd.command  = std::move(command);
+    _conn->send(std::move(cmd));
+
+    _suggest_promise.reset();
+    return _suggest_promise.emplace().get_future();
+}
+
 session_context::info_type const* session_context::info() const noexcept
 {
     return _info.has_value() ? &_info.value() : nullptr;
@@ -64,8 +91,15 @@ void session_context::_on_recv(std::string_view route, nlohmann::json const& msg
                  hash = perfkit::hasher::fnv1a_64(route),
                  msg,
                  alive_marker = std::weak_ptr{_conn}] {
-                    if (not alive_marker.expired())
-                        _handlers.at(hash)(msg);
+                    try
+                    {
+                        if (not alive_marker.expired())
+                            _handlers.at(hash)(msg);
+                    }
+                    catch (std::out_of_range&)
+                    {
+                        SPDLOG_ERROR("undefined event type received. contents: {}", msg.dump(2));
+                    }
                 });
     }
     catch (std::out_of_range&)
@@ -78,11 +112,7 @@ void session_context::_on_epoch(info_type& payload)
 {
     _info.emplace(std::move(payload));
 
-    _output.use(
-            [](auto&& e) {
-                e.clear();
-            });
-
+    _output.clear();
     _configs.clear();
     _entity_indexes.clear();
 }
@@ -90,25 +120,23 @@ void session_context::_on_epoch(info_type& payload)
 void session_context::_on_shell_output(messages::outgoing::shell_output const& message)
 {
     auto& str = message.content;
+    auto& s   = _output;
 
-    _output.use(
-            [&](std::string& s) {
-                enum
-                {
-                    BUF_ERASE_SIZE  = 2 << 20,
-                    BUF_RETAIN_SIZE = 1 << 20
-                };
+    enum
+    {
+        BUF_ERASE_SIZE  = 2 << 20,
+        BUF_RETAIN_SIZE = 1 << 20
+    };
 
-                if (s.size() + str.size() > (BUF_ERASE_SIZE)
-                    && s.size() > BUF_RETAIN_SIZE)
-                {
-                    auto to_erase = s.size() % BUF_RETAIN_SIZE;
-                    s.erase(s.begin(), s.begin() + to_erase);
-                }
+    if (s.size() + str.size() > (BUF_ERASE_SIZE)
+        && s.size() > BUF_RETAIN_SIZE)
+    {
+        auto to_erase = s.size() % BUF_RETAIN_SIZE;
+        s.erase(s.begin(), s.begin() + to_erase);
+    }
 
-                s.append(str);
-            });
-
+    s.append(str);
+    _output_fence += str.size();
     _shell_latest.clear();
 }
 
@@ -166,6 +194,9 @@ void session_context::_on_new_config_class(messages::outgoing::new_config_class 
 
 void session_context::_on_config_entity_update(messages::outgoing::config_entity const& payload)
 {
+    if (payload.content.empty())
+        return;
+
     for (auto& update : payload.content)
     {
         auto it = _entity_indexes.find(make_key(payload.class_key, update.config_key));
@@ -178,5 +209,62 @@ void session_context::_on_config_entity_update(messages::outgoing::config_entity
 
         // apply update
         it->second->value = update.value;
+    }
+}
+
+void session_context::_on_suggest_result(messages::outgoing::suggest_command const& payload)
+{
+    if (payload.reply_to == _waiting_suggest)
+    {
+        _suggest_promise->set_value(payload);
+    }
+}
+
+auto session_context::signal_fetch_trace(std::string_view trace) -> std::future<messages::outgoing::traces>
+{
+    messages::incoming::signal_fetch_traces message;
+    message.targets.emplace_back(trace);
+    _conn->send(std::move(message));
+
+    auto it = _pending_trace_results.lower_bound(trace);
+    if (it != _pending_trace_results.end() && it->first == trace)
+    {
+        // invalidate existing promise before set value
+        it->second = {};
+    }
+    else
+    {
+        it = _pending_trace_results.emplace_hint(
+                it, std::string{trace}, std::promise<messages::outgoing::traces>{});
+    }
+
+    return it->second.get_future();
+}
+
+void session_context::_on_trace_list(const outgoing::trace_class_list& payload)
+{
+    _trace_classes.assign(payload.content.begin(), payload.content.end());
+    _trace_class_dirty = true;
+}
+
+void session_context::_on_trace(const outgoing::traces& payload)
+{
+    auto it = _pending_trace_results.find(payload.class_name);
+    if (it == _pending_trace_results.end())
+        return;
+
+    it->second.set_value(payload);
+    _pending_trace_results.erase(it);
+}
+auto session_context::check_trace_class_change() -> std::vector<std::string> const*
+{
+    if (_trace_class_dirty)
+    {
+        _trace_class_dirty = false;
+        return &_trace_classes;
+    }
+    else
+    {
+        return nullptr;
     }
 }

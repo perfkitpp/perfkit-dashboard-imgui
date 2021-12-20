@@ -6,7 +6,7 @@
 #include "imgui_internal.h"
 
 namespace ImGui {
-bool Spinner(const char* label, const ImU32& color, float radius, int thickness)
+bool Spinner(const char* label, const ImU32& color, float radius, int thickness, double time)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -28,7 +28,7 @@ bool Spinner(const char* label, const ImU32& color, float radius, int thickness)
     window->DrawList->PathClear();
 
     int num_segments = 30;
-    int start        = abs(ImSin(g.Time * 1.8f) * (num_segments - 5));
+    int start        = abs(ImSin(time * 1.8f) * (num_segments - 5));
 
     const float a_min = IM_PI * 2.0f * ((float)start) / (float)num_segments;
     const float a_max = IM_PI * 2.0f * ((float)num_segments - 3) / (float)num_segments;
@@ -38,18 +38,18 @@ bool Spinner(const char* label, const ImU32& color, float radius, int thickness)
     for (int i = 0; i < num_segments; i++)
     {
         const float a = a_min + ((float)i / (float)num_segments) * (a_max - a_min);
-        window->DrawList->PathLineTo(ImVec2(centre.x + ImCos(a + g.Time * 8) * radius,
-                                            centre.y + ImSin(a + g.Time * 8) * radius));
+        window->DrawList->PathLineTo(ImVec2(centre.x + ImCos(a + time * 8) * radius,
+                                            centre.y + ImSin(a + time * 8) * radius));
     }
 
     window->DrawList->PathStroke(color, false, thickness);
     return true;
 }
 
-void ImGui::LoadingIndicatorCircle(const char* label,
-                                   const ImVec4& main_color, const ImVec4& backdrop_color,
-                                   const float indicator_radius,
-                                   const int circle_count, const float speed)
+void LoadingIndicatorCircle(const char* label,
+                            const ImVec4& main_color, const ImVec4& backdrop_color,
+                            const float indicator_radius,
+                            const int circle_count, const float speed)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -104,5 +104,10 @@ void InputTextLeft(const char* label,
     ImGui::PushItemWidth(-1);
     ImGui::InputTextWithHint(label, hint, buf, bufSize, flags, callback, userData);
     ImGui::PopItemWidth();
+}
+
+double GetGlobalTime()
+{
+    return GImGui->Time;
 }
 }  // namespace ImGui
