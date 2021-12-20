@@ -32,8 +32,17 @@ class session_slot_trace_context
         perfkit::ownership<session_context::trace_result_type> result;
     };
 
+    struct plot_arg
+    {
+        double time_offset;  // x axis
+        double value;        // y axis
+    };
+
     struct node_context
     {
+        bool plotting = false;
+        perfkit::stopwatch tim_plot_begin;
+        perfkit::circular_queue<plot_arg> graph{256};
     };
 
    public:
@@ -80,7 +89,9 @@ class session_slot_trace_context
     session_context* const _context;
     std::list<trace_class_context> _traces;
 
-    std::string_view _cur_class;
     perfkit::format_buffer _fmt_label, _tmp;
     std::unordered_map<uint64_t, node_context> _nodes;
+
+    std::string_view _cur_class;
+    bool _cur_has_update = false;
 };
