@@ -111,6 +111,9 @@ void session_slot::render_on_list()
             {
                 _state = state::valid;
                 _trace_context.emplace(_url, &*_context);
+
+                _shello_fence = 0;
+                _shello.SetText({});
             }
             if (_context->status() == session_connection_state::invalid)
             {
@@ -140,9 +143,6 @@ void session_slot::render_on_list()
         {
             if (_context->status() == session_connection_state::invalid)
             {
-                _shello_fence = 0;
-                _shello.SetText({});
-
                 // since _trace_context's pending future results depends on
                 //  context's promises, context must be disposed first to incur
                 //  'future_error' when disposing trace_context.
@@ -491,7 +491,7 @@ static bool prop_editor_recursive_impl(
             snprintf(label, sizeof label, "%s.%s", label_base, key.c_str());
 
             ImGui::PushStyleColor(ImGuiCol_Text, 0xffab8446);
-            ImGui::Text(key.c_str());
+            ImGui::TextEx(key.c_str());
             ImGui::PopStyleColor(1);
 
             ImGui::SameLine();
@@ -554,22 +554,27 @@ static bool prop_editor_recursive_impl(
     else if (e->is_number())
     {
         void* ptr;
+        float step       = 1.;
         void const *pmin = {}, *pmax = {};
         int data_type = 0;
 
         if (e->is_number_integer())
         {
-            ptr = e->get_ptr<int64_t*>();
+            data_type = ImGuiDataType_S64;
+            auto data = e->get_ptr<int64_t*>();
+            ptr       = data;
             min && (pmin = min->get_ptr<int64_t const*>());
             max && (pmax = max->get_ptr<int64_t const*>());
-            data_type = ImGuiDataType_S64;
         }
         else if (e->is_number_float())
         {
-            ptr = e->get_ptr<double*>();
+            data_type = ImGuiDataType_Double;
+            auto data = e->get_ptr<double*>();
+            ptr       = data;
             min && (pmin = min->get_ptr<double const*>());
             max && (pmax = max->get_ptr<double const*>());
-            data_type = ImGuiDataType_Double;
+
+            step = std::max(0.001, std::abs(*data) / 1000);
         }
 
         ImGui::SetNextItemWidth(-1);
@@ -580,7 +585,7 @@ static bool prop_editor_recursive_impl(
         }
         else
         {
-            has_change |= ImGui::DragScalar(label_base, data_type, ptr, 1, pmin, pmax);
+            has_change |= ImGui::DragScalar(label_base, data_type, ptr, step, pmin, pmax);
         }
     }
     else if (e->is_binary())
@@ -812,7 +817,21 @@ void session_slot::_draw_category_recursive(
         {
             ImGui::PushTextWrapPos(ImGui::GetWindowWidth());
             ImGui::BeginTooltip();
-            ImGui::Text("%s", elem.metadata.dump(2).c_str());
+
+            ImGui::PushStyleColor(ImGuiCol_Text, 0xffffffff);
+            if (auto it = elem.metadata.find("description");
+                it != elem.metadata.end() && it->is_string())
+            {
+                ImGui::TextEx(it->get_ref<std::string const&>().c_str());
+            }
+
+            ImGui::Separator();
+
+            ImGui::PushStyleColor(ImGuiCol_Text, 0xff55ffff);
+            ImGui::TextEx(elem.value.dump(2).c_str());
+
+            ImGui::PopStyleColor(2);
+
             ImGui::EndTooltip();
             ImGui::PopTextWrapPos();
         }
@@ -824,13 +843,7 @@ void session_slot::_draw_category_recursive(
                 : elem.value.is_string()                          ? 0xff4c87c7
                                                                   : 0xffc7794c);
 
-        if (not elem.value.is_structured())
-            ImGui::Text(elem.value.dump().c_str());
-        else if (elem.value.is_array())
-            ImGui::Text("[array] - %llu args", elem.value.size());
-        else
-            ImGui::Text("[object] - %llu entries", elem.value.size());
-
+        ImGui::TextEx(elem.value.dump().c_str());
         ImGui::PopStyleColor();
 
         if (open)
