@@ -268,3 +268,16 @@ auto session_context::check_trace_class_change() -> std::vector<std::string> con
         return nullptr;
     }
 }
+
+void session_context::control_trace(
+        std::string_view class_name, uint64_t key, const bool* subscr, const bool* fold)
+{
+    perfkit::terminal::net::incoming::control_trace message;
+    message.class_name = class_name;
+    message.trace_key  = key;
+
+    if (fold) { message.fold = *fold; }
+    if (subscr) { message.subscribe = *subscr; }
+
+    _conn->send(std::move(message));
+}

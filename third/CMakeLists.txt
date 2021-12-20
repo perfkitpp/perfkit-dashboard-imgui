@@ -11,6 +11,8 @@ add_library(
         imgui/backends/imgui_impl_glfw.cpp
         imgui/backends/imgui_impl_opengl3.cpp
         ImGuiColorTextEdit/TextEditor.cpp
+        implot/implot.cpp
+        implot/implot_items.cpp
 )
 
 target_include_directories(
@@ -19,6 +21,7 @@ target_include_directories(
         PUBLIC
         imgui
         imgui/backends
+        implot
         ${OpenGL_INCLUDE_DIRS}
         ImGuiColorTextEdit
 )

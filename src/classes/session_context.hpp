@@ -30,6 +30,8 @@ class session_context
     void configure(std::string_view class_key, uint64_t key, nlohmann::json const& new_value);
     auto signal_fetch_trace(std::string_view trace)
             -> std::future<messages::outgoing::traces>;
+    void control_trace(
+            std::string_view class_name, uint64_t key, bool const* subscr, bool const* fold);
     auto suggest_command(std::string command, int16_t position)
             -> std::future<messages::outgoing::suggest_command>;
 

@@ -178,7 +178,7 @@ void plain_tcp::_handle_body(asio::error_code const &ec, size_t num_read)
     }
     catch (nlohmann::json::parse_error &e)
     {
-        CPPH_ERROR("msgpack parsing error: {}", e.what());
+        CPPH_ERROR("msgpack parsing error: {}, data size was: {}", e.what(), _rdbuf.size());
         _socket.close();
         return;
     }

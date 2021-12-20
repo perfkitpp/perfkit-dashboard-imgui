@@ -8,6 +8,7 @@
 #include <spdlog/spdlog.h>
 
 #include "classes/session_context.hpp"
+#include "perfkit/common/circular_queue.hxx"
 #include "perfkit/common/format.hxx"
 #include "perfkit/common/timer.hxx"
 #include "perfkit/common/utility/ownership.hxx"
@@ -16,6 +17,9 @@ using namespace std::literals;
 
 class session_slot_trace_context
 {
+   public:
+    using node_type = session_context::trace_result_type::node_scheme;
+
    private:
     struct trace_class_context
     {
@@ -26,6 +30,10 @@ class session_slot_trace_context
         perfkit::stopwatch tim_last_request;
         std::future<session_context::trace_result_type> fut_result;
         perfkit::ownership<session_context::trace_result_type> result;
+    };
+
+    struct node_context
+    {
     };
 
    public:
@@ -59,16 +67,20 @@ class session_slot_trace_context
     template <typename Str_, typename... Args_>
     char const* _label(Str_&& fmt, Args_&&... args)
     {
-        _fmt.clear();
-        _fmt.format_append(std::forward<Str_>(fmt), std::forward<Args_>(args)...);
-        _fmt.format_append("##{}", _url);
-        return _fmt.c_str();
+        _fmt_label.clear();
+        _fmt_label.format_append(std::forward<Str_>(fmt), std::forward<Args_>(args)...);
+        _fmt_label.format_append("{}", _url);
+        return _fmt_label.c_str();
     }
+
+    void _recursive_draw_trace(node_type const* node);
 
    private:
     std::string const _url;
     session_context* const _context;
     std::list<trace_class_context> _traces;
 
-    perfkit::format_buffer _fmt;
+    std::string_view _cur_class;
+    perfkit::format_buffer _fmt_label, _tmp;
+    std::unordered_map<uint64_t, node_context> _nodes;
 };

@@ -7,3 +7,6 @@
 [submodule "third/ImGuiColorTextEdit"]
 	path = third/ImGuiColorTextEdit
 	url = git@github.com:perfkitpp/ImGuiColorTextEdit.git
+[submodule "third/implot"]
+	path = third/implot
+	url = git@github.com:epezent/implot.git
