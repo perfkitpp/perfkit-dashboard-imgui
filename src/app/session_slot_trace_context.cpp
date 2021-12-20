@@ -29,13 +29,20 @@ void session_slot_trace_context::update_selected()
         std::vector<std::string_view> diffs;
         diffs.reserve(class_update->size());
 
-        perfkit::set_difference2(
-                *class_update,
-                _traces | ranges::views::transform([](auto&& s) { return s.class_name; }),
-                std::back_inserter(diffs),
-                [](auto&& a, auto&& b) {
-                    return a < b;
-                });
+        if (_traces.empty())
+        {
+            diffs.assign(class_update->begin(), class_update->end());
+        }
+        else
+        {
+            perfkit::set_difference2(
+                    *class_update,
+                    _traces | ranges::views::transform([](auto&& s) { return s.class_name; }),
+                    std::back_inserter(diffs),
+                    [](auto&& a, auto&& b) {
+                        return a < b;
+                    });
+        }
 
         if (not diffs.empty())
         {
