@@ -22,6 +22,7 @@ class session_context
     using config_type        = messages::outgoing::new_config_class::category_scheme;
     using config_entity_type = messages::outgoing::new_config_class::entity_scheme;
     using trace_result_type  = messages::outgoing::traces;
+    using session_state_type = messages::outgoing::session_state;
 
    public:
     explicit session_context(connection_ptr conn);
@@ -90,13 +91,17 @@ class session_context
     }
 
     void _on_epoch(info_type& payload);
-    void _on_session_state(messages::outgoing::session_state const& payload);
+    void _on_session_state(messages::outgoing::session_state const& payload) const;
     void _on_shell_output(messages::outgoing::shell_output const& payload);
     void _on_new_config_class(messages::outgoing::new_config_class const& payload);
     void _on_config_entity_update(messages::outgoing::config_entity const& payload);
     void _on_suggest_result(messages::outgoing::suggest_command const& payload);
     void _on_trace_list(messages::outgoing::trace_class_list const& payload);
     void _on_trace(messages::outgoing::traces const& payload);
+
+   public:
+    perfkit::function<void(session_state_type const&)>
+            on_session_state_update{perfkit::default_function};
 
    private:
     connection_ptr _conn;

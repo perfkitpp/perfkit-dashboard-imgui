@@ -22,6 +22,7 @@ session_context::session_context(connection_ptr conn)
     _install<outgoing::suggest_command>(CPPH_BIND(_on_suggest_result));
     _install<outgoing::trace_class_list>(CPPH_BIND(_on_trace_list));
     _install<outgoing::traces>(CPPH_BIND(_on_trace));
+    _install<outgoing::session_state>(CPPH_BIND(_on_session_state));
 }
 
 void session_context::login(std::string_view id, std::string_view pw)
@@ -280,4 +281,9 @@ void session_context::control_trace(
     if (subscr) { message.subscribe = *subscr; }
 
     _conn->send(std::move(message));
+}
+
+void session_context::_on_session_state(const outgoing::session_state& payload) const
+{
+    on_session_state_update(payload);
 }

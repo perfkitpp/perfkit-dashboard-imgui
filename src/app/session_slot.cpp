@@ -76,6 +76,8 @@ void session_slot::render_on_list()
 
                     _context.reset();
                     _context = std::make_unique<session_context>(std::move(conn));
+                    _context->on_session_state_update
+                            = CPPH_BIND(_session_state_update);
 
                     _state = state::connecting;
                 }
@@ -900,4 +902,35 @@ session_slot::~session_slot()
 {
     _context = {};           // always be first
     _trace_context.reset();  // then next
+}
+
+template <typename Ty_, typename RTy_>
+static void put(session_slot::data_footprint<Ty_>* a, RTy_&& b)
+{
+    if constexpr (std::is_integral_v<Ty_>)
+    {
+        if (not a->empty() && a->back().value == b)
+            return;  // skip update when it's identical with previous
+    }
+    session_slot::graph_node<Ty_> arg;
+    arg.value = b;
+    a->push_back(arg);
+}
+
+void session_slot::_session_state_update(const session_context::session_state_type& state)
+{
+    put(&plots.cpu_total, state.cpu_usage_total_system + state.cpu_usage_total_user);
+    put(&plots.cpu_total_user, state.cpu_usage_total_user);
+    put(&plots.cpu_total_sys, state.cpu_usage_total_system);
+
+    put(&plots.cpu_this, state.cpu_usage_self_user + state.cpu_usage_self_system);
+    put(&plots.cpu_this_user, state.cpu_usage_self_user);
+    put(&plots.cpu_this_sys, state.cpu_usage_self_system);
+
+    put(&plots.num_thrd, state.num_threads);
+    put(&plots.mem_rss, state.memory_usage_resident);
+    put(&plots.mem_virt, state.memory_usage_virtual);
+
+    put(&plots.bw_in, state.bw_in);
+    put(&plots.bw_out, state.bw_out);
 }

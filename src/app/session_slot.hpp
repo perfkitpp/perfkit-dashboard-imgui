@@ -29,7 +29,7 @@ class session_slot_invalid_url : public session_slot_close
  */
 class session_slot
 {
-   private:
+   public:
     enum class state
     {
         disconnected,
@@ -37,6 +37,16 @@ class session_slot
         pre_login,
         valid,
     };
+
+    template <typename Ty_>
+    struct graph_node
+    {
+        Ty_ value;
+        perfkit::stopwatch timestamp;
+    };
+
+    template <typename Ty_>
+    using data_footprint = perfkit::circular_queue<graph_node<Ty_>>;
 
    public:
     explicit session_slot(std::string url, bool from_apiserver);
@@ -82,6 +92,7 @@ class session_slot
     }
 
     void _draw_category_recursive(session_context::config_type const&);
+    void _session_state_update(session_context::session_state_type const& state);
 
    private:
     // url
@@ -101,14 +112,33 @@ class session_slot
     // connection
     std::unique_ptr<session_context> _context;
 
+    // session state data
+    struct _plot_data_t
+    {
+        data_footprint<float> cpu_total_user{250};
+        data_footprint<float> cpu_total_sys{250};
+        data_footprint<float> cpu_total{250};
+        data_footprint<float> cpu_this_user{250};
+        data_footprint<float> cpu_this_sys{250};
+        data_footprint<float> cpu_this{250};
+
+        data_footprint<int64_t> mem_virt{250};
+        data_footprint<int64_t> mem_rss{250};
+
+        data_footprint<int16_t> num_thrd{250};
+
+        data_footprint<int32_t> bw_out{250};
+        data_footprint<int32_t> bw_in{250};
+    } plots;
+
     //
     perfkit::format_buffer _fmt;
     perfkit::circular_queue<std::string> _history{63};
     perfkit::poll_timer _shello_colorize_timer{1s};
-    int64_t _history_cursor      = 0;
-    int _cmd_prev_cursor         = 0;
-    int _shello_color_fence      = 0;
-    size_t _shello_fence         = 0;
+    int64_t _history_cursor = 0;
+    int _cmd_prev_cursor    = 0;
+    int _shello_color_fence = 0;
+    size_t _shello_fence    = 0;
     TextEditor _shello;
 
     // trace
