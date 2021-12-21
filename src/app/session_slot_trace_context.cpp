@@ -173,7 +173,7 @@ void session_slot_trace_context::_recursive_draw_trace(
                 std::from_chars(begin, end, plot_value);
 
                 if (node->value_type == TRACE_VALUE_DURATION_USEC)
-                    plot_value *= 1e-6;
+                    plot_value *= 1e-3;
 
                 auto arg = &ctx->graph.emplace_back();
                 arg->timestamp.reset();
