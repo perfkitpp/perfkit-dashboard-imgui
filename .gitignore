@@ -1,3 +1,5 @@
 _Resharper*
 /out/
 .vs
+.idea
+
