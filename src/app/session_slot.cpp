@@ -1,10 +1,13 @@
 #include "session_slot.hpp"
 
+#include <perfkit/common/futils.hxx>
+#include <perfkit/common/utility/cleanup.hxx>
+
 #include "application.hpp"
 #include "classes/connection/plain_tcp.hpp"
 #include "imgui-extension.h"
 #include "imgui_internal.h"
-#include "perfkit/common/utility/cleanup.hxx"
+#include "implot.h"
 #include "spdlog/spdlog.h"
 #include "utility.hpp"
 
@@ -74,6 +77,7 @@ void session_slot::render_on_list()
                         return;
                     }
 
+                    _plots = {};
                     _context.reset();
                     _context = std::make_unique<session_context>(std::move(conn));
                     _context->on_session_state_update
@@ -157,34 +161,35 @@ void session_slot::render_on_list()
                 break;
             }
 
-            bool visible      = true;
-            bool show_submenu = ImGui::CollapsingHeader(
-                    _fmt.format("{}@{} ... {}###HEAD:{}",
-                                _context->info()->name,
-                                _url,
-                                "|/-\\"[(int)(ImGui::GetTime() / 0.25f) & 3],
-                                _url)
-                            .c_str(),
-                    &visible,
-                    ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick);
+            ImGui::SetNextTreeNodeOpen(_do_plotting);
+            bool keep_open = true;
+            _do_plotting   = ImGui::CollapsingHeader(
+                      _fmt.format("{}@{} ... {}###HEAD:{}",
+                                  _context->info()->name,
+                                  _url,
+                                  "|/-\\"[(int)(ImGui::GetTime() / 0.25f) & 3],
+                                  _url)
+                              .c_str(),
+                      &keep_open);
 
             if (ImGui::IsItemClicked())
             {
                 ImGui::FocusWindow(ImGui::FindWindowByName(_terminal_window_name()));
             }
 
-            if (show_submenu)
+            if (_do_plotting)
             {
-                /*   if (ImGui::IsItemFocused())
-                    ImGui::SetWindowFocus(_terminal_window_name());*/
+                if (ImGui::Begin(
+                            _key("Status Plots: {}@{}", _context->info()->name, _url),
+                            &_do_plotting))
+                {
+                    _plot_on_submenu();
+                }
 
-                ImGui::TreePush();
-                ImGui::Text(__FILE__ " (%d): TODO", __LINE__);
-                // TODO: session state visualizer
-                ImGui::TreePop();
+                ImGui::End();
             }
 
-            if (not visible)
+            if (not keep_open)
             {
                 _context = {};
                 _state   = state::disconnected;
@@ -909,9 +914,13 @@ static void put(session_slot::data_footprint<Ty_>* a, RTy_&& b)
 {
     if constexpr (std::is_integral_v<Ty_>)
     {
-        if (not a->empty() && a->back().value == b)
-            return;  // skip update when it's identical with previous
+        if (a->size() >= 2 && a->end()[-1].value == b && a->end()[-2].value == b)
+        {
+            a->back().timestamp.reset();
+            return;  // skip update when it's identical with previous}
+        }
     }
+
     session_slot::graph_node<Ty_> arg;
     arg.value = b;
     a->push_back(arg);
@@ -919,18 +928,140 @@ static void put(session_slot::data_footprint<Ty_>* a, RTy_&& b)
 
 void session_slot::_session_state_update(const session_context::session_state_type& state)
 {
-    put(&plots.cpu_total, state.cpu_usage_total_system + state.cpu_usage_total_user);
-    put(&plots.cpu_total_user, state.cpu_usage_total_user);
-    put(&plots.cpu_total_sys, state.cpu_usage_total_system);
+    put(&_plots.cpu_total, (state.cpu_usage_total_system + state.cpu_usage_total_user) * 100.);
+    put(&_plots.cpu_total_user, state.cpu_usage_total_user * 100.);
+    put(&_plots.cpu_total_sys, state.cpu_usage_total_system * 100.);
 
-    put(&plots.cpu_this, state.cpu_usage_self_user + state.cpu_usage_self_system);
-    put(&plots.cpu_this_user, state.cpu_usage_self_user);
-    put(&plots.cpu_this_sys, state.cpu_usage_self_system);
+    put(&_plots.cpu_this, (state.cpu_usage_self_user + state.cpu_usage_self_system) * 100.);
+    put(&_plots.cpu_this_user, state.cpu_usage_self_user * 100.);
+    put(&_plots.cpu_this_sys, state.cpu_usage_self_system * 100.);
 
-    put(&plots.num_thrd, state.num_threads);
-    put(&plots.mem_rss, state.memory_usage_resident);
-    put(&plots.mem_virt, state.memory_usage_virtual);
+    put(&_plots.num_thrd, state.num_threads);
+    put(&_plots.mem_rss, state.memory_usage_resident);
+    put(&_plots.mem_virt, state.memory_usage_virtual);
 
-    put(&plots.bw_in, state.bw_in);
-    put(&plots.bw_out, state.bw_out);
+    put(&_plots.bw_in, state.bw_in);
+    put(&_plots.bw_out, state.bw_out);
+}
+
+template <typename Ty_>
+static ImPlotPoint getter(void* param, int idx)
+{
+    auto p   = (typename session_slot::data_footprint<Ty_>*)param;
+    auto arg = (p->begin())[idx];
+
+    if (idx == p->size() - 1)
+        return ImPlotPoint(0., arg.value);
+    else
+        return ImPlotPoint(-arg.timestamp.elapsed().count(), arg.value);
+}
+
+template <typename Ty_>
+static ImPlotPoint getter_0(void* param, int idx)
+{
+    auto p   = (typename session_slot::data_footprint<Ty_>*)param;
+    auto arg = (p->begin())[idx];
+
+    if (idx == p->size() - 1)
+        return ImPlotPoint(0., 0.);
+    else
+        return ImPlotPoint(-arg.timestamp.elapsed().count(), 0.);
+}
+
+template <int Type_, typename Range_>
+static void DoPlot(Range_&& rng, char const* label)
+{
+    if (rng.empty())
+        return;
+
+    auto size  = rng.size();
+    using type = decltype(rng.front().value);
+
+    if constexpr (Type_ == 0)
+    {
+        ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.25f);
+        ImPlot::PlotShadedG(label, getter<type>, &rng, getter_0<type>, &rng, size);
+        ImPlot::PopStyleVar();
+    }
+    else if constexpr (Type_ == 1)
+    {
+        ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.25f);
+        ImPlot::PlotShadedG(label, getter<type>, &rng, getter_0<type>, &rng, size);
+        ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 1.f);
+        ImPlot::PlotScatterG(label, getter<type>, &rng, size);
+        ImPlot::PopStyleVar(2);
+    }
+    else if constexpr (Type_ == 2)
+    {
+        ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.25f);
+        ImPlot::PlotShadedG(label, getter<type>, &rng, getter_0<type>, &rng, size);
+        ImPlot::PopStyleVar();
+    }
+}
+
+void session_slot::_plot_on_submenu()
+{
+    auto OpenPlot =
+            [](char const* name) {
+                return ImGui::CollapsingHeader(perfkit::futils::usprintf("%s##Header", name))
+                    && ImPlot::BeginPlot(name);
+            };
+
+    auto BeginAxisX =
+            [](auto&& queue) {
+                if (queue.empty())
+                    return 0.;
+
+                double time = queue.front().timestamp.elapsed().count();
+                return -ceil(time);
+            };
+
+    ImPlot::SetNextAxisLimits(ImAxis_X1, BeginAxisX(_plots.cpu_total), 0., ImPlotCond_Always);
+    if (OpenPlot("Cpu Usage Total"))
+    {  // Cpu Meter
+        DoPlot<0>(_plots.cpu_total, "User+System");
+        DoPlot<0>(_plots.cpu_total_user, "User");
+        DoPlot<0>(_plots.cpu_total_sys, "System");
+
+        ImPlot::EndPlot();
+    }
+    ImPlot::SetNextAxisLimits(ImAxis_Y1, 0., 1.);
+
+    ImPlot::SetNextAxisLimits(ImAxis_X1, BeginAxisX(_plots.cpu_this), 0., ImPlotCond_Always);
+    if (OpenPlot("CPU Usage This Process"))
+    {  // Cpu Meter
+        DoPlot<0>(_plots.cpu_this, "User+System");
+        DoPlot<0>(_plots.cpu_this_user, "User");
+        DoPlot<0>(_plots.cpu_this_sys, "System");
+
+        ImPlot::EndPlot();
+    }
+
+    ImPlot::SetNextAxisLimits(ImAxis_X1, BeginAxisX(_plots.num_thrd), 0., ImPlotCond_Always);
+    if (OpenPlot("Number Of Threads"))
+    {
+        DoPlot<1>(_plots.num_thrd, "Thread Count");
+
+        ImPlot::EndPlot();
+    }
+
+    auto AxisBegin = std::min(BeginAxisX(_plots.mem_virt), BeginAxisX(_plots.mem_rss));
+    ImPlot::SetNextAxisLimits(ImAxis_X1, AxisBegin, 0., ImPlotCond_Always);
+    if (OpenPlot("Memory Usage"))
+    {
+        DoPlot<2>(_plots.mem_virt, "Virtual");
+        DoPlot<2>(_plots.mem_rss, "Resident");
+
+        ImPlot::EndPlot();
+    }
+
+    AxisBegin = std::min(BeginAxisX(_plots.bw_out), BeginAxisX(_plots.bw_in));
+    ImPlot::SetNextAxisLimits(ImAxis_X1, AxisBegin, 0., ImPlotCond_Always);
+    if (OpenPlot("Network Bandwidth Usage"))
+    {
+        DoPlot<0>(_plots.bw_out, "Outgoing");
+        DoPlot<0>(_plots.bw_in, "Incoming");
+
+        ImPlot::EndPlot();
+    }
 }

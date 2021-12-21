@@ -93,6 +93,7 @@ class session_slot
 
     void _draw_category_recursive(session_context::config_type const&);
     void _session_state_update(session_context::session_state_type const& state);
+    void _plot_on_submenu();
 
    private:
     // url
@@ -129,7 +130,8 @@ class session_slot
 
         data_footprint<int32_t> bw_out{250};
         data_footprint<int32_t> bw_in{250};
-    } plots;
+    } _plots;
+    bool _do_plotting = false;
 
     //
     perfkit::format_buffer _fmt;
