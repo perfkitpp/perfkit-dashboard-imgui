@@ -1013,7 +1013,7 @@ void session_slot::_plot_on_submenu()
                     return 0.;
 
                 double time = queue.front().timestamp.elapsed().count();
-                return -ceil(time);
+                return -ceil(time / 15.) * 15.;
             };
 
     ImPlot::SetNextAxisLimits(ImAxis_X1, BeginAxisX(_plots.cpu_total), 0., ImPlotCond_Always);
