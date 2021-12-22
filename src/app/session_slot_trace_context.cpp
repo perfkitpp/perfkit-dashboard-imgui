@@ -189,8 +189,7 @@ void session_slot_trace_context::_recursive_draw_trace(
                 ImGui::BeginTooltip();
 
                 ImPlot::SetNextAxesToFit();
-                ImPlot::SetupAxisLimits(ImAxis_X1, 0, 0);  // reset axis limits if cached
-                ImPlot::SetupAxisLimits(ImAxis_Y1, 0, 0);  // reset axis limits if cached
+                ImPlot::SetNextAxesLimits(0, 1, 0, 1);  // reset axis limits if cached
                 if (ImPlot::BeginPlot(ctx->display_key.c_str()))
                 {
                     using iterator = decltype(ctx->graph.begin());
