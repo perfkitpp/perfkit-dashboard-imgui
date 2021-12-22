@@ -131,8 +131,7 @@ class session_slot
         data_footprint<int32_t> bw_out{250};
         data_footprint<int32_t> bw_in{250};
     } _plots;
-    bool _do_plotting = false;
-
+    
     //
     perfkit::format_buffer _fmt;
     perfkit::circular_queue<std::string> _history{63};

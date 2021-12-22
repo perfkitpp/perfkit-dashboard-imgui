@@ -161,33 +161,73 @@ void session_slot::render_on_list()
                 break;
             }
 
-            ImGui::SetNextTreeNodeOpen(_do_plotting);
-            bool keep_open = true;
-            _do_plotting   = ImGui::CollapsingHeader(
-                      _fmt.format("{}@{} ... {}###HEAD:{}",
-                                  _context->info()->name,
-                                  _url,
-                                  "|/-\\"[(int)(ImGui::GetTime() / 0.25f) & 3],
-                                  _url)
-                              .c_str(),
-                      &keep_open,
-                      ImGuiTreeNodeFlags_OpenOnDoubleClick);
+            static void* active_plotting = nullptr;
+            bool is_plotting             = active_plotting == this;
 
-            if (ImGui::IsItemClicked())
+            bool keep_open      = true;
+            bool plotting_label = is_plotting;
+
+            ImGui::AlignTextToFramePadding();
+            auto spin       = ":._-^'\"~\\|/*"sv;
+            char spinbuf[2] = {};
+            spinbuf[0]      = spin[int(ImGui::GetTime() / 0.25f) % spin.size()];
+
+            ImGui::PushStyleColor(ImGuiCol_Text, 0xff00ff00);
+            ImGui::TextEx(spinbuf);
+            ImGui::PopStyleColor();
+
+            ImGui::SameLine();
+            auto on_select = ImGui::Selectable(
+                    _fmt.format("{0}@{1}##HEAD:{2}",
+                                _context->info()->name,
+                                _url,
+                                _url)
+                            .c_str(),
+                    &plotting_label,
+                    ImGuiSelectableFlags_SpanAllColumns
+                            | ImGuiSelectableFlags_AllowItemOverlap);
+
+            if (ImGui::IsItemClicked()
+                && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+            {
+                if (is_plotting)
+                    active_plotting = nullptr;
+                else
+                    active_plotting = this;
+            }
+
+            ImGui::SameLine();
+            ImGui::PushStyleColor(ImGuiCol_Button, 0xff002288);
+            if (ImGui::SmallButton(_key("x##{}", _url)))
+            {
+                keep_open = false;
+            }
+            ImGui::PopStyleColor();
+
+            if (on_select)
             {
                 ImGui::FocusWindow(ImGui::FindWindowByName(_terminal_window_name()));
             }
 
-            if (_do_plotting)
+            if (is_plotting)
             {
                 if (ImGui::Begin(
-                            _key("Status Plots: {}@{}", _context->info()->name, _url),
-                            &_do_plotting))
+                            _key("Status Plot", _context->info()->name, _url),
+                            &is_plotting))
                 {
+                    ImGui::BeginChild(
+                            "Stauts Plot Child",
+                            {}, true, ImGuiWindowFlags_AlwaysAutoResize);
                     _plot_on_submenu();
+                    ImGui::EndChild();
                 }
 
                 ImGui::End();
+
+                if (not is_plotting)
+                {
+                    active_plotting = nullptr;
+                }
             }
 
             if (not keep_open)
@@ -1001,8 +1041,20 @@ void session_slot::_plot_on_submenu()
 {
     auto OpenPlot =
             [](char const* name) {
-                return ImGui::CollapsingHeader(perfkit::futils::usprintf("%s##Header", name))
-                    && ImPlot::BeginPlot(name);
+                auto open = ImGui::CollapsingHeader(
+                        perfkit::futils::usprintf("%s##Header", name),
+                        ImGuiTreeNodeFlags_DefaultOpen
+                                | ImGuiTreeNodeFlags_OpenOnDoubleClick
+                                | ImGuiTreeNodeFlags_OpenOnArrow);
+
+                ImGui::TreePush();
+                open = open && ImPlot::BeginPlot(name);
+                return open;
+            };
+
+    auto ClosePlot =
+            [] {
+                ImPlot::EndPlot();
             };
 
     auto BeginAxisX =
@@ -1021,8 +1073,9 @@ void session_slot::_plot_on_submenu()
         DoPlot<0>(_plots.cpu_total_user, "User");
         DoPlot<0>(_plots.cpu_total_sys, "System");
 
-        ImPlot::EndPlot();
+        ClosePlot();
     }
+    ImGui::TreePop();
     ImPlot::SetNextAxisLimits(ImAxis_Y1, 0., 1.);
 
     ImPlot::SetNextAxisLimits(ImAxis_X1, BeginAxisX(_plots.cpu_this), 0., ImPlotCond_Always);
@@ -1032,16 +1085,18 @@ void session_slot::_plot_on_submenu()
         DoPlot<0>(_plots.cpu_this_user, "User");
         DoPlot<0>(_plots.cpu_this_sys, "System");
 
-        ImPlot::EndPlot();
+        ClosePlot();
     }
+    ImGui::TreePop();
 
     ImPlot::SetNextAxisLimits(ImAxis_X1, BeginAxisX(_plots.num_thrd), 0., ImPlotCond_Always);
     if (OpenPlot("Number Of Threads"))
     {
         DoPlot<1>(_plots.num_thrd, "Thread Count");
 
-        ImPlot::EndPlot();
+        ClosePlot();
     }
+    ImGui::TreePop();
 
     auto AxisBegin = std::min(BeginAxisX(_plots.mem_virt), BeginAxisX(_plots.mem_rss));
     ImPlot::SetNextAxisLimits(ImAxis_X1, AxisBegin, 0., ImPlotCond_Always);
@@ -1050,8 +1105,9 @@ void session_slot::_plot_on_submenu()
         DoPlot<2>(_plots.mem_virt, "Virtual");
         DoPlot<2>(_plots.mem_rss, "Resident");
 
-        ImPlot::EndPlot();
+        ClosePlot();
     }
+    ImGui::TreePop();
 
     AxisBegin = std::min(BeginAxisX(_plots.bw_out), BeginAxisX(_plots.bw_in));
     ImPlot::SetNextAxisLimits(ImAxis_X1, AxisBegin, 0., ImPlotCond_Always);
@@ -1060,6 +1116,7 @@ void session_slot::_plot_on_submenu()
         DoPlot<0>(_plots.bw_out, "Outgoing");
         DoPlot<0>(_plots.bw_in, "Incoming");
 
-        ImPlot::EndPlot();
+        ClosePlot();
     }
+    ImGui::TreePop();
 }
