@@ -170,7 +170,8 @@ void session_slot::render_on_list()
                                   "|/-\\"[(int)(ImGui::GetTime() / 0.25f) & 3],
                                   _url)
                               .c_str(),
-                      &keep_open);
+                      &keep_open,
+                      ImGuiTreeNodeFlags_OpenOnDoubleClick);
 
             if (ImGui::IsItemClicked())
             {
@@ -986,9 +987,7 @@ static void DoPlot(Range_&& rng, char const* label)
     else if constexpr (Type_ == 1)
     {
         ImPlot::PlotLineG(label, getter<type>, &rng, size);
-        ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 1.f);
         ImPlot::PlotScatterG(label, getter<type>, &rng, size);
-        ImPlot::PopStyleVar(1);
     }
     else if constexpr (Type_ == 2)
     {
