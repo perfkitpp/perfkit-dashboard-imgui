@@ -985,11 +985,10 @@ static void DoPlot(Range_&& rng, char const* label)
     }
     else if constexpr (Type_ == 1)
     {
-        ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.25f);
-        ImPlot::PlotShadedG(label, getter<type>, &rng, getter_0<type>, &rng, size);
+        ImPlot::PlotLineG(label, getter<type>, &rng, size);
         ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 1.f);
         ImPlot::PlotScatterG(label, getter<type>, &rng, size);
-        ImPlot::PopStyleVar(2);
+        ImPlot::PopStyleVar(1);
     }
     else if constexpr (Type_ == 2)
     {
