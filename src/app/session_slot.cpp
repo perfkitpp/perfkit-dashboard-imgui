@@ -217,7 +217,9 @@ void session_slot::render_on_list()
                 {
                     ImGui::BeginChild(
                             "Stauts Plot Child",
-                            {}, true, ImGuiWindowFlags_AlwaysAutoResize);
+                            {}, true,
+                            ImGuiWindowFlags_AlwaysAutoResize
+                                    | ImGuiWindowFlags_AlwaysVerticalScrollbar);
                     _plot_on_submenu();
                     ImGui::EndChild();
                 }
@@ -750,8 +752,7 @@ static std::optional<nlohmann::json> prop_editor(
         ImGui::PopStyleColor(3);
     }
 
-    ImGui::Separator();
-    ImGui::BeginChild("Editor Child");
+    ImGui::BeginChild("Editor Child", {}, true);
 
     if (context.mode_edit_raw)
     {
@@ -821,6 +822,11 @@ static std::optional<nlohmann::json> prop_editor(
     if (not context.mode_edit_raw && context.mode_apply_on_change)
     {
         apply_changes |= has_change;
+    }
+
+    if (ImGui::GetIO().KeyCtrl && ImGui::IsKeyPressed(257, false))
+    {
+        apply_changes = true;
     }
 
     if (apply_changes)
@@ -977,12 +983,19 @@ void session_slot::_session_state_update(const session_context::session_state_ty
     put(&_plots.cpu_this_user, state.cpu_usage_self_user * 100.);
     put(&_plots.cpu_this_sys, state.cpu_usage_self_system * 100.);
 
-    put(&_plots.num_thrd, state.num_threads);
     put(&_plots.mem_rss, state.memory_usage_resident);
     put(&_plots.mem_virt, state.memory_usage_virtual);
 
-    put(&_plots.bw_in, state.bw_in);
-    put(&_plots.bw_out, state.bw_out);
+    put(&_plots.bw_in, state.bw_in * 8);
+    put(&_plots.bw_out, state.bw_out * 8);
+
+    // 사각형 형태를 유지하기 위해 두 개씩 put
+    if (not _plots.num_thrd.empty())
+        put(&_plots.num_thrd, _plots.num_thrd.back().value);
+    else
+        put(&_plots.num_thrd, 0);
+
+    put(&_plots.num_thrd, state.num_threads);
 }
 
 template <typename Ty_>
@@ -1018,43 +1031,78 @@ static void DoPlot(Range_&& rng, char const* label)
     auto size  = rng.size();
     using type = decltype(rng.front().value);
 
-    if constexpr (Type_ == 0)
+    if constexpr (Type_ == 0 || Type_ == 2)
     {
         ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.25f);
         ImPlot::PlotShadedG(label, getter<type>, &rng, getter_0<type>, &rng, size);
         ImPlot::PopStyleVar();
+        ImPlot::PlotLineG(label, getter<type>, &rng, size);
     }
     else if constexpr (Type_ == 1)
     {
-        ImPlot::PlotLineG(label, getter<type>, &rng, size);
-        ImPlot::PlotScatterG(label, getter<type>, &rng, size);
-    }
-    else if constexpr (Type_ == 2)
-    {
         ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.25f);
         ImPlot::PlotShadedG(label, getter<type>, &rng, getter_0<type>, &rng, size);
         ImPlot::PopStyleVar();
+
+        ImPlot::PlotScatterG(label, getter<type>, &rng, size);
+        ImPlot::PlotStairsG(label, getter<type>, &rng, size);
+        ImPlot::PlotBarsG(label, getter<type>, &rng, size, 0.);
     }
 }
 
 void session_slot::_plot_on_submenu()
 {
-    auto OpenPlot =
-            [](char const* name) {
-                auto open = ImGui::CollapsingHeader(
-                        perfkit::futils::usprintf("%s##Header", name),
-                        ImGuiTreeNodeFlags_DefaultOpen
-                                | ImGuiTreeNodeFlags_OpenOnDoubleClick
-                                | ImGuiTreeNodeFlags_OpenOnArrow);
+    auto makeOpenPlotContext =
+            [=](char const* name) {
+                return [mM           = std::array<double, 2>{},
+                        name         = std::string{name},
+                        fitTimeAuto  = true,
+                        fitValueAuto = true]  //
+                       () mutable -> bool {
+                           ImGui::AlignTextToFramePadding();
+                           auto open = ImGui::TreeNodeEx(
+                                   perfkit::futils::usprintf("%s##Header", name.c_str()),
+                                   ImGuiTreeNodeFlags_DefaultOpen
+                                           | ImGuiTreeNodeFlags_SpanFullWidth);
 
-                ImGui::TreePush();
-                open = open && ImPlot::BeginPlot(name);
-                return open;
+                           if (open)
+                           {
+                               ImGui::Checkbox("Fit Time", &fitTimeAuto);
+                               ImGui::SameLine();
+                               ImGui::Checkbox("Fit Value", &fitValueAuto);
+
+                               if (fitTimeAuto)
+                                   ImPlot::SetNextAxisToFit(ImAxis_X1);
+                               if (fitValueAuto)
+                                   ImPlot::SetNextAxisToFit(ImAxis_Y1);
+
+                               ImPlot::PushStyleColor(ImPlotCol_FrameBg, 0x00);
+                               if (ImPlot::BeginPlot(name.c_str(), {-1, 0}, ImPlotFlags_NoTitle))
+                               {
+                                   mM[0] = std::max(0., mM[0]);
+                                   mM[1] = std::min(0., mM[1]);
+
+                                   ImPlot::SetupAxisLinks(ImAxis_Y1, &mM[0], nullptr);
+                                   ImPlot::SetupAxisLinks(ImAxis_X1, nullptr, &mM[1]);
+                                   ImPlot::SetupAxisFormat(ImAxis_X1, "%.1fs");
+                               }
+                               else
+                               {
+                                   ImPlot::PopStyleColor();
+                                   ImGui::TreePop();
+                                   open = false;
+                               }
+                           }
+
+                           return open;
+                       };
             };
 
     auto ClosePlot =
             [] {
                 ImPlot::EndPlot();
+                ImPlot::PopStyleColor();
+                ImGui::TreePop();
             };
 
     auto BeginAxisX =
@@ -1066,57 +1114,109 @@ void session_slot::_plot_on_submenu()
                 return -ceil(time / 15.) * 15.;
             };
 
-    ImPlot::SetNextAxisLimits(ImAxis_X1, BeginAxisX(_plots.cpu_total), 0., ImPlotCond_Always);
-    if (OpenPlot("Cpu Usage Total"))
+    ImPlotFormatter formatCpuUsage =
+            [](double value, char* buff, int size, void*) {
+                if (value > 10.)
+                {
+                    snprintf(buff, size, "%.0lf%%", value);
+                }
+                else if (value > 1.)
+                {
+                    snprintf(buff, size, "%.1lf%%", value);
+                }
+                else
+                {
+                    snprintf(buff, size, "%g%%", value);
+                }
+            };
+
+    ImPlotFormatter formatMemoryUsage =
+            [](double value, char* buff, int size, void* user) {
+                if (value < 0)
+                {
+                    snprintf(buff, size, "--");
+                    return;
+                }
+
+                int64_t lvalue      = value;
+                char const suffix[] = " kMGTPE";
+                int64_t base        = 1;
+                int order           = 0;
+
+                for (; base * 1024 < lvalue
+                       && order < std::size(suffix) - 1;
+                     base *= 1024, ++order) {}
+
+                auto is_bandwidth = (intptr_t)user == 2;
+
+                if (order > 0)
+                {
+                    int dec  = lvalue * 10 / base;
+                    int frac = dec % 10;
+                    dec /= 10;
+
+                    if (is_bandwidth)
+                        snprintf(buff, size, "%d.%d %cbit/s", dec, frac, suffix[order]);
+                    else
+                        snprintf(buff, size, "%d.%d %ciB", dec, frac, suffix[order]);
+                }
+                else
+                {
+                    if (is_bandwidth)
+                        snprintf(buff, size, "%lld bit/s", lvalue);
+                    else
+                        snprintf(buff, size, "%lld B", lvalue);
+                }
+            };
+
+    ImPlot::SetNextAxisLimits(ImAxis_X1, -30., 0.);
+
+    if (static auto fn = makeOpenPlotContext("Cpu Usage: Total"); fn())
     {  // Cpu Meter
+        ImPlot::SetupAxisFormat(ImAxis_Y1, formatCpuUsage);
+
         DoPlot<0>(_plots.cpu_total, "User+System");
         DoPlot<0>(_plots.cpu_total_user, "User");
         DoPlot<0>(_plots.cpu_total_sys, "System");
 
         ClosePlot();
     }
-    ImGui::TreePop();
-    ImPlot::SetNextAxisLimits(ImAxis_Y1, 0., 1.);
 
-    ImPlot::SetNextAxisLimits(ImAxis_X1, BeginAxisX(_plots.cpu_this), 0., ImPlotCond_Always);
-    if (OpenPlot("CPU Usage This Process"))
+    if (static auto fn = makeOpenPlotContext("CPU Usage: This Process"); fn())
     {  // Cpu Meter
+        ImPlot::SetupAxisFormat(ImAxis_Y1, formatCpuUsage);
+
         DoPlot<0>(_plots.cpu_this, "User+System");
         DoPlot<0>(_plots.cpu_this_user, "User");
         DoPlot<0>(_plots.cpu_this_sys, "System");
 
         ClosePlot();
     }
-    ImGui::TreePop();
 
-    ImPlot::SetNextAxisLimits(ImAxis_X1, BeginAxisX(_plots.num_thrd), 0., ImPlotCond_Always);
-    if (OpenPlot("Number Of Threads"))
+    if (static auto fn = makeOpenPlotContext("Number of Threads"); fn())
     {
         DoPlot<1>(_plots.num_thrd, "Thread Count");
 
         ClosePlot();
     }
-    ImGui::TreePop();
 
-    auto AxisBegin = std::min(BeginAxisX(_plots.mem_virt), BeginAxisX(_plots.mem_rss));
-    ImPlot::SetNextAxisLimits(ImAxis_X1, AxisBegin, 0., ImPlotCond_Always);
-    if (OpenPlot("Memory Usage"))
+    if (static auto fn = makeOpenPlotContext("Memory Usage"); fn())
     {
+        ImPlot::SetupAxisFormat(ImAxis_Y1, formatMemoryUsage, (void*)1);
+
         DoPlot<2>(_plots.mem_virt, "Virtual");
         DoPlot<2>(_plots.mem_rss, "Resident");
 
         ClosePlot();
     }
-    ImGui::TreePop();
 
-    AxisBegin = std::min(BeginAxisX(_plots.bw_out), BeginAxisX(_plots.bw_in));
-    ImPlot::SetNextAxisLimits(ImAxis_X1, AxisBegin, 0., ImPlotCond_Always);
-    if (OpenPlot("Network Bandwidth Usage"))
+    if (static auto fn = makeOpenPlotContext("Perfkit IO BW Usgae"); fn())
     {
+        ImPlot::SetupAxisFormat(ImAxis_Y1, formatMemoryUsage, (void*)2);
+
         DoPlot<0>(_plots.bw_out, "Outgoing");
         DoPlot<0>(_plots.bw_in, "Incoming");
 
         ClosePlot();
     }
-    ImGui::TreePop();
 }

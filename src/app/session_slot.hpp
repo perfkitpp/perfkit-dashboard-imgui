@@ -126,12 +126,12 @@ class session_slot
         data_footprint<int64_t> mem_virt{250};
         data_footprint<int64_t> mem_rss{250};
 
-        data_footprint<int16_t> num_thrd{250};
+        data_footprint<int16_t> num_thrd{500};
 
         data_footprint<int32_t> bw_out{250};
         data_footprint<int32_t> bw_in{250};
     } _plots;
-    
+
     //
     perfkit::format_buffer _fmt;
     perfkit::circular_queue<std::string> _history{63};
