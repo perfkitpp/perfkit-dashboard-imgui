@@ -114,6 +114,7 @@ void session_slot_trace_context::_recursive_draw_trace(
                 _label("{}##{}.", node->name, node->trace_key),
                 ImGuiTreeNodeFlags_AllowItemOverlap
                         | ImGuiTreeNodeFlags_SpanAvailWidth
+                        | ImGuiTreeNodeFlags_DefaultOpen
                         | (not node->folded && node->children.empty() ? ImGuiTreeNodeFlags_Leaf : 0));
         auto should_popup     = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup);
         auto fold_toggled     = ImGui::IsItemToggledOpen();
