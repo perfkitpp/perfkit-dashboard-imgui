@@ -491,24 +491,27 @@ void session_slot::_title_string()
     bool should_close = false;
 
     ImGui::PushStyleColor(ImGuiCol_Button, 0xff000077);
-    if (not _prompt_close)
-    {
-        _prompt_close = ImGui::Button(_fmt.format("delete##{}", _url).c_str());
-        ImGui::PopStyleColor();
-    }
-    else
-    {
-        ImGui::PushStyleColor(ImGuiCol_Text, 0xff00ffff);
-        ImGui::Text("really?");
-        ImGui::PopStyleColor();
+    if (_state != state ::connecting)
+    {  // If deleted during connecting, deadlock occurs.
+        if (not _prompt_close)
+        {
+            _prompt_close = ImGui::Button(_fmt.format("delete##{}", _url).c_str());
+            ImGui::PopStyleColor();
+        }
+        else
+        {
+            ImGui::PushStyleColor(ImGuiCol_Text, 0xff00ffff);
+            ImGui::Text("really?");
+            ImGui::PopStyleColor();
 
-        ImGui::SameLine();
-        should_close = ImGui::Button("yes");
+            ImGui::SameLine();
+            should_close = ImGui::Button("yes");
 
-        ImGui::PopStyleColor();
+            ImGui::PopStyleColor();
 
-        ImGui::SameLine();
-        if (ImGui::Button("no")) { _prompt_close = false; }
+            ImGui::SameLine();
+            if (ImGui::Button("no")) { _prompt_close = false; }
+        }
     }
 
     if (should_close)
