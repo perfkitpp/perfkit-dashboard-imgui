@@ -486,12 +486,12 @@ void session_slot::_draw_shell()
 void session_slot::_title_string()
 {
     ImGui::TextEx(_url.c_str());
-    ImGui::SameLine();
 
     bool should_close = false;
 
     if (_state != state ::connecting)
     {  // If deleted during connecting, deadlock occurs.
+        ImGui::SameLine();
         ImGui::PushStyleColor(ImGuiCol_Button, 0xff000077);
 
         if (not _prompt_close)
