@@ -305,10 +305,10 @@ void session_slot::render_windows()
 
 void session_slot::_draw_shell()
 {
-    this->_has_focus = ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows);
+    _has_focus = ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows);
 
-    if (auto s = this->_context->shell_output(&this->_shello_fence); not s.empty())
-        xterm_leap_escape(&this->_shello, s);
+    if (auto s = _context->shell_output(&_shello_fence); not s.empty())
+        xterm_leap_escape(&_shello, s);
 
     if (_shello.GetTotalLines() != _shello_color_fence && _shello_colorize_timer.check())
     {
@@ -317,30 +317,30 @@ void session_slot::_draw_shell()
         _shello_color_fence = _shello.GetTotalLines();
     }
 
-    this->_shello.Render(this->_key("Terminal:{}", this->_url), {-1, -40}, true);
+    _shello.Render(_key("Terminal:{}", _url), {-1, -40}, true);
 
-    if (this->_do_autoscroll)
+    if (_do_autoscroll)
     {
-        this->_shello.MoveBottom();
-        this->_shello.MoveEnd();
-        ImGui::SetScrollY(ImGui::GetScrollMaxY()), this->_do_autoscroll = false;
+        _shello.MoveBottom();
+        _shello.MoveEnd();
+        ImGui::SetScrollY(ImGui::GetScrollMaxY()), _do_autoscroll = false;
     }
 
-    if (this->_context->consume_recv_char() && not this->_scroll_lock)
-        this->_do_autoscroll = true;
+    if (_context->consume_recv_char() && not _scroll_lock)
+        _do_autoscroll = true;
 
-    ImGui::Checkbox("Scroll Lock", &this->_scroll_lock);
+    ImGui::Checkbox("Scroll Lock", &_scroll_lock);
 
     // Commandline
     ImGui::PushItemWidth(-1);
 
-    auto* current_command = &this->_history.back();
+    auto* current_command = &_history.back();
     if (current_command->size() < 1024)
         current_command->resize(1024);
 
     auto* command  = current_command->data();
     bool has_enter = ImGui::InputTextWithHint(
-            this->_key("SHELLIN:{}", this->_url), "$ enter command here",
+            _key("SHELLIN:{}", _url), "$ enter command here",
             command, current_command->size() - 1,
             ImGuiInputTextFlags_CallbackCompletion
                     | ImGuiInputTextFlags_CallbackHistory
@@ -417,7 +417,7 @@ void session_slot::_draw_shell()
             },
             this);
 
-    if (this->_active_suggest && not this->_active_suggest->candidates.empty())
+    if (_active_suggest && not _active_suggest->candidates.empty())
     {
         std::string_view last_word = command;
         auto i_space               = last_word.find_last_of(' ');
@@ -439,7 +439,7 @@ void session_slot::_draw_shell()
                              | ImGuiWindowFlags_NoFocusOnAppearing);
 
         bool has_any_match = false;
-        for (std::string_view suggest : this->_active_suggest->candidates)
+        for (std::string_view suggest : _active_suggest->candidates)
         {
             if (suggest.find(last_word) == 0)
             {
@@ -454,30 +454,31 @@ void session_slot::_draw_shell()
         }
 
         if (not has_any_match)
-            this->_active_suggest.reset();
+            _active_suggest.reset();
 
         ImGui::End();
     }
     else
     {
-        this->_active_suggest.reset();
+        _active_suggest.reset();
     }
 
     if (has_enter)
-    {  // TODO: submit command
+    {
         ImGui::SetKeyboardFocusHere(-1);
         current_command->resize(strlen(current_command->c_str()));
 
         if (not current_command->empty())
         {
-            this->_context->push_command(*current_command);
+            _context->push_command(*current_command);
 
-            if (this->_history.size() > 2 && this->_history.end()[-1] == this->_history.end()[-2])
+            if (_history.size() > 2 && _history.end()[-1] == _history.end()[-2])
                 (*current_command)[0] = '\0';
             else
-                this->_history.emplace_back();
+                _history.emplace_back();
 
-            this->_history_cursor = 0;
+            _history_cursor = 0;
+            _active_suggest       = {};
         }
     }
     ImGui::PopItemWidth();
