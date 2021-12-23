@@ -902,18 +902,6 @@ static std::optional<nlohmann::json> prop_editor(
 void session_slot::_draw_category_recursive(
         session_context::config_type const& target)
 {
-    for (auto& sub : target.subcategories)
-    {
-        if (not ImGui::TreeNodeEx(
-                    _key("{}##{}", sub.name.c_str(), (void*)&sub),
-                    ImGuiTreeNodeFlags_SpanFullWidth))
-            continue;
-
-        _draw_category_recursive(sub);
-
-        ImGui::TreePop();
-    }
-
     static uint64_t selected_item = 0;
 
     for (auto& elem : target.entities)
@@ -998,6 +986,19 @@ void session_slot::_draw_category_recursive(
         }
 
         ImGui::End();
+    }
+
+    for (auto& sub : target.subcategories)
+    {
+        if (not ImGui::TreeNodeEx(
+                    _key("{}##{}", sub.name.c_str(), (void*)&sub),
+                    ImGuiTreeNodeFlags_SpanFullWidth
+                            | ImGuiTreeNodeFlags_DefaultOpen))
+            continue;
+
+        _draw_category_recursive(sub);
+
+        ImGui::TreePop();
     }
 }
 
