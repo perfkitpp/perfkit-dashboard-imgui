@@ -490,9 +490,10 @@ void session_slot::_title_string()
 
     bool should_close = false;
 
-    ImGui::PushStyleColor(ImGuiCol_Button, 0xff000077);
     if (_state != state ::connecting)
     {  // If deleted during connecting, deadlock occurs.
+        ImGui::PushStyleColor(ImGuiCol_Button, 0xff000077);
+
         if (not _prompt_close)
         {
             _prompt_close = ImGui::Button(_fmt.format("delete##{}", _url).c_str());
