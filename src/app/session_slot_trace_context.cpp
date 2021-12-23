@@ -66,6 +66,7 @@ void session_slot_trace_context::_recursive_draw_trace(
         std::string_view text;
         ImGuiCol text_color = 0xffcccccc;
 
+        bool is_string = false;
         switch (trace_value_type(node->value_type))
         {
             case TRACE_VALUE_NULLPTR:
@@ -95,6 +96,7 @@ void session_slot_trace_context::_recursive_draw_trace(
             case TRACE_VALUE_STRING:
                 text       = node->value;
                 text_color = 0xff2980cc;
+                is_string  = true;
                 break;
 
             case TRACE_VALUE_BOOLEAN:
@@ -213,6 +215,23 @@ void session_slot_trace_context::_recursive_draw_trace(
                 }
                 ImGui::EndTooltip();
             }
+        }
+
+        if (is_string && should_popup)
+        {
+            static ImVec2 size{480, 272};
+            ImGui::SetNextWindowSize(size);
+            ImGui::SetNextWindowBgAlpha(0.67);
+
+            ImGui::BeginTooltip();
+            ImGui::PushTextWrapPos(480.);
+
+            ImGui::TextEx(node->value.c_str(),
+                          node->value.c_str() + std::min<size_t>(2500, node->value.size()));
+            size = ImGui::CalcWindowNextAutoFitSize(ImGui::GetCurrentWindow());
+
+            ImGui::PopTextWrapPos();
+            ImGui::EndTooltip();
         }
 
         if (not tree_open)

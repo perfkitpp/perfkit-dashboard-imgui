@@ -478,7 +478,7 @@ void session_slot::_draw_shell()
                 _history.emplace_back();
 
             _history_cursor = 0;
-            _active_suggest       = {};
+            _active_suggest = {};
         }
     }
     ImGui::PopItemWidth();
@@ -576,15 +576,55 @@ static bool prop_editor_recursive_impl(
     }
     else if (e->is_string())
     {
-        auto str = e->get_ptr<std::string*>();
+        static TextEditor editor;
+        static std::string* editing = nullptr;
+
+        auto str           = e->get_ptr<std::string*>();
+        auto readonly_flag = 0;
+
+        if (str == editing)
+        {
+            bool keep_open = true;
+            if (ImGui::Begin("String Property Editor", &keep_open, ImGuiWindowFlags_NoDocking))
+            {
+                // TODO: reinforce this
+                //       - syntax mode
+                editor.Render("String Property Editor Body", {});
+
+                if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Escape)))
+                {
+                    keep_open = false;
+                }
+                else if (ImGui::IsKeyPressed('S')
+                         && (ImGui::GetMergedKeyModFlags() & ImGuiKeyModFlags_Ctrl))
+                {
+                    *editing = editor.GetText();
+                    has_change |= true;
+                }
+                else
+                {
+                    readonly_flag |= ImGuiInputTextFlags_ReadOnly;
+                }
+            }
+
+            if (not keep_open)
+            {
+                has_change |= true;
+                *editing = editor.GetText();
+                editing  = nullptr;
+            }
+            ImGui::End();
+        }
 
         ImGui::SetNextItemWidth(-1);
-        has_change |= ImGui::InputTextMultiline(
+        has_change |= ImGui::InputTextEx(
                 label_base,
+                "",
                 str->data(),
                 str->capacity(),
                 {},
-                ImGuiInputTextFlags_CallbackResize,
+                ImGuiInputTextFlags_CallbackResize
+                        | readonly_flag,
                 [](ImGuiInputTextCallbackData* data) -> int {
                     if (data->EventFlag == ImGuiInputTextFlags_CallbackResize)
                     {
@@ -596,6 +636,12 @@ static bool prop_editor_recursive_impl(
                     return 0;
                 },
                 str);
+
+        if (ImGui::IsItemClicked(ImGuiMouseButton_Left) && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+        {
+            editing = str;
+            editor.SetText(*str);
+        }
 
         if (has_change)
         {
