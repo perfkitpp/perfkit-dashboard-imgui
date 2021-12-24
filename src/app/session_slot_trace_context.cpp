@@ -46,7 +46,7 @@ void session_slot_trace_context::update_selected()
 
 enum
 {
-    PLOT_BUFFER_SIZE = 1024
+    PLOT_BUFFER_SIZE = 2000
 };
 
 void session_slot_trace_context::_recursive_draw_trace(
@@ -60,6 +60,7 @@ void session_slot_trace_context::_recursive_draw_trace(
         auto ctx                    = &it_node->second;
         if (is_new_node)
         {
+            // Generate display key name
             _tmp.format("{}@", _cur_class);
             for (auto hkey : _node_stack)
                 _tmp.format_append("{}/", hkey->name);
@@ -67,6 +68,7 @@ void session_slot_trace_context::_recursive_draw_trace(
 
             ctx->display_key = _tmp;
 
+            // Generate plot color randomly
             static int order = 0;
             auto hash        = perfkit::hasher::fnv1a_64(++order);
             uint8_t color[4] = {0, 0, 0, 0xff};
@@ -75,6 +77,9 @@ void session_slot_trace_context::_recursive_draw_trace(
             color[1]   = (hash >>= 8) & 0xff | 0x10;
             color[2]   = (hash >>= 8) & 0xff | 0x10;
             ctx->color = *(uint32_t*)color;
+
+            // Validate fold status
+            ImGui::SetNextTreeNodeOpen(not node->folded);
         }
 
         bool show_plot_button = false;
@@ -443,13 +448,6 @@ void session_slot_trace_context::_plot_window()
         draw_targets.clear();
     }
 
-    // TODO: Plotting Window
-    //       - 모든 트레이스 클래스에서 plotting 활성화된 노드 리스트
-    //       - 다수의 노드 선택 시 중첩 그리기
-    //       - 각 노드의 그리기 모드 지정
-    //       - 두 개의 서로 다른 노드 x, y 병합 (타임스탬프로)
-
-    static ImVec2 window_size;
     static uint64_t color_editing_target = 0;
     auto constexpr DRAG_DROP_CLASS       = "TracePlotArg";
 
@@ -536,9 +534,9 @@ void session_slot_trace_context::_plot_window()
         ImPlot::SetupAxisLimits(ImAxis_X1, -1., 0.);
         ImPlot::SetupAxis(ImAxis_X1, NULL, ImPlotAxisFlags_RangeFit);
 
-        ImPlot::SetupAxis(ImAxis_Y1, "[drop here]");
-        ImPlot::SetupAxis(ImAxis_Y2, "[drop here]", ImPlotAxisFlags_Opposite);
-        ImPlot::SetupAxis(ImAxis_Y3, "[drop here]", ImPlotAxisFlags_Opposite);
+        ImPlot::SetupAxis(ImAxis_Y1, "[AXIS 1]");
+        ImPlot::SetupAxis(ImAxis_Y2, "[AXIS 2]");
+        ImPlot::SetupAxis(ImAxis_Y3, "[AXIS 3]", ImPlotAxisFlags_Opposite);
 
         if (ImPlot::BeginDragDropTargetPlot())
         {
@@ -586,6 +584,9 @@ void session_slot_trace_context::_plot_window()
             }
 
             ImPlot::SetAxis(ctx.plot_axis_n);
+
+            // TODO: Plot Style
+
             ImPlot::SetNextLineStyle(ImGui::ColorConvertU32ToFloat4(ctx.color));
             ImPlot::PlotLine(
                     ctx.display_key.c_str(),
