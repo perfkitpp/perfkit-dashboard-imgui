@@ -171,6 +171,11 @@ void session_slot_trace_context::_recursive_draw_trace(
 
         if (ctx->plotting)
         {
+            if (ctx->graph.capacity() == 0)
+            {
+                ctx->graph.reserve_shrink(512);
+            }
+
             // 1. collect value
             if (_cur_has_update)
             {
@@ -215,6 +220,10 @@ void session_slot_trace_context::_recursive_draw_trace(
                 }
                 ImGui::EndTooltip();
             }
+        }
+        else
+        {
+            ctx->graph.reserve_shrink(0);
         }
 
         if (is_string && should_popup)

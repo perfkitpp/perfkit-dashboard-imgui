@@ -44,7 +44,7 @@ class session_slot_trace_context
         bool plotting = false;
         perfkit::stopwatch tim_plot_begin;
         perfkit::poll_timer tim_plot_push_interval;
-        perfkit::circular_queue<plot_arg> graph{256};
+        perfkit::circular_queue<plot_arg> graph{0};
     };
 
    public:

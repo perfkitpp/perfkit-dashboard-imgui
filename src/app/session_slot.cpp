@@ -1191,7 +1191,7 @@ void session_slot::_plot_on_submenu()
                 }
 
                 int64_t lvalue      = value;
-                char const suffix[] = " kMGTPE";
+                char const suffix[] = " KMGTPE";
                 int64_t base        = 1;
                 int order           = 0;
 
@@ -1208,14 +1208,14 @@ void session_slot::_plot_on_submenu()
                     dec /= 10;
 
                     if (is_bandwidth)
-                        snprintf(buff, size, "%d.%d %cbit/s", dec, frac, suffix[order]);
+                        snprintf(buff, size, "%d.%d %cbps", dec, frac, suffix[order]);
                     else
                         snprintf(buff, size, "%d.%d %ciB", dec, frac, suffix[order]);
                 }
                 else
                 {
                     if (is_bandwidth)
-                        snprintf(buff, size, "%lld bit/s", lvalue);
+                        snprintf(buff, size, "%lld bps", lvalue);
                     else
                         snprintf(buff, size, "%lld B", lvalue);
                 }
