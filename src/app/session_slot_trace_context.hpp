@@ -42,9 +42,17 @@ class session_slot_trace_context
     {
         std::string display_key;
         bool plotting = false;
+
         perfkit::stopwatch tim_plot_begin;
-        perfkit::poll_timer tim_plot_push_interval;
         perfkit::circular_queue<plot_arg> graph{0};
+
+        // caches
+        bool plot_dirty = false;
+        std::vector<double> plot_x;
+        std::vector<double> plot_y;
+        size_t plot_cursor = 0;
+        int plot_axis_n    = 0;
+        uint32_t color     = 0xffffffff;
     };
 
    public:

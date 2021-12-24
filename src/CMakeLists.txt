@@ -40,7 +40,8 @@ target_link_libraries(
         perfkitpp-imgui-bundled
         perfkit::core
         perfkit::picosha2
-        perfkit::net::asio
+        perfkit::net::core
+        asio::standalone
 )
 
 target_include_directories(

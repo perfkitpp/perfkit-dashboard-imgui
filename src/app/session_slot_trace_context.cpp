@@ -8,10 +8,12 @@
 
 #include <imgui-extension.h>
 #include <implot.h>
-#include <range/v3/view/transform.hpp>
+#include <range/v3/view.hpp>
 
 #include "imgui_internal.h"
 #include "perfkit/common/algorithm.hxx"
+
+namespace views = ranges::views;
 
 static void push_button_color_series(ImGuiCol index, int32_t code)
 {
@@ -42,6 +44,11 @@ void session_slot_trace_context::update_selected()
     _plot_window();
 }
 
+enum
+{
+    PLOT_BUFFER_SIZE = 1024
+};
+
 void session_slot_trace_context::_recursive_draw_trace(
         const session_slot_trace_context::node_type* node)
 {
@@ -59,6 +66,15 @@ void session_slot_trace_context::_recursive_draw_trace(
             _tmp.pop_back();
 
             ctx->display_key = _tmp;
+
+            static int order = 0;
+            auto hash        = perfkit::hasher::fnv1a_64(++order);
+            uint8_t color[4] = {0, 0, 0, 0xff};
+
+            color[0]   = (hash >>= 8) & 0xff | 0x10;
+            color[1]   = (hash >>= 8) & 0xff | 0x10;
+            color[2]   = (hash >>= 8) & 0xff | 0x10;
+            ctx->color = *(uint32_t*)color;
         }
 
         bool show_plot_button = false;
@@ -173,7 +189,10 @@ void session_slot_trace_context::_recursive_draw_trace(
         {
             if (ctx->graph.capacity() == 0)
             {
-                ctx->graph.reserve_shrink(512);
+                ctx->graph.reserve_shrink(PLOT_BUFFER_SIZE);
+                ctx->plot_x.reserve(PLOT_BUFFER_SIZE);
+                ctx->plot_y.reserve(PLOT_BUFFER_SIZE);
+                ctx->plot_cursor = 0;
             }
 
             // 1. collect value
@@ -188,6 +207,8 @@ void session_slot_trace_context::_recursive_draw_trace(
                 auto arg = &ctx->graph.emplace_back();
                 arg->timestamp.reset();
                 arg->value = plot_value;
+
+                ctx->plot_dirty = true;
             }
 
             // 2. draw if popped up
@@ -224,6 +245,9 @@ void session_slot_trace_context::_recursive_draw_trace(
         else
         {
             ctx->graph.reserve_shrink(0);
+            ctx->plot_x     = {};
+            ctx->plot_y     = {};
+            ctx->plot_dirty = false;
         }
 
         if (is_string && should_popup)
@@ -404,9 +428,183 @@ void session_slot_trace_context::_fetch_update_traces()
 
 void session_slot_trace_context::_plot_window()
 {
+    if (not ImGui::Begin("Trace Plots", nullptr))
+    {
+        ImGui::End();
+        return;
+    }
+
+    void* selected_window = nullptr;
+    static std::vector<node_context*> draw_targets;
+
+    if (selected_window != this)
+    {
+        selected_window = this;
+        draw_targets.clear();
+    }
+
     // TODO: Plotting Window
     //       - 모든 트레이스 클래스에서 plotting 활성화된 노드 리스트
     //       - 다수의 노드 선택 시 중첩 그리기
     //       - 각 노드의 그리기 모드 지정
     //       - 두 개의 서로 다른 노드 x, y 병합 (타임스탬프로)
+
+    static ImVec2 window_size;
+    static uint64_t color_editing_target = 0;
+    auto constexpr DRAG_DROP_CLASS       = "TracePlotArg";
+
+    if (decltype(&*_nodes.end()) edit_target = nullptr;
+        color_editing_target != 0
+        && nullptr != (edit_target = perfkit::find_ptr(_nodes, color_editing_target)))
+    {
+        ImGui::SetNextWindowSize({320, 400});
+        if (bool open = true; ImGui::Begin("Trace Graph Color Editor", &open))
+        {
+            ImVec4 color = ImGui::ColorConvertU32ToFloat4(edit_target->second.color);
+            ImGui::SetNextItemWidth(-1);
+            ImGui::ColorPicker4("Trace Graph Color Picker", &color.x);
+            edit_target->second.color = ImGui::ColorConvertFloat4ToU32(color);
+
+            if (not ImGui::IsWindowFocused(ImGuiFocusedFlags_RootWindow))
+                open = false;
+
+            if (not open)
+                color_editing_target = 0;
+        }
+        ImGui::End();
+    }
+
+    ImGui::BeginChild("TracePlotDndLeft", {200, -1}, true, ImGuiWindowFlags_HorizontalScrollbar);
+
+    push_button_color_series(ImGuiCol_Button, 0xFF0F3BAC);
+    if (ImGui::Button("Reset All", {-1, 0}))
+    {
+        for (auto& ctx : _nodes | views::values)
+            ctx.plot_axis_n = 0;
+    }
+    push_button_color_series(ImGuiCol_Button, 0xFF0FAC3B);
+    if (ImGui::Button("Add All", {-1, 0}))
+    {
+        for (auto& ctx : _nodes | views::values)
+            ctx.plot_axis_n = ImAxis_Y1;
+    }
+    pop_button_color_series();
+    pop_button_color_series();
+
+    for (auto& [key, ctx] : _nodes)
+    {  // plot 리스트 렌더
+        if (not ctx.plotting)
+            continue;
+
+        if (ImPlot::ItemIcon(ctx.color), ImGui::IsItemClicked(ImGuiMouseButton_Left))
+        {  // 색상 편집
+            color_editing_target = key;
+        }
+
+        ImGui::SameLine(), ImGui::Selectable(ctx.display_key.c_str());
+
+        if (ImGui::BeginDragDropSource())
+        {  // Drag & Drop
+            ImGui::SetDragDropPayload(DRAG_DROP_CLASS, &key, sizeof key);
+            ImPlot::ItemIcon(ctx.color), ImGui::SameLine();
+            ImGui::TextUnformatted(ctx.display_key.c_str());
+            ImGui::EndDragDropSource();
+        }
+    }
+    ImGui::EndChild();
+
+    if (ImGui::BeginDragDropTarget())
+    {
+        if (auto payload = ImGui::AcceptDragDropPayload(DRAG_DROP_CLASS))
+        {
+            auto idx         = *(uint64_t*)payload->Data;
+            auto ctx         = &_nodes.at(idx);
+            ctx->plot_axis_n = 0;
+        }
+
+        ImGui::EndDragDropTarget();
+    }
+
+    ImGui::SameLine();
+    ImGui::BeginChild("TracePlotDndRight", {-1, -1}, false);
+
+    static double axis_limits[2];
+    axis_limits[0] = std::min(0., axis_limits[0]);
+    ImPlot::SetNextAxisLinks(ImAxis_X1, axis_limits + 0, axis_limits + 1);
+    if (ImPlot::BeginPlot("##TracePlotDnd", {-1, -1}))
+    {
+        ImPlot::SetupAxisLimits(ImAxis_X1, -1., 0.);
+        ImPlot::SetupAxis(ImAxis_X1, NULL, ImPlotAxisFlags_RangeFit);
+
+        ImPlot::SetupAxis(ImAxis_Y1, "[drop here]");
+        ImPlot::SetupAxis(ImAxis_Y2, "[drop here]", ImPlotAxisFlags_Opposite);
+        ImPlot::SetupAxis(ImAxis_Y3, "[drop here]", ImPlotAxisFlags_Opposite);
+
+        if (ImPlot::BeginDragDropTargetPlot())
+        {
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(DRAG_DROP_CLASS))
+            {
+                auto key                   = *(uint64_t*)payload->Data;
+                _nodes.at(key).plot_axis_n = ImAxis_Y1;
+            }
+            ImPlot::EndDragDropTarget();
+        }
+
+        for (auto i = (int)ImAxis_Y1; i <= (int)ImAxis_Y3; ++i)
+        {
+            if (ImPlot::BeginDragDropTargetAxis(i))
+            {
+                if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(DRAG_DROP_CLASS))
+                {
+                    auto key                   = *(uint64_t*)payload->Data;
+                    _nodes.at(key).plot_axis_n = i;
+                }
+
+                ImPlot::EndDragDropTarget();
+            }
+        }
+
+        for (auto& [key, ctx] : _nodes)
+        {
+            if (not ctx.plotting || ctx.plot_axis_n == 0)
+                continue;
+
+            if (ctx.plot_dirty)
+            {
+                ctx.plot_dirty   = false;
+                auto x_retriever = ctx.graph
+                                 | views::transform([](plot_arg& p) {
+                                       return -p.timestamp.elapsed().count();
+                                   });
+                auto y_retriever = ctx.graph
+                                 | views::transform([](plot_arg& p) {
+                                       return p.value;
+                                   });
+
+                ctx.plot_x.assign(x_retriever.begin(), x_retriever.end());
+                ctx.plot_y.assign(y_retriever.begin(), y_retriever.end());
+            }
+
+            ImPlot::SetAxis(ctx.plot_axis_n);
+            ImPlot::SetNextLineStyle(ImGui::ColorConvertU32ToFloat4(ctx.color));
+            ImPlot::PlotLine(
+                    ctx.display_key.c_str(),
+                    ctx.plot_x.data(),
+                    ctx.plot_y.data(),
+                    ctx.plot_x.size());
+
+            if (ImPlot::BeginDragDropSourceItem(ctx.display_key.c_str()))
+            {
+                ImGui::SetDragDropPayload(DRAG_DROP_CLASS, &key, sizeof key);
+                ImPlot::ItemIcon(ctx.color), ImGui::SameLine();
+                ImGui::TextUnformatted(ctx.display_key.c_str());
+                ImGui::EndDragDropSource();
+            }
+        }
+
+        ImPlot::EndPlot();
+    }
+
+    ImGui::EndChild();
+    ImGui::End();
 }

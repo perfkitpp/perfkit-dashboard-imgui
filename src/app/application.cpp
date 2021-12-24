@@ -16,6 +16,8 @@
 #include "perfkit/common/algorithm.hxx"
 #include "perfkit/common/utility/cleanup.hxx"
 #include "perfkit/configs.h"
+#include "perfkit/extension/net.hpp"
+#include "perfkit/traces.h"
 #include "session_slot.hpp"
 
 #define INTERNAL_CATID_1(A, B) A##B
@@ -39,7 +41,9 @@ static std::string const CONFIG_PATH = [] {
 
 PERFKIT_CATEGORY(backups)
 {
-    PERFKIT_CONFIGURE(urls, std::vector<std::pair<std::string, bool>>{}).confirm();
+    PERFKIT_CONFIGURE(urls, std::vector<std::pair<std::string, bool>>{})
+            .hide()
+            .confirm();
 }
 
 namespace application {
@@ -67,8 +71,14 @@ static struct context_t
     std::list<session_slot> sessions;
 
     /**
-     * TODO: list of active application server slots
+     * Local net terminal
      */
+    perfkit::terminal_ptr terminal;
+
+    /**
+     * Local net tracer
+     */
+    perfkit::tracer_ptr tracer = perfkit::tracer::create("Loop");
 } _context;
 
 void initialize()
@@ -76,8 +86,18 @@ void initialize()
     perfkit::configs::import_file(CONFIG_PATH);
     backups::update();
 
+    perfkit::terminal::net::terminal_init_info init{"LOCAL"};
+    init.serve(49951);
+    _context.terminal = perfkit::terminal::net::create(init);
+
+    _context.sessions.emplace_back("127.0.0.1:49951", false);
     for (auto& url : backups::urls.ref())
+    {
+        if (url.first == "127.0.0.1:49951")
+            continue;
+
         _context.sessions.emplace_back(url.first, url.second);
+    }
 
     _context.work_net
             = asio::require(
@@ -92,6 +112,12 @@ void initialize()
 
 void shutdown()
 {
+    // Expire net provider
+    _context.terminal.reset();
+
+    // Expire tracer
+    _context.tracer.reset();
+
     // shutdown dedicated network thread
     _context.sessions.clear();
 
@@ -104,14 +130,19 @@ void shutdown()
 
 void update()
 {
-    // poll event loop once.
+    PERFKIT_TRACE(_context.tracer);
+
+    PERFKIT_TRACE_SEQUENCE(RunIoContext);
     _context.ioc_evt.run();
     _context.ioc_evt.restart();
 
-    // render GUI
+    PERFKIT_TRACE_SEQUENCE(DrawRootComponents);
     gui::_draw_root_components();
+
+    PERFKIT_TRACE_SEQUENCE(DrawAllSessions);
     gui::_draw_session_list();
 
+    PERFKIT_TRACE_SEQUENCE(RenderRemoteGraphics);
     gui::_render_windows();
 }
 
