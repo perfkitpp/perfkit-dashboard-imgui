@@ -449,6 +449,7 @@ void session_slot_trace_context::_plot_window()
     }
 
     static uint64_t color_editing_target = 0;
+    static int color_edit_focus_next     = 0;
     auto constexpr DRAG_DROP_CLASS       = "TracePlotArg";
 
     if (decltype(&*_nodes.end()) edit_target = nullptr;
@@ -456,6 +457,12 @@ void session_slot_trace_context::_plot_window()
         && nullptr != (edit_target = perfkit::find_ptr(_nodes, color_editing_target)))
     {
         ImGui::SetNextWindowSize({320, 400});
+        if (color_edit_focus_next > 0)
+        {
+            ImGui::SetNextWindowFocus();
+            color_edit_focus_next = std::max(0, color_edit_focus_next - 1);
+        }
+
         if (bool open = true; ImGui::Begin("Trace Graph Color Editor", &open))
         {
             ImVec4 color = ImGui::ColorConvertU32ToFloat4(edit_target->second.color);
@@ -472,7 +479,7 @@ void session_slot_trace_context::_plot_window()
         ImGui::End();
     }
 
-    ImGui::BeginChild("TracePlotDndLeft", {200, -1}, true, ImGuiWindowFlags_HorizontalScrollbar);
+    ImGui::BeginChild("TracePlotDndLeft", {240, -1}, true, ImGuiWindowFlags_HorizontalScrollbar);
 
     push_button_color_series(ImGuiCol_Button, 0xFF0F3BAC);
     if (ImGui::Button("Reset All", {-1, 0}))
@@ -496,10 +503,12 @@ void session_slot_trace_context::_plot_window()
 
         if (ImPlot::ItemIcon(ctx.color), ImGui::IsItemClicked(ImGuiMouseButton_Left))
         {  // 색상 편집
-            color_editing_target = key;
+            color_editing_target  = key;
+            color_edit_focus_next = 10;
         }
 
         ImGui::SameLine(), ImGui::Selectable(ctx.display_key.c_str());
+        auto hovering = ImGui::IsItemHovered();
 
         if (ImGui::BeginDragDropSource())
         {  // Drag & Drop
@@ -507,6 +516,14 @@ void session_slot_trace_context::_plot_window()
             ImPlot::ItemIcon(ctx.color), ImGui::SameLine();
             ImGui::TextUnformatted(ctx.display_key.c_str());
             ImGui::EndDragDropSource();
+        }
+
+        if (hovering)
+        {
+            ImGui::SetNextWindowBgAlpha(0.67);
+            ImGui::BeginTooltip();
+            ImGui::TextUnformatted(ctx.display_key.c_str());
+            ImGui::EndTooltip();
         }
     }
     ImGui::EndChild();
