@@ -161,8 +161,6 @@ void post_event(perfkit::function<void()> evt)
     asio::post(_context.ioc_evt, std::move(evt));
 }
 
-static bool _show_sessions_list = true;
-
 void gui::_draw_root_components()
 {
     using namespace ImGui;
@@ -199,7 +197,7 @@ void gui::_draw_root_components()
 
         if (BeginMenu("View"))
         {
-            MenuItem("Session List", "Alt+1", &_show_sessions_list);
+            MenuItem("Session List", "Alt+1");
 
             ImGui::EndMenu();
         }
@@ -226,63 +224,60 @@ void gui::_draw_session_list()
 {
     auto& sessions = _context.sessions;
 
-    if (_show_sessions_list)
+    if (ImGui::Begin("Sessions"))
     {
-        if (ImGui::Begin("Sessions", &_show_sessions_list))
+        if (ImGui::TreeNodeEx("Add New ...", ImGuiTreeNodeFlags_SpanFullWidth))
         {
-            if (ImGui::TreeNodeEx("Add New ...", ImGuiTreeNodeFlags_SpanFullWidth))
+            static char buf_url[1024] = {};
+            ImGui::InputTextLeft("URL", "localhost:5572", buf_url, sizeof buf_url);
+
+            if (ImGui::Button("Direct Connect", {-1, 0}))
             {
-                static char buf_url[1024] = {};
-                ImGui::InputTextLeft("URL", "localhost:5572", buf_url, sizeof buf_url);
+                // create new connection
+                std::string url = buf_url;
 
-                if (ImGui::Button("Direct Connect", {-1, 0}))
+                auto is_unique = perfkit::none_of(
+                        _context.sessions,
+                        [&](auto&& sess) {
+                            return sess.url() == buf_url;
+                        });
+
+                if (not url.empty() && is_unique)
                 {
-                    // create new connection
-                    std::string url = buf_url;
+                    SPDLOG_INFO("new connection candidate {} added.", url);
+                    push_message(message_level::info, "new connection candidate {} added.", url);
+                    _context.sessions.emplace_back(std::move(url), false);
 
-                    auto is_unique = perfkit::none_of(
-                            _context.sessions,
-                            [&](auto&& sess) {
-                                return sess.url() == buf_url;
-                            });
-
-                    if (not url.empty() && is_unique)
-                    {
-                        SPDLOG_INFO("new connection candidate {} added.", url);
-                        push_message(message_level::info, "new connection candidate {} added.", url);
-                        _context.sessions.emplace_back(std::move(url), false);
-
-                        _refresh_session_list_backup();
-                    }
+                    _refresh_session_list_backup();
                 }
-
-                ImGui::Button("Thru Relay Server", {-1, 0});
-                ImGui::TreePop();
-
-                ImGui::Separator();
             }
 
-            if (ImGui::TreeNodeEx("Sessions", ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanFullWidth))
-            {
-                for (auto it = sessions.begin(); it != sessions.end();)
-                {
-                    try
-                    {
-                        it->render_on_list();
-                        ++it;
-                    }
-                    catch (session_slot_close&)
-                    {
-                        it = sessions.erase(it);
-                        _refresh_session_list_backup();
-                    }
-                }
+            ImGui::Button("Thru Relay Server", {-1, 0});
+            ImGui::TreePop();
 
-                ImGui::TreePop();
-            }
+            ImGui::Separator();
         }
-        ImGui::End();
+
+        if (ImGui::TreeNodeEx("Sessions", ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanFullWidth))
+        {
+            for (auto it = sessions.begin(); it != sessions.end();)
+            {
+                try
+                {
+                    it->render_on_list();
+                    ++it;
+                }
+                catch (session_slot_close&)
+                {
+                    it = sessions.erase(it);
+                    _refresh_session_list_backup();
+                }
+            }
+
+            ImGui::TreePop();
+        }
     }
+    ImGui::End();
 
     for (auto it = sessions.begin(); it != sessions.end();)
     {

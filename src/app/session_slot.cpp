@@ -1,7 +1,9 @@
 #include "session_slot.hpp"
 
+#include <perfkit/common/counter.hxx>
 #include <perfkit/common/futils.hxx>
 #include <perfkit/common/utility/cleanup.hxx>
+#include <perfkit/common/zip.hxx>
 
 #include "application.hpp"
 #include "classes/connection/plain_tcp.hpp"
@@ -11,7 +13,7 @@
 #include "spdlog/spdlog.h"
 #include "utility.hpp"
 
-using namespace std::literals;
+using namespace perfkit::utilities;
 
 session_slot::session_slot(std::string url, bool from_apiserver)
         : _url(std::move(url)),
@@ -740,10 +742,10 @@ static std::optional<nlohmann::json> prop_editor(
     static struct _context_data_t
     {
         nlohmann::json editing;
-        std::string combo_value;
         TextEditor edit_raw;
         bool mode_apply_on_change = false;
         bool mode_edit_raw        = false;
+        std::string combo_value   = {};
     } context;
 
     if (item_key == 0)
@@ -754,6 +756,7 @@ static std::optional<nlohmann::json> prop_editor(
 
     if (is_changed)
     {
+        context.combo_value.clear();
         *dirty = false;
 
         if (context.mode_edit_raw)
@@ -842,32 +845,35 @@ static std::optional<nlohmann::json> prop_editor(
         {
             if (context.combo_value.empty())
             {
-                context.combo_value = context.editing.dump();
+                context.combo_value = e.value.dump();
             }
 
             ImGui::SetNextItemWidth(-1);
-            if (ImGui::BeginListBox("##Edit Combo", ))
+            if (ImGui::BeginListBox("##Edit Combo", {-1, -1}))
             {
-                std::string sample;
-                sample.reserve(context.combo_value.capacity());
-
-                ImGui::SetItemDefaultFocus();
-
-                for (auto& elem : *one_of)
+                for (auto [pidx, pvalue] : zip(count(one_of->size()), *one_of))
                 {
-                    sample = elem.dump();
+                    auto string = pvalue->dump();
 
-                    if (ImGui::Selectable(sample.c_str()))
+                    bool selected = (context.combo_value == string);
+                    if (selected)
                     {
-                        context.combo_value = sample;
+                        ImGui::PushStyleColor(ImGuiCol_Text, *dirty ? 0xff00aaff : 0xff00ff00);
+                        ImGui::Text("*"), ImGui::SameLine();
+                        ImGui::PopStyleColor();
+                    }
+
+                    if (ImGui::Selectable(string.c_str(), selected))
+                    {
+                        context.combo_value = std::move(string);
                         context.editing     = nlohmann::json::parse(context.combo_value);
                         context.edit_raw.SetText(context.combo_value);
 
                         has_change = true;
+                        ImGui::SetItemDefaultFocus();
                     }
                 }
-
-                ImGui::EndCombo();
+                ImGui::EndListBox();
             }
         }
         else
