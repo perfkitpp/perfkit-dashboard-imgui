@@ -119,6 +119,14 @@ int main(int, char**)
     // IM_ASSERT(font != NULL);
     // Our state
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+    {
+        ImFontConfig cfg       = {};
+        cfg.RasterizerMultiply = 1.1;
+        io.Fonts->AddFontFromFileTTF("font-0.ttf", 15.f, &cfg);
+
+        cfg.MergeMode          = true;
+        io.Fonts->AddFontFromFileTTF("font-1.ttf", 15.f, &cfg, io.Fonts->GetGlyphRangesKorean());
+    }
 
     // initialize application
     InitPlatform();
