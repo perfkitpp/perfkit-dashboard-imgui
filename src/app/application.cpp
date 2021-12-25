@@ -29,19 +29,12 @@
     }
 
 static std::string const CONFIG_PATH = [] {
-    std::filesystem::path home =
-#ifdef _WIN32
-            getenv("USERPROFILE");
-#else
-            getenv("HOME");
-#endif
-    home = home / ".perfkit_rdinit";
-    return home.string();
+    return ".perfkit.json";
 }();
 
 PERFKIT_CATEGORY(backups)
 {
-    PERFKIT_CONFIGURE(urls, std::vector<std::pair<std::string, bool>>{})
+    PERFKIT_CONFIGURE(urls, std::vector<std::tuple<std::string, bool, std::string>>{})
             .hide()
             .confirm();
 }
@@ -90,13 +83,13 @@ void initialize()
     init.serve(49951);
     _context.terminal = perfkit::terminal::net::create(init);
 
-    _context.sessions.emplace_back("127.0.0.1:49951", false);
-    for (auto& url : backups::urls.ref())
+    _context.sessions.emplace_back("127.0.0.1:49951", false, "LOCAL");
+    for (auto& [url, is_relay, cached_name] : backups::urls.ref())
     {
-        if (url.first == "127.0.0.1:49951")
+        if (url == "127.0.0.1:49951")
             continue;
 
-        _context.sessions.emplace_back(url.first, url.second);
+        _context.sessions.emplace_back(url, is_relay, cached_name);
     }
 
     _context.work_net
@@ -112,6 +105,9 @@ void initialize()
 
 void shutdown()
 {
+    // Validate configuration file
+    gui::_refresh_session_list_backup();
+
     // Expire net provider
     _context.terminal.reset();
 
@@ -301,15 +297,15 @@ void gui::_render_windows()
 void gui::_refresh_session_list_backup()
 {
     // backup list
-    std::vector<std::pair<std::string, bool>> pairs;
-    pairs.reserve(_context.sessions.size());
+    decltype(backups::urls.value()) tups;
+    tups.reserve(_context.sessions.size());
 
     for (auto& sess : _context.sessions)
     {
-        pairs.emplace_back(sess.url(), sess.is_from_apiserver());
+        tups.emplace_back(sess.url(), sess.is_from_apiserver(), sess.latest_session_name());
     }
 
-    backups::urls.async_modify(pairs);
+    backups::urls.async_modify(tups);
 }
 
 void gui::detail::modal_single_server_connect(bool* connStat)

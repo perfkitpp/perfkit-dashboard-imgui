@@ -49,11 +49,12 @@ class session_slot
     using data_footprint = perfkit::circular_queue<graph_node<Ty_>>;
 
    public:
-    explicit session_slot(std::string url, bool from_apiserver);
+    explicit session_slot(std::string url, bool from_apiserver, std::string cached_session_name = {});
     ~session_slot();
 
     std::string const& url() { return _url; }
     bool is_from_apiserver() const { return _from_apiserver; }
+    std::string const& latest_session_name() const { return _latest_session_name; }
 
     /**
      * Performs list label rendering
@@ -99,6 +100,8 @@ class session_slot
     // url
     std::string const _url;
     bool _from_apiserver = false;
+
+    std::string _latest_session_name;
 
     //
     bool _prompt_close = false;

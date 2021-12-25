@@ -15,9 +15,10 @@
 
 using namespace perfkit::utilities;
 
-session_slot::session_slot(std::string url, bool from_apiserver)
+session_slot::session_slot(std::string url, bool from_apiserver, std::string cached_session_name)
         : _url(std::move(url)),
-          _from_apiserver(from_apiserver)
+          _from_apiserver(from_apiserver),
+          _latest_session_name(std::move(cached_session_name))
 {
     _history.emplace_back();
     _shello.SetShowWhitespaces(false);
@@ -124,6 +125,8 @@ void session_slot::render_on_list()
 
                 _shello_fence = 0;
                 _shello.SetText({});
+
+                _latest_session_name = _context->info()->name;
             }
             if (_context->status() == session_connection_state::invalid)
             {
@@ -483,7 +486,11 @@ void session_slot::_draw_shell()
 
 void session_slot::_title_string()
 {
-    ImGui::TextEx(_url.c_str());
+    ImGui::Text("%s%s",
+                not _latest_session_name.empty()
+                        ? perfkit::futils::usprintf("(%s) ", _latest_session_name.c_str())
+                        : "",
+                _url.c_str());
 
     bool should_close = false;
 
