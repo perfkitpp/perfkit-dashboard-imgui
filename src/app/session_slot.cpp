@@ -573,18 +573,29 @@ static bool prop_editor_recursive_impl(
     {
         static TextEditor editor;
         static std::string* editing = nullptr;
+        static bool content_dirty   = false;
 
         auto str           = e->get_ptr<std::string*>();
         auto readonly_flag = 0;
 
         if (str == editing)
         {
-            bool keep_open = true;
-            if (ImGui::Begin("String Property Editor", &keep_open, ImGuiWindowFlags_NoDocking))
+            auto bordered = label_base[0] != '\0';  // only nested elements has border
+            if (ImGui::BeginChild("String Property Editor", {-1, 240}, bordered, ImGuiWindowFlags_MenuBar))
             {
+                if (ImGui::BeginMenuBar())
+                {
+                    ImGui::MenuItem("File");
+                    ImGui::MenuItem("Syntax");
+
+                    ImGui::Text("%s", content_dirty ? "(modified)" : "");
+                    ImGui::EndMenuBar();
+                }
+                bool keep_open = true;
                 // TODO: reinforce this
                 //       - syntax mode
                 editor.Render("String Property Editor Body", {});
+                content_dirty |= editor.IsTextChanged();
 
                 if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Escape)))
                 {
@@ -593,66 +604,69 @@ static bool prop_editor_recursive_impl(
                 else if (ImGui::IsKeyPressed('S')
                          && (ImGui::GetMergedKeyModFlags() & ImGuiKeyModFlags_Ctrl))
                 {
-                    *editing = editor.GetText();
+                    content_dirty = false;
+                    *editing      = editor.GetText();
                     has_change |= true;
                 }
                 else
                 {
                     readonly_flag |= ImGuiInputTextFlags_ReadOnly;
                 }
-            }
 
-            if (not keep_open)
-            {
-                has_change |= true;
-                *editing = editor.GetText();
-                editing  = nullptr;
+                if (not keep_open)
+                {
+                    has_change |= true;
+                    *editing = editor.GetText();
+                    editing  = nullptr;
+                }
             }
-            ImGui::End();
+            ImGui::EndChild();
         }
-
-        ImGui::SetNextItemWidth(-1);
-        has_change |= ImGui::InputTextEx(
-                label_base,
-                "",
-                str->data(),
-                str->capacity(),
-                {},
-                ImGuiInputTextFlags_CallbackResize
-                        | readonly_flag,
-                [](ImGuiInputTextCallbackData* data) -> int {
-                    if (data->EventFlag == ImGuiInputTextFlags_CallbackResize)
-                    {
-                        auto str = static_cast<std::string*>(data->UserData);
-                        str->reserve(data->BufSize);
-                        data->Buf = str->data();
-                    }
-
-                    return 0;
-                },
-                str);
-
-        if (ImGui::IsItemClicked(ImGuiMouseButton_Left) && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+        else
         {
-            editing = str;
-            editor.SetText(*str);
-        }
+            ImGui::SetNextItemWidth(-1);
+            has_change |= ImGui::InputTextMultiline(
+                    label_base,
+                    str->data(),
+                    str->capacity(),
+                    {-1, 40},
+                    ImGuiInputTextFlags_CallbackResize
+                            | readonly_flag,
+                    [](ImGuiInputTextCallbackData* data) -> int {
+                        if (data->EventFlag == ImGuiInputTextFlags_CallbackResize)
+                        {
+                            auto str = static_cast<std::string*>(data->UserData);
+                            str->reserve(data->BufSize);
+                            data->Buf = str->data();
+                        }
 
-        if (has_change)
-        {
-            // 1. str을 dynamic buffer 대용으로 사용 중.
-            // 2. 버퍼 크기보다 크게 resize 시
-            static std::string copy_buf;
-            auto len = strlen(str->c_str());
+                        return 0;
+                    },
+                    str);
 
-            if (len > str->size())
+            if (ImGui::IsItemClicked(ImGuiMouseButton_Left) && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
             {
-                copy_buf = str->data() + str->size();
-                str->append(copy_buf.begin(), copy_buf.end());
+                editing       = str;
+                content_dirty = false;
+                editor.SetText(*str);
             }
-            else
+
+            if (has_change)
             {
-                str->resize(len);
+                // 1. str을 dynamic buffer 대용으로 사용 중.
+                // 2. 버퍼 크기보다 크게 resize 시
+                static std::string copy_buf;
+                auto len = strlen(str->c_str());
+
+                if (len > str->size())
+                {
+                    copy_buf = str->data() + str->size();
+                    str->append(copy_buf.begin(), copy_buf.end());
+                }
+                else
+                {
+                    str->resize(len);
+                }
             }
         }
     }
@@ -870,7 +884,7 @@ static std::optional<nlohmann::json> prop_editor(
         apply_changes |= has_change;
     }
 
-    if (ImGui::GetIO().KeyCtrl && ImGui::IsKeyPressed(257, false))
+    if (ImGui::GetIO().KeyCtrl && ImGui::IsKeyPressed('S', false))
     {
         apply_changes = true;
     }
@@ -973,14 +987,17 @@ void session_slot::_draw_category_recursive(
                  "editing [%s]%s###Property Editor",
                  elem.name.c_str(),
                  is_dirty ? "*" : "");
-        ImGui::Begin(buf);
 
+        bool is_open = true;
+        ImGui::Begin(buf, &is_open);
         if (auto result = prop_editor(&is_dirty, selected_item, elem))
         {
             _context->configure(target.name, elem.config_key, *result);
         }
-
         ImGui::End();
+
+        if (not is_open)
+            selected_item = 0;
     }
 
     for (auto& sub : target.subcategories)
