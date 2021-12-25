@@ -651,12 +651,15 @@ void session_slot_trace_context::_plot_window()
             }
         }
 
+        static perfkit::poll_timer tim_force_invalidate{500ms};
+        bool force_update = tim_force_invalidate.check();
+
         for (auto& [key, ctx] : _nodes)
         {
             if (not ctx.plotting || ctx.plot_axis_n == 0)
                 continue;
 
-            if (ctx.plot_dirty)
+            if (force_update || ctx.plot_dirty)
             {
                 ctx.plot_dirty   = false;
                 auto x_retriever = ctx.graph
