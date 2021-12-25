@@ -846,7 +846,7 @@ static std::optional<nlohmann::json> prop_editor(
             }
 
             ImGui::SetNextItemWidth(-1);
-            if (ImGui::BeginCombo("##Edit Combo", context.combo_value.c_str()))
+            if (ImGui::BeginListBox("##Edit Combo", ))
             {
                 std::string sample;
                 sample.reserve(context.combo_value.capacity());
