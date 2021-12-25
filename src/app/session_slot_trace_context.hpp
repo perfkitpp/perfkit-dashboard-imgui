@@ -54,12 +54,15 @@ class session_slot_trace_context
         int plot_axis_n    = 0;
         uint32_t color     = 0xffffffff;
 
-        enum plot_style{
+        enum plot_style
+        {
             // TODO: DO THIS!
             LINE_STYLE_LINE,
             LINE_STYLE_SHADED,
             LINE_STYLE_STEM,
         } style;
+
+        double plot_pivot_if_required = 0.;
     };
 
    public:
