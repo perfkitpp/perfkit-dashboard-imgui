@@ -196,6 +196,9 @@ void session_slot::render_on_list()
                     active_plotting = this;
             }
 
+            if (on_select)
+                _has_focus = true;
+
             ImGui::SameLine();
             ImGui::PushStyleColor(ImGuiCol_Button, 0xff002288);
             if (ImGui::SmallButton(_key("x##{}", _url)))
@@ -203,11 +206,6 @@ void session_slot::render_on_list()
                 keep_open = false;
             }
             ImGui::PopStyleColor();
-
-            if (on_select)
-            {
-                ImGui::FocusWindow(ImGui::FindWindowByName(_terminal_window_name()));
-            }
 
             if (is_plotting)
             {
@@ -251,13 +249,21 @@ void session_slot::render_windows()
     if (_state != state::valid)
         return;
 
-    bool keep_open = true;
-    if (ImGui::Begin(_terminal_window_name(), &keep_open))
-        _draw_shell();
-
-    ImGui::End();
-
     static session_slot* selected_session = nullptr;
+
+    if (_has_focus)
+    {
+        selected_session = this;
+        _has_focus       = false;
+    }
+
+    if (selected_session == this)
+    {
+        if (ImGui::Begin("Terminal"))
+            _draw_shell();
+
+        ImGui::End();
+    }
 
     if (selected_session == this)
     {  // Visualize configuration category
@@ -292,21 +298,10 @@ void session_slot::render_windows()
 
         ImGui::End();
     }
-
-    if (_has_focus)
-        selected_session = this;
-
-    if (not keep_open)
-    {
-        _context = {};
-        _state   = state::disconnected;
-    }
 }
 
 void session_slot::_draw_shell()
 {
-    _has_focus = ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows);
-
     if (auto s = _context->shell_output(&_shello_fence); not s.empty())
         xterm_leap_escape(&_shello, s);
 
