@@ -61,12 +61,7 @@ target_compile_definitions(
 )
 
 if (MSVC)
-    target_compile_options(
-            ${PROJECT_NAME}
-
-            PRIVATE
-            /utf-8
-    )
+    add_compile_options(/utf-8)
 
 endif ()
 

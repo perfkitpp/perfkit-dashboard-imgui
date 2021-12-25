@@ -610,7 +610,7 @@ static bool prop_editor_recursive_impl(
                         else if (ImGui::MenuItem("GLSL"))
                             lang = lang_t::GLSL();
                         else if (ImGui::MenuItem("SQL"))
-                            lang = lang_t::Lua();
+                            lang = lang_t::SQL();
                         else if (ImGui::MenuItem("C"))
                             lang = lang_t::C();
                         else if (ImGui::MenuItem("Cpp"))
@@ -658,7 +658,7 @@ static bool prop_editor_recursive_impl(
                          && (ImGui::GetMergedKeyModFlags() & ImGuiKeyModFlags_Ctrl))
                 {
                     content_dirty = false;
-                    *editing      = editor.GetText();
+                    do_apply();
                     has_change |= true;
                 }
                 else
@@ -669,8 +669,8 @@ static bool prop_editor_recursive_impl(
                 if (not keep_open)
                 {
                     has_change |= true;
-                    *editing = editor.GetText();
-                    editing  = nullptr;
+                    do_apply();
+                    editing = nullptr;
                 }
             }
             ImGui::EndChild();
@@ -986,7 +986,6 @@ void session_slot::_draw_category_recursive(
 
         if (ImGui::IsItemHovered())
         {
-            ImGui::PushTextWrapPos(ImGui::GetWindowWidth());
             ImGui::BeginTooltip();
 
             ImGui::PushStyleColor(ImGuiCol_Text, 0xffffffff);
@@ -996,7 +995,9 @@ void session_slot::_draw_category_recursive(
                 auto& str = it->get_ref<std::string const&>();
                 if (not str.empty())
                 {
+                    ImGui::PushTextWrapPos(480);
                     ImGui::TextEx(str.c_str());
+                    ImGui::PopTextWrapPos();
                 }
                 else
                 {
@@ -1009,12 +1010,14 @@ void session_slot::_draw_category_recursive(
             ImGui::Separator();
 
             ImGui::PushStyleColor(ImGuiCol_Text, 0xff55ffff);
+
+            ImGui::PushTextWrapPos(480);
             ImGui::TextEx(elem.value.dump(2).c_str());
+            ImGui::PopTextWrapPos();
 
             ImGui::PopStyleColor(2);
 
             ImGui::EndTooltip();
-            ImGui::PopTextWrapPos();
         }
 
         ImGui::SameLine();
