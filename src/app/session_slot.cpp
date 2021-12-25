@@ -598,13 +598,53 @@ static bool prop_editor_recursive_impl(
             {
                 if (ImGui::BeginMenuBar())
                 {
-                    ImGui::MenuItem("File");
-                    ImGui::MenuItem("Syntax");
+                    if (ImGui::BeginMenu("File")) { ImGui::EndMenu(); }
+                    if (ImGui::BeginMenu("Syntax"))
+                    {
+                        using lang_t = TextEditor::LanguageDefinition;
+                        lang_t lang;
+                        bool lang_set = true;
+
+                        if (ImGui::MenuItem("HLSL"))
+                            lang = lang_t::HLSL();
+                        else if (ImGui::MenuItem("GLSL"))
+                            lang = lang_t::GLSL();
+                        else if (ImGui::MenuItem("SQL"))
+                            lang = lang_t::Lua();
+                        else if (ImGui::MenuItem("C"))
+                            lang = lang_t::C();
+                        else if (ImGui::MenuItem("Cpp"))
+                            lang = lang_t::CPlusPlus();
+                        else if (ImGui::MenuItem("Lua"))
+                            lang = lang_t::Lua();
+                        else if (ImGui::MenuItem("AngelScript"))
+                            lang = lang_t::AngelScript();
+                        else if (ImGui::MenuItem("SQL"))
+                            lang = lang_t::SQL();
+                        else
+                            lang_set = false;
+
+                        if (lang_set)
+                            editor.SetLanguageDefinition(lang);
+
+                        ImGui::EndMenu();
+                    }
+
+                    ImGui::PushStyleColor(ImGuiCol_Text, 0xff0aab00);
+                    ImGui::Text("[%s]", editor.GetLanguageDefinition().mName.c_str());
+                    ImGui::PopStyleColor();
 
                     ImGui::Text("%s", content_dirty ? "(modified)" : "");
                     ImGui::EndMenuBar();
                 }
                 bool keep_open = true;
+                auto do_apply =
+                        [&] {
+                            *editing = editor.GetText();
+                            if (not editing->empty() && editing->back() == '\n')
+                                editing->pop_back();
+                        };
+
                 // TODO: reinforce this
                 //       - syntax mode
                 editor.Render("String Property Editor Body", {});
@@ -831,6 +871,7 @@ static std::optional<nlohmann::json> prop_editor(
     if (context.mode_edit_raw)
     {
         context.edit_raw.Render("Property Raw Editor");
+        has_change |= context.edit_raw.IsTextChanged();
     }
     else
     {
