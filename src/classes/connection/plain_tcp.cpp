@@ -65,8 +65,15 @@ plain_tcp::~plain_tcp()
 {
     if (_socket.is_open())
     {
-        _socket.shutdown(asio::socket_base::shutdown_both);
-        _socket.close();
+        try
+        {
+            _socket.shutdown(asio::socket_base::shutdown_both);
+            _socket.close();
+        }
+        catch (asio::system_error &e)
+        {
+            CPPH_ERROR("Socket shutdown() ~ close() failed: ({}) {}", e.code().value(), e.what());
+        }
     }
 }
 
@@ -110,7 +117,14 @@ void plain_tcp::_handle_header(asio::error_code const &ec, size_t num_read)
                    ep.port(),
                    ec.value(),
                    ec.message());
-        _socket.close();
+        try
+        {
+            _socket.close();
+        }
+        catch (asio::system_error &e)
+        {
+            CPPH_ERROR("Failed to close socket: ({}) {}", e.code().value(), e.what());
+        }
         return;
     }
 

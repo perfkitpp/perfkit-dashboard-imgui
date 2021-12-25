@@ -552,7 +552,7 @@ void session_slot_trace_context::_plot_window()
         ImPlot::SetupAxis(ImAxis_X1, NULL, ImPlotAxisFlags_RangeFit);
 
         ImPlot::SetupAxis(ImAxis_Y1, "[AXIS 1]");
-        ImPlot::SetupAxis(ImAxis_Y2, "[AXIS 2]");
+        ImPlot::SetupAxis(ImAxis_Y2, "[AXIS 2]", ImPlotAxisFlags_Opposite);
         ImPlot::SetupAxis(ImAxis_Y3, "[AXIS 3]", ImPlotAxisFlags_Opposite);
 
         if (ImPlot::BeginDragDropTargetPlot())

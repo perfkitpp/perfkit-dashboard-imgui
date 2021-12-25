@@ -59,3 +59,12 @@ target_compile_definitions(
         -D_WIN32_WINNT=0x0601
         -D_CRT_SECURE_NO_WARNINGS=1
 )
+
+if (MSVC)
+    target_compile_options(
+            ${PROJECT_NAME}
+
+            PRIVATE
+            /utf-8
+    )
+endif ()
