@@ -543,19 +543,21 @@ static bool prop_editor_recursive_impl(
             return r;
         };
 
-        ImGui::Text(e->is_object() ? "<object>" : "<array>");
+        ImGui::Text(e->is_object() ? "{" : "[");
         ImGui::TreePush();
 
+        auto label_color = e->is_object() ? 0xffab8446 : 0xff3fa118;
         for (auto& [key, value] : e->items())
         {
             char label[256];
             snprintf(label, sizeof label, "%s.%s", label_base, key.c_str());
 
-            ImGui::PushStyleColor(ImGuiCol_Text, 0xffab8446);
-            ImGui::TextEx(key.c_str());
+            ImGui::PushStyleColor(ImGuiCol_Text, label_color);
+            ImGui::AlignTextToFramePadding();
+            ImGui::TextEx(key.c_str()), ImGui::SameLine(0., 0.);
             ImGui::PopStyleColor(1);
 
-            ImGui::SameLine();
+            ImGui::Text(":"), ImGui::SameLine();
             has_change |= prop_editor_recursive_impl(
                     label,
                     &value,
@@ -566,6 +568,8 @@ static bool prop_editor_recursive_impl(
         }
 
         ImGui::TreePop();
+        if (e->empty()) { ImGui::SameLine(0., 0.); }
+        ImGui::Text(e->is_object() ? "}" : "]");
     }
     else if (e->is_boolean())
     {
@@ -583,7 +587,7 @@ static bool prop_editor_recursive_impl(
         if (str == editing)
         {
             auto bordered = label_base[0] != '\0';  // only nested elements has border
-            if (ImGui::BeginChild("String Property Editor", {-1, 240}, bordered, ImGuiWindowFlags_MenuBar))
+            if (ImGui::BeginChild("String Property Editor", {-1, -1}, bordered, ImGuiWindowFlags_MenuBar))
             {
                 if (ImGui::BeginMenuBar())
                 {
