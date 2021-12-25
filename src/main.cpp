@@ -122,10 +122,10 @@ int main(int, char**)
     {
         ImFontConfig cfg       = {};
         cfg.RasterizerMultiply = 1.1;
-        io.Fonts->AddFontFromFileTTF("font-0.ttf", 15.f, &cfg);
+        io.Fonts->AddFontFromFileTTF("fonts/font-0.ttf", 15.f, &cfg);
 
         cfg.MergeMode          = true;
-        io.Fonts->AddFontFromFileTTF("font-1.ttf", 15.f, &cfg, io.Fonts->GetGlyphRangesKorean());
+        io.Fonts->AddFontFromFileTTF("fonts/font-1.ttf", 15.f, &cfg, io.Fonts->GetGlyphRangesKorean());
     }
 
     // initialize application
