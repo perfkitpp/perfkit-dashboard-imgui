@@ -372,7 +372,7 @@ void session_slot_trace_context::_fetch_update_traces()
             min           = 0.,
             max           = 1000.;
             ImGui::SliderScalar(
-                    _label("Update Interval##{}", trace.class_name),
+                    _label("##Update Interval {}", trace.class_name),
                     ImGuiDataType_Double,
                     &interv, &min, &max, "Interval: %lf ms"))
         {

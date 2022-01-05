@@ -137,10 +137,17 @@ void session_slot::render_on_list()
             {
                 ImGui::TreePush();
 
-                ImGui::InputText("ID", _id, sizeof _id);
-                ImGui::InputText("PW", _pw, sizeof _pw, ImGuiInputTextFlags_Password);
+                ImGui::SetNextItemWidth(-1);
+                auto do_login = ImGui::InputTextWithHint(
+                        "##ID", "ID", _id, sizeof _id,
+                        ImGuiInputTextFlags_EnterReturnsTrue);
 
-                bool do_login = ImGui::Button(_fmt.format("  Login  ##{}", _url).c_str());
+                ImGui::SetNextItemWidth(-1);
+                do_login |= ImGui::InputTextWithHint(
+                        "##PW", "PW", _pw, sizeof _pw,
+                        ImGuiInputTextFlags_Password | ImGuiInputTextFlags_EnterReturnsTrue);
+
+                do_login |= ImGui::Button(_fmt.format("  Login  ##{}", _url).c_str(), {-1, 0});
 
                 ImGui::TreePop();
 
