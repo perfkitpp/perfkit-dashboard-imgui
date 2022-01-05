@@ -81,6 +81,7 @@ void initialize()
 
     perfkit::terminal::net::terminal_init_info init{"LOCAL"};
     init.serve(49951);
+    init.parse_auth("guest:guest:W");
     _context.terminal = perfkit::terminal::net::create(init);
 
     _context.sessions.emplace_back("127.0.0.1:49951", false, "LOCAL");

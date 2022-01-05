@@ -30,14 +30,13 @@ void session_context::login(std::string_view id, std::string_view pw)
     nlohmann::json param;
     param["id"] = id;
 
-    std::array<char, 256> array;
+    std::array<char, 32> array;
     picosha2::hash256(pw, array);
 
-    std::array<char, perfkit::base64::encoded_size(256)> b64hash;
+    std::array<char, perfkit::base64::encoded_size(sizeof(array))> b64hash = {};
     perfkit::base64::encode(array, b64hash.begin());
 
     param["pw"] = std::string_view{b64hash.data(), b64hash.size()};
-
     _conn->send_message("auth:login", param);
 }
 
