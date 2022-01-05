@@ -118,6 +118,8 @@ class session_slot_trace_context
     std::unordered_map<uint64_t, node_context> _nodes;
     std::vector<node_type const*> _node_stack;
 
+    bool _plotting_any = false;
+
     std::string_view _cur_class;
     bool _cur_has_update = false;
 };

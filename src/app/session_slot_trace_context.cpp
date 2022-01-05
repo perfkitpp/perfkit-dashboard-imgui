@@ -13,6 +13,8 @@
 #include "imgui_internal.h"
 #include "perfkit/common/algorithm.hxx"
 #include "perfkit/common/counter.hxx"
+#include "perfkit/common/macros.hxx"
+#include "perfkit/common/utility/cleanup.hxx"
 #include "perfkit/common/zip.hxx"
 
 namespace views = ranges::views;
@@ -44,7 +46,8 @@ void session_slot_trace_context::update_selected()
 {
     _check_new_classes();
     _fetch_update_traces();
-    _plot_window();
+
+    if (_plotting_any) { _plot_window(); }
 }
 
 enum
@@ -82,7 +85,7 @@ void session_slot_trace_context::_recursive_draw_trace(
             ctx->color = *(uint32_t*)color;
 
             // Validate fold status
-            ImGui::SetNextTreeNodeOpen(not node->folded);
+            ImGui::SetNextItemOpen(not node->folded);
         }
 
         bool show_plot_button = false;
@@ -198,6 +201,8 @@ void session_slot_trace_context::_recursive_draw_trace(
 
         if (ctx->plotting)
         {
+            _plotting_any = true;
+
             if (ctx->graph.capacity() == 0)
             {
                 ctx->graph.reserve_shrink(PLOT_BUFFER_SIZE);
@@ -426,7 +431,8 @@ void session_slot_trace_context::_fetch_update_traces()
         }
 
         // render trace result
-        _cur_class = trace.class_name;
+        _cur_class    = trace.class_name;
+        _plotting_any = false;
         _node_stack.push_back(&trace.result->root);
         _recursive_draw_trace(&trace.result->root);
         _node_stack.pop_back();
@@ -439,321 +445,314 @@ void session_slot_trace_context::_fetch_update_traces()
 
 void session_slot_trace_context::_plot_window()
 {
-    if (not ImGui::Begin("Trace Plots", nullptr))
-    {
-        ImGui::End();
-        return;
-    }
-
-    void* selected_window = nullptr;
-    static std::vector<node_context*> draw_targets;
-
-    if (selected_window != this)
-    {
-        selected_window = this;
-        draw_targets.clear();
-    }
-
     static uint64_t color_editing_target = 0;
     static int color_edit_focus_next     = 0;
     auto constexpr DRAG_DROP_CLASS       = "TracePlotArg";
+    uint64_t currently_hovered_plot_ctx  = 0;
 
-    if (decltype(&*_nodes.end()) edit_target = nullptr;
-        color_editing_target != 0
-        && nullptr != (edit_target = perfkit::find_ptr(_nodes, color_editing_target)))
+    if (CPPH_FINALLY(&ImGui::End);
+        ImGui::Begin("Trace Plot - List", nullptr, ImGuiWindowFlags_HorizontalScrollbar))
     {
-        ImGui::SetNextWindowSize({320, 400});
-        if (color_edit_focus_next > 0)
+        void* selected_window = nullptr;
+        static std::vector<node_context*> draw_targets;
+
+        if (selected_window != this)
         {
-            ImGui::SetNextWindowFocus();
-            color_edit_focus_next = std::max(0, color_edit_focus_next - 1);
+            selected_window = this;
+            draw_targets.clear();
         }
 
-        if (bool open = true; ImGui::Begin("Trace Graph Color Editor", &open))
+        if (decltype(&*_nodes.end()) edit_target = nullptr;
+            color_editing_target != 0
+            && nullptr != (edit_target = perfkit::find_ptr(_nodes, color_editing_target)))
         {
-            ImVec4 color = ImGui::ColorConvertU32ToFloat4(edit_target->second.color);
-            ImGui::SetNextItemWidth(-1);
-            ImGui::ColorPicker4("Trace Graph Color Picker", &color.x);
-            edit_target->second.color = ImGui::ColorConvertFloat4ToU32(color);
-
-            if (not ImGui::IsWindowFocused(ImGuiFocusedFlags_RootWindow))
-                open = false;
-
-            if (not open)
-                color_editing_target = 0;
-        }
-        ImGui::End();
-    }
-
-    ImGui::BeginChild("TracePlotDndLeft", {240, -1}, true, ImGuiWindowFlags_HorizontalScrollbar);
-
-    push_button_color_series(ImGuiCol_Button, 0xFF0F3BAC);
-    if (ImGui::Button("Reset All", {-1, 0}))
-    {
-        for (auto& ctx : _nodes | views::values)
-            ctx.plot_axis_n = 0;
-    }
-    push_button_color_series(ImGuiCol_Button, 0xFF0FAC3B);
-    if (ImGui::Button("Add All", {-1, 0}))
-    {
-        for (auto& ctx : _nodes | views::values)
-            ctx.plot_axis_n = ImAxis_Y1;
-    }
-    pop_button_color_series();
-    pop_button_color_series();
-
-    ImGui::Separator();
-
-    uint64_t currently_hovered_plot_ctx = 0;
-    for (auto& [key, ctx] : _nodes)
-    {  // plot 리스트 렌더
-        if (not ctx.plotting)
-            continue;
-
-        if (ImPlot::ItemIcon(ctx.color), ImGui::IsItemClicked(ImGuiMouseButton_Left))
-        {  // 색상 편집
-            color_editing_target  = key;
-            color_edit_focus_next = 10;
-        }
-
-        ImGui::SameLine(), ImGui::Selectable(ctx.display_key.c_str(), false, ImGuiSelectableFlags_SpanAvailWidth);
-        auto hovering  = ImGui::IsItemHovered();
-        auto rclicked  = ImGui::IsItemClicked(ImGuiMouseButton_Right);
-        auto dbl_click = ImGui::IsItemClicked() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left);
-
-        if (ImGui::BeginDragDropSource())
-        {  // Drag & Drop
-            ImGui::SetDragDropPayload(DRAG_DROP_CLASS, &key, sizeof key);
-            ImPlot::ItemIcon(ctx.color), ImGui::SameLine();
-            ImGui::TextUnformatted(ctx.display_key.c_str());
-            ImGui::EndDragDropSource();
-        }
-
-        if (rclicked)
-            ImGui::OpenPopup(_label("##{}.PlotTypeSelection", key));
-
-        if (ImGui::BeginPopup(_label("##{}.PlotTypeSelection", key)))
-        {
-            ImGui::Text("Plot Type");
-            ImGui::Separator();
-
-            auto const labels = {"Line", "Shaded", "Stems"};
-            auto style        = ctx.style;
-
-            for (auto [idx, label] : zip(count(labels.size()), labels))
+            ImGui::SetNextWindowSize({320, 400});
+            if (color_edit_focus_next > 0)
             {
-                auto selected = style == *idx;
-                if (selected)
-                    ImGui::TextUnformatted("*"), ImGui::SameLine();
-
-                if (ImGui::Selectable(label, selected, ImGuiSelectableFlags_DontClosePopups))
-                {
-                    ctx.style = static_cast<decltype(ctx.style)>(*idx);
-                    break;
-                }
+                ImGui::SetNextWindowFocus();
+                color_edit_focus_next = std::max(0, color_edit_focus_next - 1);
             }
 
-            auto pvalue = &ctx.plot_pivot_if_required;
-            auto offset = std::max(1., std::abs(*pvalue) * ImGui::GetIO().DeltaTime * 0.25);
-            auto min = *pvalue - offset, max = *pvalue + offset;
-
-            ImGui::BeginDisabled(style == 0);
-            ImGui::Separator();
-            ImGui::SliderScalar(
-                    "Pivot Control",
-                    ImGuiDataType_Double,
-                    pvalue, &min, &max);
-
-            static float units_per_sec = 3.;
-            min                        = *pvalue - units_per_sec * ImGui::GetIO().DeltaTime;
-            max                        = *pvalue + units_per_sec * ImGui::GetIO().DeltaTime;
-
-            ImGui::Separator();
-            ImGui::SliderScalar(
-                    "Fixed Control",
-                    ImGuiDataType_Double,
-                    pvalue, &min, &max);
-
-            ImGui::DragFloat(
-                    "Units/s",
-                    &units_per_sec,
-                    units_per_sec * 0.005, 0.0001);
-
-            ImGui::EndDisabled();
-
-            ImGui::EndPopup();
-        }
-
-        if (hovering)
-        {
-            ImGui::SetNextWindowBgAlpha(0.67);
-            ImGui::BeginTooltip();
-            ImGui::TextUnformatted(ctx.display_key.c_str());
-            ImGui::EndTooltip();
-
-            currently_hovered_plot_ctx = key;
-        }
-
-        if (dbl_click && ctx.plot_axis_n == 0)
-            ctx.plot_axis_n = ImAxis_Y1;
-    }
-    ImGui::EndChild();
-
-    if (ImGui::BeginDragDropTarget())
-    {
-        if (auto payload = ImGui::AcceptDragDropPayload(DRAG_DROP_CLASS))
-        {
-            auto idx         = *(uint64_t*)payload->Data;
-            auto ctx         = &_nodes.at(idx);
-            ctx->plot_axis_n = 0;
-        }
-
-        ImGui::EndDragDropTarget();
-    }
-
-    ImGui::SameLine();
-    ImGui::BeginChild("TracePlotDndRight", {-1, -1}, false);
-
-    static double axis_limits[2];
-    axis_limits[0] = std::min(0., axis_limits[0]);
-    ImPlot::SetNextAxisLinks(ImAxis_X1, axis_limits + 0, axis_limits + 1);
-    if (ImPlot::BeginPlot("##TracePlotDnd", {-1, -1}))
-    {
-        ImPlot::SetupAxisLimits(ImAxis_X1, -1., 0.);
-        ImPlot::SetupAxis(ImAxis_X1, "Issued Time (seconds ago)", ImPlotAxisFlags_RangeFit);
-
-        auto flag = ImPlotAxisFlags_NoGridLines;
-        ImPlot::SetupAxis(ImAxis_Y1, "[AXIS 1]", flag);
-        ImPlot::SetupAxis(ImAxis_Y2, "[AXIS 2]", flag | ImPlotAxisFlags_Opposite);
-        ImPlot::SetupAxis(ImAxis_Y3, "[AXIS 3]", flag | ImPlotAxisFlags_Opposite);
-
-        if (ImPlot::BeginDragDropTargetPlot())
-        {
-            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(DRAG_DROP_CLASS))
+            if (bool open = true; ImGui::Begin("Trace Graph Color Editor", &open))
             {
-                auto key                   = *(uint64_t*)payload->Data;
-                _nodes.at(key).plot_axis_n = ImAxis_Y1;
+                ImVec4 color = ImGui::ColorConvertU32ToFloat4(edit_target->second.color);
+                ImGui::SetNextItemWidth(-1);
+                ImGui::ColorPicker4("Trace Graph Color Picker", &color.x);
+                edit_target->second.color = ImGui::ColorConvertFloat4ToU32(color);
+
+                if (not ImGui::IsWindowFocused(ImGuiFocusedFlags_RootWindow))
+                    open = false;
+
+                if (not open)
+                    color_editing_target = 0;
             }
-            ImPlot::EndDragDropTarget();
+            ImGui::End();
         }
 
-        for (auto i = (int)ImAxis_Y1; i <= (int)ImAxis_Y3; ++i)
+        push_button_color_series(ImGuiCol_Button, 0xFF0F3BAC);
+        if (ImGui::Button("Reset All", {-1, 0}))
         {
-            if (ImPlot::BeginDragDropTargetAxis(i))
-            {
-                if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(DRAG_DROP_CLASS))
-                {
-                    auto key                   = *(uint64_t*)payload->Data;
-                    _nodes.at(key).plot_axis_n = i;
-                }
-
-                ImPlot::EndDragDropTarget();
-            }
+            for (auto& ctx : _nodes | views::values)
+                ctx.plot_axis_n = 0;
         }
+        push_button_color_series(ImGuiCol_Button, 0xFF0FAC3B);
+        if (ImGui::Button("Add All", {-1, 0}))
+        {
+            for (auto& ctx : _nodes | views::values)
+                ctx.plot_axis_n = ImAxis_Y1;
+        }
+        pop_button_color_series();
+        pop_button_color_series();
 
-        static perfkit::poll_timer tim_force_invalidate{500ms};
-        bool force_update = tim_force_invalidate.check();
+        ImGui::Separator();
 
         for (auto& [key, ctx] : _nodes)
-        {
-            if (not ctx.plotting || ctx.plot_axis_n == 0)
+        {  // plot 리스트 렌더
+            if (not ctx.plotting)
                 continue;
 
-            if (force_update || ctx.plot_dirty)
-            {
-                ctx.plot_dirty   = false;
-                auto x_retriever = ctx.graph
-                                 | views::transform([](plot_arg& p) {
-                                       return -p.timestamp.elapsed().count();
-                                   });
-                auto y_retriever = ctx.graph
-                                 | views::transform([](plot_arg& p) {
-                                       return p.value;
-                                   });
-
-                ctx.plot_x.assign(x_retriever.begin(), x_retriever.end());
-                ctx.plot_y.assign(y_retriever.begin(), y_retriever.end());
+            if (ImPlot::ItemIcon(ctx.color), ImGui::IsItemClicked(ImGuiMouseButton_Left))
+            {  // 색상 편집
+                color_editing_target  = key;
+                color_edit_focus_next = 10;
             }
 
-            ImPlot::SetAxis(ctx.plot_axis_n);
+            ImGui::SameLine(), ImGui::Selectable(ctx.display_key.c_str(), false, ImGuiSelectableFlags_SpanAvailWidth);
+            auto hovering  = ImGui::IsItemHovered();
+            auto rclicked  = ImGui::IsItemClicked(ImGuiMouseButton_Right);
+            auto dbl_click = ImGui::IsItemClicked() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left);
 
-            float weight = IMPLOT_AUTO;
-            if (key == currently_hovered_plot_ctx)
-            {
-                weight = 3;
-                ImPlot::SetNextLineStyle({0.f, 0.f, 0.f, 1.f}, 5);
-                ImPlot::PlotLine(
-                        ctx.display_key.c_str(),
-                        ctx.plot_x.data(),
-                        ctx.plot_y.data(),
-                        ctx.plot_x.size());
-            }
-
-            switch (ctx.style)
-            {
-                case node_context::LINE_STYLE_LINE:
-                    ImPlot::SetNextLineStyle(ImGui::ColorConvertU32ToFloat4(ctx.color), weight);
-                    ImPlot::PlotLine(
-                            ctx.display_key.c_str(),
-                            ctx.plot_x.data(),
-                            ctx.plot_y.data(),
-                            ctx.plot_x.size());
-                    break;
-
-                case node_context::LINE_STYLE_SHADED:
-                    ImPlot::SetNextLineStyle(ImGui::ColorConvertU32ToFloat4(ctx.color), weight);
-                    ImPlot::PlotHLines(
-                            ctx.display_key.c_str(),
-                            &ctx.plot_pivot_if_required,
-                            1);
-
-                    ImPlot::SetNextFillStyle(ImGui::ColorConvertU32ToFloat4(ctx.color), 0.25);
-                    ImPlot::PlotShaded(
-                            ctx.display_key.c_str(),
-                            ctx.plot_x.data(),
-                            ctx.plot_y.data(),
-                            ctx.plot_x.size(),
-                            ctx.plot_pivot_if_required);
-
-                    ImPlot::SetNextLineStyle(ImGui::ColorConvertU32ToFloat4(ctx.color), weight);
-                    ImPlot::PlotLine(
-                            ctx.display_key.c_str(),
-                            ctx.plot_x.data(),
-                            ctx.plot_y.data(),
-                            ctx.plot_x.size());
-                    break;
-
-                case node_context::LINE_STYLE_STEM:
-                    ImPlot::SetNextLineStyle(ImGui::ColorConvertU32ToFloat4(ctx.color), weight);
-                    ImPlot::PlotHLines(
-                            ctx.display_key.c_str(),
-                            &ctx.plot_pivot_if_required,
-                            1);
-
-                    ImPlot::SetNextMarkerStyle(-1, -1, ImGui::ColorConvertU32ToFloat4(ctx.color));
-                    ImPlot::SetNextLineStyle(ImGui::ColorConvertU32ToFloat4(ctx.color - 0x7f000000), weight);
-                    ImPlot::PlotStems(
-                            ctx.display_key.c_str(),
-                            ctx.plot_x.data(),
-                            ctx.plot_y.data(),
-                            ctx.plot_x.size(),
-                            ctx.plot_pivot_if_required);
-
-                    break;
-            }
-
-            if (ImPlot::BeginDragDropSourceItem(ctx.display_key.c_str()))
-            {
+            if (ImGui::BeginDragDropSource())
+            {  // Drag & Drop
                 ImGui::SetDragDropPayload(DRAG_DROP_CLASS, &key, sizeof key);
                 ImPlot::ItemIcon(ctx.color), ImGui::SameLine();
                 ImGui::TextUnformatted(ctx.display_key.c_str());
                 ImGui::EndDragDropSource();
             }
+
+            if (rclicked)
+                ImGui::OpenPopup(_label("##{}.PlotTypeSelection", key));
+
+            if (ImGui::BeginPopup(_label("##{}.PlotTypeSelection", key)))
+            {
+                ImGui::Text("Plot Type");
+                ImGui::Separator();
+
+                auto const labels = {"Line", "Shaded", "Stems"};
+                auto style        = ctx.style;
+
+                for (auto [idx, label] : zip(count(labels.size()), labels))
+                {
+                    auto selected = style == *idx;
+                    if (selected)
+                        ImGui::TextUnformatted("*"), ImGui::SameLine();
+
+                    if (ImGui::Selectable(label, selected, ImGuiSelectableFlags_DontClosePopups))
+                    {
+                        ctx.style = static_cast<decltype(ctx.style)>(*idx);
+                        break;
+                    }
+                }
+
+                auto pvalue = &ctx.plot_pivot_if_required;
+                auto offset = std::max(1., std::abs(*pvalue) * ImGui::GetIO().DeltaTime * 0.25);
+                auto min = *pvalue - offset, max = *pvalue + offset;
+
+                ImGui::BeginDisabled(style == 0);
+                ImGui::Separator();
+                ImGui::SliderScalar(
+                        "Pivot Control",
+                        ImGuiDataType_Double,
+                        pvalue, &min, &max);
+
+                static float units_per_sec = 3.;
+                min                        = *pvalue - units_per_sec * ImGui::GetIO().DeltaTime;
+                max                        = *pvalue + units_per_sec * ImGui::GetIO().DeltaTime;
+
+                ImGui::Separator();
+                ImGui::SliderScalar(
+                        "Fixed Control",
+                        ImGuiDataType_Double,
+                        pvalue, &min, &max);
+
+                ImGui::DragFloat(
+                        "Units/s",
+                        &units_per_sec,
+                        units_per_sec * 0.005, 0.0001);
+
+                ImGui::EndDisabled();
+
+                ImGui::EndPopup();
+            }
+
+            if (hovering)
+            {
+                ImGui::SetNextWindowBgAlpha(0.67);
+                ImGui::BeginTooltip();
+                ImGui::TextUnformatted(ctx.display_key.c_str());
+                ImGui::EndTooltip();
+
+                currently_hovered_plot_ctx = key;
+            }
+
+            if (dbl_click && ctx.plot_axis_n == 0)
+                ctx.plot_axis_n = ImAxis_Y1;
         }
 
-        ImPlot::EndPlot();
+        if (ImGui::BeginDragDropTarget())
+        {
+            if (auto payload = ImGui::AcceptDragDropPayload(DRAG_DROP_CLASS))
+            {
+                auto idx         = *(uint64_t*)payload->Data;
+                auto ctx         = &_nodes.at(idx);
+                ctx->plot_axis_n = 0;
+            }
+
+            ImGui::EndDragDropTarget();
+        }
     }
 
-    ImGui::EndChild();
-    ImGui::End();
+    if (CPPH_FINALLY(&ImGui::End);
+        ImGui::Begin("Trace Plots"))
+    {
+        static double axis_limits[2];
+        axis_limits[0] = std::min(0., axis_limits[0]);
+        ImPlot::SetNextAxisLinks(ImAxis_X1, axis_limits + 0, axis_limits + 1);
+        if (ImPlot::BeginPlot("##TracePlotDnd", {-1, -1}))
+        {
+            ImPlot::SetupAxisLimits(ImAxis_X1, -1., 0.);
+            ImPlot::SetupAxis(ImAxis_X1, "Issued Time (seconds ago)", ImPlotAxisFlags_RangeFit);
+
+            auto flag = ImPlotAxisFlags_NoGridLines;
+            ImPlot::SetupAxis(ImAxis_Y1, "[AXIS 1]", flag);
+            ImPlot::SetupAxis(ImAxis_Y2, "[AXIS 2]", flag | ImPlotAxisFlags_Opposite);
+            ImPlot::SetupAxis(ImAxis_Y3, "[AXIS 3]", flag | ImPlotAxisFlags_Opposite);
+
+            if (ImPlot::BeginDragDropTargetPlot())
+            {
+                if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(DRAG_DROP_CLASS))
+                {
+                    auto key                   = *(uint64_t*)payload->Data;
+                    _nodes.at(key).plot_axis_n = ImAxis_Y1;
+                }
+                ImPlot::EndDragDropTarget();
+            }
+
+            for (auto i = (int)ImAxis_Y1; i <= (int)ImAxis_Y3; ++i)
+            {
+                if (ImPlot::BeginDragDropTargetAxis(i))
+                {
+                    if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(DRAG_DROP_CLASS))
+                    {
+                        auto key                   = *(uint64_t*)payload->Data;
+                        _nodes.at(key).plot_axis_n = i;
+                    }
+
+                    ImPlot::EndDragDropTarget();
+                }
+            }
+
+            static perfkit::poll_timer tim_force_invalidate{500ms};
+            bool force_update = tim_force_invalidate.check();
+
+            for (auto& [key, ctx] : _nodes)
+            {
+                if (not ctx.plotting || ctx.plot_axis_n == 0)
+                    continue;
+
+                if (force_update || ctx.plot_dirty)
+                {
+                    ctx.plot_dirty   = false;
+                    auto x_retriever = ctx.graph
+                                     | views::transform([](plot_arg& p) {
+                                           return -p.timestamp.elapsed().count();
+                                       });
+                    auto y_retriever = ctx.graph
+                                     | views::transform([](plot_arg& p) {
+                                           return p.value;
+                                       });
+
+                    ctx.plot_x.assign(x_retriever.begin(), x_retriever.end());
+                    ctx.plot_y.assign(y_retriever.begin(), y_retriever.end());
+                }
+
+                ImPlot::SetAxis(ctx.plot_axis_n);
+
+                float weight = IMPLOT_AUTO;
+                if (key == currently_hovered_plot_ctx)
+                {
+                    weight = 3;
+                    ImPlot::SetNextLineStyle({0.f, 0.f, 0.f, 1.f}, 5);
+                    ImPlot::PlotLine(
+                            ctx.display_key.c_str(),
+                            ctx.plot_x.data(),
+                            ctx.plot_y.data(),
+                            ctx.plot_x.size());
+                }
+
+                switch (ctx.style)
+                {
+                    case node_context::LINE_STYLE_LINE:
+                        ImPlot::SetNextLineStyle(ImGui::ColorConvertU32ToFloat4(ctx.color), weight);
+                        ImPlot::PlotLine(
+                                ctx.display_key.c_str(),
+                                ctx.plot_x.data(),
+                                ctx.plot_y.data(),
+                                ctx.plot_x.size());
+                        break;
+
+                    case node_context::LINE_STYLE_SHADED:
+                        ImPlot::SetNextLineStyle(ImGui::ColorConvertU32ToFloat4(ctx.color), weight);
+                        ImPlot::PlotHLines(
+                                ctx.display_key.c_str(),
+                                &ctx.plot_pivot_if_required,
+                                1);
+
+                        ImPlot::SetNextFillStyle(ImGui::ColorConvertU32ToFloat4(ctx.color), 0.25);
+                        ImPlot::PlotShaded(
+                                ctx.display_key.c_str(),
+                                ctx.plot_x.data(),
+                                ctx.plot_y.data(),
+                                ctx.plot_x.size(),
+                                ctx.plot_pivot_if_required);
+
+                        ImPlot::SetNextLineStyle(ImGui::ColorConvertU32ToFloat4(ctx.color), weight);
+                        ImPlot::PlotLine(
+                                ctx.display_key.c_str(),
+                                ctx.plot_x.data(),
+                                ctx.plot_y.data(),
+                                ctx.plot_x.size());
+                        break;
+
+                    case node_context::LINE_STYLE_STEM:
+                        ImPlot::SetNextLineStyle(ImGui::ColorConvertU32ToFloat4(ctx.color), weight);
+                        ImPlot::PlotHLines(
+                                ctx.display_key.c_str(),
+                                &ctx.plot_pivot_if_required,
+                                1);
+
+                        ImPlot::SetNextMarkerStyle(-1, -1, ImGui::ColorConvertU32ToFloat4(ctx.color));
+                        ImPlot::SetNextLineStyle(ImGui::ColorConvertU32ToFloat4(ctx.color - 0x7f000000), weight);
+                        ImPlot::PlotStems(
+                                ctx.display_key.c_str(),
+                                ctx.plot_x.data(),
+                                ctx.plot_y.data(),
+                                ctx.plot_x.size(),
+                                ctx.plot_pivot_if_required);
+
+                        break;
+                }
+
+                if (ImPlot::BeginDragDropSourceItem(ctx.display_key.c_str()))
+                {
+                    ImGui::SetDragDropPayload(DRAG_DROP_CLASS, &key, sizeof key);
+                    ImPlot::ItemIcon(ctx.color), ImGui::SameLine();
+                    ImGui::TextUnformatted(ctx.display_key.c_str());
+                    ImGui::EndDragDropSource();
+                }
+            }
+
+            ImPlot::EndPlot();
+        }
+    }
 }
