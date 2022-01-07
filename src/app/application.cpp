@@ -59,7 +59,6 @@ static std::string const CONFIG_PATH = [] {
 PERFKIT_CATEGORY(backups)
 {
     PERFKIT_CONFIGURE(urls, std::vector<std::tuple<std::string, bool, std::string>>{})
-            .hide()
             .confirm();
 }
 
