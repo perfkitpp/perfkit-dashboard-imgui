@@ -29,10 +29,12 @@
 #include "session_slot_trace_context.hpp"
 
 #include <charconv>
+#include <set>
 
 #include <imgui-extension.h>
 #include <implot.h>
-#include <range/v3/view.hpp>
+#include <range/v3/view/map.hpp>
+#include <range/v3/view/transform.hpp>
 
 #include "imgui_internal.h"
 #include "perfkit/common/algorithm.hxx"
@@ -107,6 +109,8 @@ void session_slot_trace_context::_recursive_draw_trace(
             color[1]   = (hash >>= 8) & 0xff | 0x10;
             color[2]   = (hash >>= 8) & 0xff | 0x10;
             ctx->color = *(uint32_t*)color;
+
+            _traces.find(_cur_class)->second.relates.insert(node->trace_key);
 
             // Validate fold status
             ImGui::SetNextItemOpen(not node->folded);
@@ -330,38 +334,46 @@ void session_slot_trace_context::_check_new_classes()
     if (not class_update)
         return;
 
-    std::vector<std::string_view> diffs;
-    diffs.reserve(class_update->size());
+    namespace view   = ranges::view;
+    namespace action = ranges::action;
 
-    if (_traces.empty())
-    {
-        diffs.assign(class_update->begin(), class_update->end());
-    }
-    else
-    {
-        perfkit::set_difference2(
-                *class_update,
-                _traces | ranges::views::transform([](auto&& s) { return s.class_name; }),
-                std::back_inserter(diffs),
-                [](auto&& a, auto&& b) {
-                    return a < b;
-                });
-    }
+    std::set<std::string> erases;
+    auto all_keys = *class_update | view::keys;
+    erases.insert(all_keys.begin(), all_keys.end());
 
-    if (not diffs.empty())
+    // 현재 트레이스 목록 iterate, 생성/제거/갱신 검출
+    for (auto& [name, id] : *class_update)
     {
-        SPDLOG_INFO("{}:{} trace classes newly recognized.", _url, diffs.size());
+        auto [it, is_new] = _traces.try_emplace(name);
+        auto ctx          = &it->second;
 
-        for (auto class_name : diffs)
+        // 지워지는 대상이 아니다.
+        erases.erase(name);
+
+        if (not is_new)
         {
-            _traces.emplace_back().class_name = class_name;
+            if (id == ctx->instance_id) { continue; }  // not changed.
+
+            // 기존의 트레이스가 대체됨 ...
+            _cleanup_context(&it->second);
         }
+
+        // update context
+        ctx->class_name  = name;
+        ctx->instance_id = id;
+    }
+
+    // 제거된 트레이스를 cleanup
+    for (auto& erased : erases)
+    {
+        _cleanup_context(&_traces.at(erased));
+        _traces.erase(erased);
     }
 }
 
 void session_slot_trace_context::_fetch_update_traces()
 {
-    for (auto& trace : _traces)
+    for (auto& [_, trace] : _traces)
     {
         if (trace.tracing)
             push_button_color_series(ImGuiCol_Header, 0xff407857);
@@ -456,13 +468,16 @@ void session_slot_trace_context::_fetch_update_traces()
 
         // render trace result
         _cur_class    = trace.class_name;
+        _cur_class_id = trace.instance_id;
         _plotting_any = false;
         _node_stack.push_back(&trace.result->root);
         _recursive_draw_trace(&trace.result->root);
         _node_stack.pop_back();
 
         _cur_class      = {};
+        _cur_class_id   = 0;
         _cur_has_update = false;
+
         assert_(_node_stack.empty());
     }
 }

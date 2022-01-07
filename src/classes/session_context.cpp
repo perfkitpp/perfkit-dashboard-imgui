@@ -280,7 +280,7 @@ void session_context::_on_trace(const outgoing::traces& payload)
     it->second.set_value(payload);
     _pending_trace_results.erase(it);
 }
-auto session_context::check_trace_class_change() -> std::vector<std::string> const*
+auto session_context::check_trace_class_change() -> std::vector<std::pair<std::string, uint64_t>> const*
 {
     if (_trace_class_dirty)
     {

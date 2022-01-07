@@ -28,6 +28,7 @@
 
 #pragma once
 #include <string>
+#include <unordered_set>
 
 #include <spdlog/spdlog.h>
 
@@ -48,12 +49,16 @@ class session_slot_trace_context
     struct trace_class_context
     {
         std::string class_name;
+        uint64_t instance_id = 0;
+
         bool tracing        = 0;
         size_t update_index = 0;
         perfkit::poll_timer tim_next_signal{50ms};
         perfkit::stopwatch tim_last_request;
         std::future<session_context::trace_result_type> fut_result;
         perfkit::ownership<session_context::trace_result_type> result;
+
+        std::unordered_set<uint64_t> relates;
     };
 
     struct plot_arg
@@ -96,7 +101,7 @@ class session_slot_trace_context
 
     ~session_slot_trace_context()
     {
-        for (auto& trace : _traces)
+        for (auto& [_, trace] : _traces)
         {
             if (trace.fut_result.valid())
             {
@@ -121,6 +126,24 @@ class session_slot_trace_context
     void _fetch_update_traces();
     void _plot_window();
 
+    void _cleanup_context(trace_class_context* context)
+    {
+        // TODO: 모든 연관된 트레이스 노드 제거 (relates)
+        for (auto key : context->relates)
+        {
+            _nodes.erase(key);
+        }
+
+        try
+        {
+            *context = {};
+        }
+        catch (std::future_error& ec)
+        {
+            SPDLOG_ERROR("future error: {}", ec.what());
+        }
+    }
+
    private:
     template <typename Str_, typename... Args_>
     char const* _label(Str_&& fmt, Args_&&... args)
@@ -136,7 +159,7 @@ class session_slot_trace_context
    private:
     std::string const _url;
     session_context* const _context;
-    std::list<trace_class_context> _traces;
+    std::map<std::string, trace_class_context, std::less<>> _traces;
 
     perfkit::format_buffer _fmt_label, _tmp;
     std::unordered_map<uint64_t, node_context> _nodes;
@@ -145,5 +168,6 @@ class session_slot_trace_context
     bool _plotting_any = false;
 
     std::string_view _cur_class;
-    bool _cur_has_update = false;
+    uint64_t _cur_class_id = 0;
+    bool _cur_has_update   = false;
 };

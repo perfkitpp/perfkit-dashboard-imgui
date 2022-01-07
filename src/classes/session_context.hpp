@@ -60,7 +60,7 @@ class session_context
     auto suggest_command(std::string command, int16_t position)
             -> std::future<messages::outgoing::suggest_command>;
 
-    auto check_trace_class_change() -> std::vector<std::string> const*;
+    auto check_trace_class_change() -> std::vector<std::pair<std::string, uint64_t>> const*;
     session_connection_state status() const noexcept { return _conn->status(); }
     info_type const* info() const noexcept;
     auto const& configs() const noexcept { return _configs; }
@@ -151,7 +151,7 @@ class session_context
             _entity_indexes;
 
     bool _trace_class_dirty = false;
-    std::vector<std::string> _trace_classes;
+    std::vector<std::pair<std::string, uint64_t>> _trace_classes;
     std::map<
             std::string,
             std::promise<messages::outgoing::traces>,
