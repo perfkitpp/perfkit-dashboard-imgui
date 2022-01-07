@@ -132,7 +132,7 @@ class session_slot
     bool _has_focus    = false;
 
     // entered id and password, which are cached only for single program instance
-    char _id[256] = {}, _pw[256] = {};
+    char _id[256] = "guest", _pw[256] = "guest";
 
     // current state
     state _state = {};
