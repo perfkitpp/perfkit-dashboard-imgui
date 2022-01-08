@@ -39,7 +39,7 @@
 
 using namespace perfkit::literals;
 
-void plain_tcp::send_message(std::string_view route, const nlohmann::json &parameter)
+void plain_tcp::send_message(std::string_view route, const nlohmann::json& parameter)
 {
     _sendbuf["route"]     = route;
     _sendbuf["parameter"] = parameter;
@@ -50,13 +50,13 @@ void plain_tcp::send_message(std::string_view route, const nlohmann::json &param
     nlohmann::json::to_msgpack(_sendbuf, {*buffer});
 
     memcpy(buffer->data(), "o`P%", 4);
-    *(int *)&(*buffer)[4] = (int)buffer->size() - 8;
+    *(int*)&(*buffer)[4] = (int)buffer->size() - 8;
 
     auto pbuf = &*buffer;
     asio::async_write(_socket,
                       asio::buffer(*pbuf),
                       asio::transfer_all(),
-                      [buffer = std::move(buffer)](auto &&ec, size_t n) {});
+                      [buffer = std::move(buffer)](auto&& ec, size_t n) {});
 }
 
 session_connection_state plain_tcp::status() const
@@ -67,7 +67,7 @@ session_connection_state plain_tcp::status() const
     return _status;
 }
 
-plain_tcp::plain_tcp(asio::io_context *ioc, const char *address, uint16_t port)
+plain_tcp::plain_tcp(asio::io_context* ioc, const char* address, uint16_t port)
         : _socket{*ioc}
 {
     asio::ip::tcp::resolver resolver{*ioc};
@@ -94,14 +94,14 @@ plain_tcp::~plain_tcp()
             _socket.shutdown(asio::socket_base::shutdown_both);
             _socket.close();
         }
-        catch (asio::system_error &e)
+        catch (asio::system_error& e)
         {
             CPPH_ERROR("Socket shutdown() ~ close() failed: ({}) {}", e.code().value(), e.what());
         }
     }
 }
 
-void plain_tcp::_on_connect(const asio::error_code &ec)
+void plain_tcp::_on_connect(const asio::error_code& ec)
 {
     if (ec)
     {
@@ -126,7 +126,7 @@ void plain_tcp::_on_connect(const asio::error_code &ec)
             CPPH_BIND(_handle_header));
 }
 
-void plain_tcp::_handle_header(asio::error_code const &ec, size_t num_read)
+void plain_tcp::_handle_header(asio::error_code const& ec, size_t num_read)
 {
     if (ec && ec.value() == asio::error::operation_aborted)
     {
@@ -145,7 +145,7 @@ void plain_tcp::_handle_header(asio::error_code const &ec, size_t num_read)
         {
             _socket.close();
         }
-        catch (asio::system_error &e)
+        catch (asio::system_error& e)
         {
             CPPH_ERROR("Failed to close socket: ({}) {}", e.code().value(), e.what());
         }
@@ -161,7 +161,7 @@ void plain_tcp::_handle_header(asio::error_code const &ec, size_t num_read)
         return;
     }
 
-    auto bufsize = *(int *)(_rdbuf.data() + 4);
+    auto bufsize = *(int*)(_rdbuf.data() + 4);
     if (bufsize > 128 << 20)
     {
         CPPH_ERROR("requested buffer size {} is too big. aborting connection ...", bufsize);
@@ -176,7 +176,7 @@ void plain_tcp::_handle_header(asio::error_code const &ec, size_t num_read)
             CPPH_BIND(_handle_body));
 }
 
-void plain_tcp::_handle_body(asio::error_code const &ec, size_t num_read)
+void plain_tcp::_handle_body(asio::error_code const& ec, size_t num_read)
 {
     if (ec && ec.value() == asio::error::operation_aborted)
     {
@@ -211,16 +211,16 @@ void plain_tcp::_handle_body(asio::error_code const &ec, size_t num_read)
     try
     {
         object  = nlohmann::json::from_msgpack(_rdbuf.begin(), _rdbuf.end());
-        route   = object.at("route").get_ref<std::string &>();
+        route   = object.at("route").get_ref<std::string&>();
         payload = &object.at("payload");
     }
-    catch (nlohmann::json::parse_error &e)
+    catch (nlohmann::json::parse_error& e)
     {
         CPPH_ERROR("msgpack parsing error: {}, data size was: {}", e.what(), _rdbuf.size());
         _socket.close();
         return;
     }
-    catch (std::exception &e)
+    catch (std::exception& e)
     {
         CPPH_ERROR("error on parsing: {}", e.what());
         _socket.close();

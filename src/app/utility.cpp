@@ -30,7 +30,7 @@
 
 #include "TextEditor.h"
 
-void xterm_leap_escape(TextEditor *edit, std::string_view content)
+void xterm_leap_escape(TextEditor* edit, std::string_view content)
 {
     if (content.empty())
         return;
