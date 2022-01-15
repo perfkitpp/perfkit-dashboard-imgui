@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2022. Seungwoo Kang
+// Copyright (c) 2021-2022. Seungwoo Kang
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,9 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-// project home: https://github.com/perfkitpp    //
-// Created by ki608 on 2021-12-19.
-//
+// project home: https://github.com/perfkitpp
 #pragma once
 #include <string_view>
 
