@@ -41,7 +41,7 @@ target_link_libraries(
         perfkit::core
         perfkit::picosha2
         perfkit::net::core
-        asio::standalone
+        perfkit::asio
 )
 
 target_include_directories(
