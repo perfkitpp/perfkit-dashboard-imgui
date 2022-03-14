@@ -2,4 +2,4 @@ _Resharper*
 /out/
 .vs
 .idea
-
+venv/
