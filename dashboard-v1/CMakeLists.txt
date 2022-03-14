@@ -71,3 +71,15 @@ set_target_properties(
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/perfkit-dashboard"
         LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
 )
+
+configure_file(
+        ${CMAKE_SOURCE_DIR}/misc/CascadiaMono.ttf
+        ${CMAKE_BINARY_DIR}/perfkit-dashboard/fonts/font-0.ttf
+        COPYONLY
+)
+
+configure_file(
+        ${CMAKE_SOURCE_DIR}/misc/NanumGothic.ttf
+        ${CMAKE_BINARY_DIR}/perfkit-dashboard/fonts/font-1.ttf
+        COPYONLY
+)
