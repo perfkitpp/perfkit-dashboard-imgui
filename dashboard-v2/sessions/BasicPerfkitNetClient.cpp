@@ -8,6 +8,7 @@
 #include <perfkit/common/refl/extension/msgpack-rpc.hxx>
 
 using namespace perfkit;
+using namespace net::message;
 
 class PerfkitNetClientRpcMonitor : public msgpack::rpc::if_context_monitor
 {
@@ -26,14 +27,13 @@ class PerfkitNetClientRpcMonitor : public msgpack::rpc::if_context_monitor
 
 BasicPerfkitNetClient::BasicPerfkitNetClient()
 {
-    using namespace net::message;
-
     // Create service
     auto service = msgpack::rpc::service_info{};
     service.serve(
             notify::tty,
             [](tty_output_t& h) {
                 printf("%s", h.content.c_str());
+                fflush(stdout);
             });
 
     // Create monitor
@@ -69,7 +69,31 @@ void BasicPerfkitNetClient::RenderTickSession()
 
 void BasicPerfkitNetClient::TickSession()
 {
-    ISession::TickSession();
+    if (_timHeartbeat.check())
+        sendHeartbeat();
 }
 
-BasicPerfkitNetClient::~BasicPerfkitNetClient() = default;
+void BasicPerfkitNetClient::_onSessionCreate_(const msgpack::rpc::session_profile& profile)
+{
+    NotifyToast("Rpc Session Created").String(profile.peer_name);
+}
+
+void BasicPerfkitNetClient::_onSessionDispose_(const msgpack::rpc::session_profile& profile)
+{
+    NotifyToast("Rpc Session Disposed").String(profile.peer_name);
+}
+
+BasicPerfkitNetClient::~BasicPerfkitNetClient()
+{
+    _rpc.reset();
+}
+
+void BasicPerfkitNetClient::sendHeartbeat()
+{
+    auto fnHeartbeat =
+            [&] {
+                service::heartbeat(*GetRpc()).rpc(nullptr);
+            };
+
+    asio::dispatch(bind_front_weak(weak_from_this(), fnHeartbeat));
+}

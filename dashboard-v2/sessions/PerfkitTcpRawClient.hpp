@@ -23,7 +23,6 @@ class PerfkitTcpRawClient : public BasicPerfkitNetClient
     EConnectionState _state;
 
     asio::system_executor _exec;
-    asio::ip::tcp::socket _socket{_exec};
     asio::ip::tcp::endpoint _endpoint;
 
     // UI State

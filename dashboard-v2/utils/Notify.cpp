@@ -195,6 +195,7 @@ static class NotifyContext
    private:
     void preEraseToast(decltype(_toasts)::iterator iter)
     {
+        ImGui::SetWindowSize(usprintf("###PDASH_TOAST%d", (*iter)->stateIdAlloc), {1, 1}, ImGuiCond_Always);
         _idPool.push_back((*iter)->stateIdAlloc);
 
         auto offset = (*iter)->toastHeightCache;

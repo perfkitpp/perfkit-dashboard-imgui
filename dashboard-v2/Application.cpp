@@ -254,6 +254,8 @@ void Application::drawSessionList(bool* bKeepOpen)
                 // If session was originally open, try close session.
                 sess.Ref->CloseSession();
                 sess.bPendingClose = true;
+
+                NotifyToast("Session Closed").String("{}@{}", sess.CachedDisplayName, sess.Key);
             }
             else
             {

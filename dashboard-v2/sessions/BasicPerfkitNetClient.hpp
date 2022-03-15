@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#include <perfkit/common/timer.hxx>
 #include <perfkit/extension/net/protocol.hpp>
 
 #include "interfaces/Session.hpp"
@@ -17,6 +18,7 @@ class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNe
 {
     unique_ptr<perfkit::msgpack::rpc::context> _rpc;
     shared_ptr<perfkit::msgpack::rpc::if_context_monitor> _monitor;
+    perfkit::poll_timer _timHeartbeat{1s};
 
    public:
     BasicPerfkitNetClient();
@@ -26,11 +28,14 @@ class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNe
     void RenderTickSession() final;
     void TickSession() final;
 
+   private:
+    void sendHeartbeat();
+
    protected:
     //! @note Connection to server must be unique!
     perfkit::msgpack::rpc::context* GetRpc() { return &*_rpc; }
 
    public:
-    void _onSessionCreate_(perfkit::msgpack::rpc::session_profile const&) {}
-    void _onSessionDispose_(perfkit::msgpack::rpc::session_profile const&) {}
+    void _onSessionCreate_(perfkit::msgpack::rpc::session_profile const&);
+    void _onSessionDispose_(perfkit::msgpack::rpc::session_profile const&);
 };
