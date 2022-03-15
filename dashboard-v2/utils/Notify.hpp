@@ -24,7 +24,6 @@ class NotifyToast
     struct Content
     {
         NotifySeverity Severity = NotifySeverity::Info;
-        string Title;
         vector<function<bool()>> ContentDecos;  // returns true if toast should be closed
         steady_clock::time_point Lifespan = steady_clock::now() + 5s;
         steady_clock::time_point Birth;
@@ -58,8 +57,6 @@ class NotifyToast
 
     NotifyToast&& Permanent() && { return _body->bInfinity = true, _self(); }
 
-    NotifyToast&& Title(string title) && { return _body->Title = std::move(title), _self(); }
-
     NotifyToast&& String(string content) &&;
 
     template <typename Fmt_, typename... Args_>
@@ -68,6 +65,8 @@ class NotifyToast
         return (std::move(*this))
                 .String(fmt::format(std::forward<Fmt_>(fmtstr), std::forward<Args_>(args)...));
     }
+
+    NotifyToast&& Title(string content) &&;
 
     NotifyToast&& Button(function<void()> handler, string label = "Okay") &&;
     NotifyToast&& ButtonYesNo(function<void()> onYes, function<void()> onNo, string labelYes = "Yes", string labelNo = "No") &&;
