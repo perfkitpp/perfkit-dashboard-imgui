@@ -184,3 +184,13 @@ int main(int, char**)
 
     return 0;
 }
+
+void DispatchEventMainThread(function<void()> fn)
+{
+    Application::Get()->PostMainThreadEvent(std::move(fn));
+}
+
+void PostEventMainThread(function<void()> fn)
+{
+    Application::Get()->DispatchMainThreadEvent(std::move(fn));
+}

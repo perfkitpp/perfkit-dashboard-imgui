@@ -5,8 +5,10 @@
 #include <vector>
 
 #include <perfkit/common/functional.hxx>
+#include <perfkit/common/futils.hxx>
 
 using perfkit::function;
+using perfkit::futils::usprintf;
 using std::shared_ptr;
 using std::string;
 using std::string_view;
@@ -42,3 +44,8 @@ auto CondInvoke(bool condition, Callable&& callable)
 #define INTERNAL_PDASH_CONCAT_0(a, b) a##b
 #define INTERNAL_PDASH_CONCAT(a, b)   INTERNAL_PDASH_CONCAT_0(a, b)
 #define CondInvoke(CondExpr, ...)     auto INTERNAL_PDASH_CONCAT(_pdash_intennal_, __LINE__) = detail::CondInvoke(CondExpr, __VA_ARGS__)
+
+void DispatchEventMainThread(function<void()>);
+void PostEventMainThread(function<void()>);
+
+#include "utils/Notify.hpp"

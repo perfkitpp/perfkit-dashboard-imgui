@@ -15,7 +15,6 @@
 #include <perfkit/common/utility/cleanup.hxx>
 
 #include "interfaces/Session.hpp"
-#include "utils/Notify.hpp"
 
 Application* Application::Get()
 {
@@ -74,9 +73,9 @@ void Application::drawMenuContents()
             NotifyToast{}.Severity(NotifySeverity(rand() % (int)NotifySeverity::Fatal + 1)).Title("글쎄요!!").Commit();
         if (ImGui::MenuItem("Save workspace as"))
             NotifyToast{}
-                    .AddString("Below is button to press!")
-                    .AddButton(
-                            [] { NotifyToast{}.AddString("Hello~~").Commit(); },
+                    .Permanent()
+                    .String("Below is button to press!")
+                    .Button([] { NotifyToast{}.String("Hello~~").Commit(); },
                             "Press Okay");
         ImGui::MenuItem("Load workspace");
     }
@@ -122,11 +121,14 @@ void Application::drawSessionList(bool* bKeepOpen)
         int colorPopCount         = 3;
         CPPH_CALL_ON_EXIT(ImGui::PopStyleColor(colorPopCount));
 
-        auto baseColor = bIsSessionOpen ? 0xff'264d22 : 0xff'383838;
+        auto baseColor       = bIsSessionOpen ? 0xff'264d22 : 0xff'282828;
+        baseColor            = sess.bPendingClose ? 0xff'37b8db : baseColor;
+        sess.bPendingClose   = sess.bPendingClose && bIsSessionOpen;
+        bool bRenderContents = sess.Ref->ShouldRenderSessionListEntityContent();
 
-        if (not sess.Ref->ShouldRenderSessionListEntityContent())
+        if (not bRenderContents)
         {
-            headerFlag |= ImGuiTreeNodeFlags_Leaf;
+            headerFlag |= ImGuiTreeNodeFlags_Bullet;
             ImGui::PushStyleColor(ImGuiCol_Header, baseColor);
             ImGui::PushStyleColor(ImGuiCol_HeaderActive, baseColor);
             ImGui::PushStyleColor(ImGuiCol_HeaderHovered, baseColor);
@@ -139,25 +141,51 @@ void Application::drawSessionList(bool* bKeepOpen)
         }
 
         sprintf(textBuf, "%s##SLB-%s-%d", sess.CachedDisplayName.c_str(), sess.Key.c_str(), sess.Type);
-        if (ImGui::CollapsingHeader(textBuf, &bOpenStatus, headerFlag))
+
+        bRenderContents &= ImGui::CollapsingHeader(textBuf, &bOpenStatus, headerFlag);
+        ImGui::SameLine();
+        ImGui::TextColored({.5f, .5f, .5f, 1.f}, "%s", sess.Key.c_str());
+
+        if (bIsSessionOpen)
+        {
+            ImGui::SameLine();
+
+            if (sess.bShow)
+                sprintf(textBuf, "[HIDE]###OPN-%s-%d", sess.Key.c_str(), sess.Type);
+            else
+                sprintf(textBuf, "[SHOW]###OPN-%s-%d", sess.Key.c_str(), sess.Type);
+
+            int buttonBase = sess.bShow ? 0xff'6ccf48 : baseColor;
+
+            CPPH_CALL_ON_EXIT(ImGui::PopStyleColor(4));
+            ImGui::PushStyleColor(ImGuiCol_Button, buttonBase);
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, buttonBase + offsetActive);
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, buttonBase + offsetHover);
+            ImGui::PushStyleColor(ImGuiCol_Text, 0xffcccccc);
+
+            if (ImGui::Button(textBuf, {-18, 0}))
+                sess.bShow = not sess.bShow, NotifyToast{}.String("Toggle!");
+        }
+
+        if (bRenderContents)
         {
             sprintf(textBuf, "%s##CHLD-%s-%d", sess.CachedDisplayName.c_str(), sess.Key.c_str(), sess.Type);
 
             ImGui::TreePush();
             sess.Ref->RenderSessionListEntityContent();
             ImGui::TreePop();
-        }
 
-        ImGui::SameLine();
-        ImGui::TextColored({.5f, .5f, .5f, 1.f}, "%s", sess.Key.c_str());
+            ImGui::Separator();
+        }
 
         sprintf(textBuf, "Unregister##%s-%d", sess.Key.c_str(), sess.Type);
         if (not bOpenStatus)
         {
-            if (bIsSessionOpen)
+            if (bIsSessionOpen && not sess.bPendingClose)
             {
                 // If session was originally open, try close session.
                 sess.Ref->CloseSession();
+                sess.bPendingClose = true;
             }
             else
             {
@@ -168,6 +196,8 @@ void Application::drawSessionList(bool* bKeepOpen)
 
         if (CondInvoke(ImGui::BeginPopup(textBuf), ImGui::EndPopup))
         {
+            sess.bPendingClose = false;
+
             ImGui::Text("Are you sure to unregister this session?");
             if (ImGui::Button("Yes"))
             {
@@ -253,7 +283,7 @@ bool Application::RegisterSessionMainThread(
         NotifyToast{}
                 .Severity(NotifySeverity::Error)
                 .Title("Session Creation Failed")
-                .AddString("Session key {} already exist", keyString);
+                .String("Session key {} already exist", keyString);
         return false;
     }
 
@@ -278,7 +308,7 @@ bool Application::RegisterSessionMainThread(
         NotifyToast{}
                 .Severity(NotifySeverity::Error)
                 .Title("Session Creation Failed")
-                .AddString("[URI {}]: Given session type is not implemented yet ...", keyString);
+                .String("[URI {}]: Given session type is not implemented yet ...", keyString);
         return false;
     }
 
@@ -292,7 +322,7 @@ bool Application::RegisterSessionMainThread(
     elem->Ref->InitializeSession(elem->Key);
     elem->Ref->FetchSessionDisplayName(&elem->CachedDisplayName);
 
-    NotifyToast{}.AddString("Session {}@{} Created", elem->CachedDisplayName, elem->Key);
+    NotifyToast{}.String("Session {}@{} Created", elem->CachedDisplayName, elem->Key);
     return true;
 }
 

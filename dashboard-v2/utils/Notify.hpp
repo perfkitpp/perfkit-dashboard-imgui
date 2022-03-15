@@ -56,7 +56,7 @@ class NotifyToast
     NotifyToast&& Error() && { return std::move(*this).Severity(NotifySeverity::Error); }
     NotifyToast&& Fatal() && { return std::move(*this).Severity(NotifySeverity::Fatal); }
 
-    NotifyToast&& Infinity() && { return _body->bInfinity = true, _self(); }
+    NotifyToast&& Permanent() && { return _body->bInfinity = true, _self(); }
 
     NotifyToast&& Title(string title) && { return _body->Title = std::move(title), _self(); }
 

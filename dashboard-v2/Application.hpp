@@ -21,7 +21,8 @@ class Application
         ESessionType Type;
         shared_ptr<class ISession> Ref;
 
-        bool bShow = false;
+        bool bShow         = false;
+        bool bPendingClose = false;
 
         string CachedDisplayName;
     };
