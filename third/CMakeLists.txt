@@ -14,6 +14,7 @@ add_library(
         ImGuiColorTextEdit/TextEditor.cpp
         implot/implot.cpp
         implot/implot_items.cpp
+        imgui-extension/imgui-extension.cpp
 )
 
 target_include_directories(
@@ -25,6 +26,7 @@ target_include_directories(
         implot
         ${OpenGL_INCLUDE_DIRS}
         ImGuiColorTextEdit
+        imgui-extension
 )
 
 target_link_libraries(

@@ -105,6 +105,86 @@ void Application::drawSessionList(bool* bKeepOpen)
     if (CondInvoke(ImGui::BeginMenuBar(), &ImGui::EndMenuBar))
         if (CondInvoke(ImGui::BeginMenu("Add Session"), &ImGui::EndMenu))
             drawAddSessionMenu();
+
+    char textBuf[256];
+    auto const colorBase    = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyleColorVec4(ImGuiCol_Header));
+    auto const offsetActive = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyleColorVec4(ImGuiCol_HeaderActive)) - colorBase;
+    auto const offsetHover  = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyleColorVec4(ImGuiCol_HeaderHovered)) - colorBase;
+
+    for (auto iter = _sessions.begin(); iter != _sessions.end();)
+    {
+        auto& sess = *iter;
+        sess.Ref->FetchSessionDisplayName(&sess.CachedDisplayName);
+
+        bool const bIsSessionOpen = sess.Ref->IsSessionOpen();
+        bool bOpenStatus          = true;
+        auto headerFlag           = 0;
+        int colorPopCount         = 3;
+        CPPH_CALL_ON_EXIT(ImGui::PopStyleColor(colorPopCount));
+
+        auto baseColor = bIsSessionOpen ? 0xff'264d22 : 0xff'383838;
+
+        if (not sess.Ref->ShouldRenderSessionListEntityContent())
+        {
+            headerFlag |= ImGuiTreeNodeFlags_Leaf;
+            ImGui::PushStyleColor(ImGuiCol_Header, baseColor);
+            ImGui::PushStyleColor(ImGuiCol_HeaderActive, baseColor);
+            ImGui::PushStyleColor(ImGuiCol_HeaderHovered, baseColor);
+        }
+        else
+        {
+            ImGui::PushStyleColor(ImGuiCol_Header, baseColor);
+            ImGui::PushStyleColor(ImGuiCol_HeaderActive, baseColor + offsetActive);
+            ImGui::PushStyleColor(ImGuiCol_HeaderHovered, baseColor + offsetHover);
+        }
+
+        sprintf(textBuf, "%s##SLB-%s-%d", sess.CachedDisplayName.c_str(), sess.Key.c_str(), sess.Type);
+        if (ImGui::CollapsingHeader(textBuf, &bOpenStatus, headerFlag))
+        {
+            sprintf(textBuf, "%s##CHLD-%s-%d", sess.CachedDisplayName.c_str(), sess.Key.c_str(), sess.Type);
+
+            ImGui::TreePush();
+            sess.Ref->RenderSessionListEntityContent();
+            ImGui::TreePop();
+        }
+
+        ImGui::SameLine();
+        ImGui::TextColored({.5f, .5f, .5f, 1.f}, "%s", sess.Key.c_str());
+
+        sprintf(textBuf, "Unregister##%s-%d", sess.Key.c_str(), sess.Type);
+        if (not bOpenStatus)
+        {
+            if (bIsSessionOpen)
+            {
+                // If session was originally open, try close session.
+                sess.Ref->CloseSession();
+            }
+            else
+            {
+                // Otherwise, popup modal for deleting this session
+                ImGui::OpenPopup(textBuf);
+            }
+        }
+
+        if (CondInvoke(ImGui::BeginPopup(textBuf), ImGui::EndPopup))
+        {
+            ImGui::Text("Are you sure to unregister this session?");
+            if (ImGui::Button("Yes"))
+            {
+                iter = _sessions.erase(iter);
+                ImGui::CloseCurrentPopup();
+                continue;
+            }
+
+            ImGui::SameLine();
+            if (ImGui::Button("No"))
+            {
+                ImGui::CloseCurrentPopup();
+            }
+        }
+
+        ++iter;
+    }
 }
 
 void Application::drawAddSessionMenu()
@@ -182,7 +262,7 @@ bool Application::RegisterSessionMainThread(
     switch (type)
     {
         case ESessionType::TcpRawClient:
-            // TODO: create TCP RAW client
+            session = CreatePerfkitTcpRawClient();
             break;
 
         case ESessionType::WebSocketClient:
@@ -198,7 +278,7 @@ bool Application::RegisterSessionMainThread(
         NotifyToast{}
                 .Severity(NotifySeverity::Error)
                 .Title("Session Creation Failed")
-                .AddString("Seesion type {} is not implemented yet ...", (int)type);
+                .AddString("[URI {}]: Given session type is not implemented yet ...", keyString);
         return false;
     }
 
@@ -212,7 +292,7 @@ bool Application::RegisterSessionMainThread(
     elem->Ref->InitializeSession(elem->Key);
     elem->Ref->FetchSessionDisplayName(&elem->CachedDisplayName);
 
-    NotifyToast{}.AddString("Session {} Created", elem->Key).Commit();
+    NotifyToast{}.AddString("Session {}@{} Created", elem->CachedDisplayName, elem->Key);
     return true;
 }
 

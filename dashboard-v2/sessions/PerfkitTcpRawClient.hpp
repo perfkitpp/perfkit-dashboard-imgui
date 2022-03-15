@@ -7,7 +7,17 @@
 
 class PerfkitTcpRawClient : public BasicPerfkitNetClient
 {
+    enum class EConnectionState
+    {
+        Offline,
+        Connecting,
+        OnlineReadOnly,
+        OnlineAdmin,
+    };
+
+   private:
     string _uri;
+    EConnectionState _state;
 
    public:
     void InitializeSession(const string& keyUri) override;

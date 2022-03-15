@@ -13,7 +13,7 @@ void PerfkitTcpRawClient::InitializeSession(const string& keyUri)
 
 bool PerfkitTcpRawClient::ShouldRenderSessionListEntityContent() const
 {
-    return ISession::ShouldRenderSessionListEntityContent();
+    return true;
 }
 
 void PerfkitTcpRawClient::RenderSessionListEntityContent()
@@ -23,7 +23,8 @@ void PerfkitTcpRawClient::RenderSessionListEntityContent()
 
 bool PerfkitTcpRawClient::IsSessionOpen() const
 {
-    return false;
+    return _state == EConnectionState::OnlineReadOnly
+        || _state == EConnectionState::OnlineAdmin;
 }
 
 void PerfkitTcpRawClient::CloseSession()

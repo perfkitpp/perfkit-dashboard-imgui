@@ -4,7 +4,6 @@ set(
         PERFKIT_DASHBOARD_SOURCES
 
         main.cpp
-        imgui-extension.cpp
         platform.cpp
 
         app/session_slot.cpp
