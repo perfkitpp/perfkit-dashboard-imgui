@@ -66,6 +66,8 @@ static class NotifyContext
                 ptoast->stateIdAlloc = _idPool.back(), _idPool.pop_back();
         }
 
+        bool bExpireAtLeastOne = false;
+
         // Display all toasts
         {
             using namespace ImGui;
@@ -105,10 +107,16 @@ static class NotifyContext
                     toast->stateHeightOffset = std::max(0.f, std::min(fixedDecr, rationalDescr));
                 }
 
-                SetNextWindowPos(
-                        ImVec2(posVp.x - PaddingX, posVp.y - PaddingY - height - (*iter)->stateHeightOffset),
-                        ImGuiCond_Always,
-                        ImVec2(1.f, 1.f));
+                auto entityHeight = height + (*iter)->stateHeightOffset;
+                ImVec2 nextPos(posVp.x - PaddingX, posVp.y - PaddingY - entityHeight);
+                SetNextWindowPos(nextPos, ImGuiCond_Always, ImVec2(1.f, 1.f));
+
+                if (entityHeight + toast->toastHeightCache > sizeVp.y)
+                {
+                    bExpireAtLeastOne = true;
+                    ++iter;
+                    break;
+                }
 
                 switch (toast->Severity)
                 {
@@ -165,6 +173,17 @@ static class NotifyContext
                 height += (toast->toastHeightCache = GetWindowHeight() + PaddingMessageY);
                 ++iter;
             }
+        }
+
+        if (bExpireAtLeastOne && not _timeouts.empty())
+        {
+            auto it = _timeouts.begin();
+            for (auto iter = it->second; ++iter != _toasts.end();)
+                (**iter).stateHeightOffset -= (**it->second).toastHeightCache;
+
+            preEraseToast(it->second);
+            _toasts.erase(it->second);
+            _timeouts.erase(it);
         }
 
         // Erase expired toasts
