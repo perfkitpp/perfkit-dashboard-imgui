@@ -77,26 +77,24 @@ void Application::drawMenuContents()
                     .AddString("Below is button to press!")
                     .AddButton(
                             [] { NotifyToast{}.AddString("Hello~~").Commit(); },
-                            "Press Okay")
-                    .Commit();
+                            "Press Okay");
         ImGui::MenuItem("Load workspace");
     }
 
     if (CondInvoke(ImGui::BeginMenu("View"), &ImGui::EndMenu))
     {
         ImGui::MenuItem("Sessions", "Ctrl+H", &_bDrawSessionList);
-    }
 
-    if (CondInvoke(ImGui::BeginMenu("Debug"), &ImGui::EndMenu))
-    {
+        ImGui::Separator();
+        ImGui::TextColored({.5f, .5f, .5f, 1.f}, "Debugging");
+
         ImGui::MenuItem("Metrics", NULL, &_bShowMetrics);
         ImGui::MenuItem("Demo", NULL, &_bShowDemo);
     }
 
-    if (CondInvoke(ImGui::BeginMenu("Add Session"), &ImGui::EndMenu))
-    {
-        drawAddSessionMenu();
-    }
+    if (CondInvoke(ImGui::BeginMenu("Add"), &ImGui::EndMenu))
+        if (CondInvoke(ImGui::BeginMenu("Session..."), &ImGui::EndMenu))
+            drawAddSessionMenu();
 }
 
 void Application::drawSessionList(bool* bKeepOpen)
@@ -165,6 +163,8 @@ void Application::drawAddSessionMenu()
     }
 }
 
+shared_ptr<ISession> CreatePerfkitTcpRawClient();
+
 bool Application::RegisterSessionMainThread(
         string keyString, ESessionType type, string_view optionalDefaultDisplayName)
 {
@@ -173,8 +173,7 @@ bool Application::RegisterSessionMainThread(
         NotifyToast{}
                 .Severity(NotifySeverity::Error)
                 .Title("Session Creation Failed")
-                .AddString("Session key {} already exist", keyString)
-                .Commit();
+                .AddString("Session key {} already exist", keyString);
         return false;
     }
 
@@ -199,8 +198,7 @@ bool Application::RegisterSessionMainThread(
         NotifyToast{}
                 .Severity(NotifySeverity::Error)
                 .Title("Session Creation Failed")
-                .AddString("Seesion type {} is not implemented yet ...", (int)type)
-                .Commit();
+                .AddString("Seesion type {} is not implemented yet ...", (int)type);
         return false;
     }
 

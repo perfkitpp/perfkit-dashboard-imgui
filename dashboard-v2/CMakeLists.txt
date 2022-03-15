@@ -10,8 +10,9 @@ set(
         Application.cpp
 
         utils/Notify.cpp
-        
+
         sessions/BasicPerfkitNetClient.cpp
+        sessions/PerfkitTcpRawClient.cpp
 )
 
 #

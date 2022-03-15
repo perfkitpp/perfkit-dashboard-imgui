@@ -17,8 +17,7 @@ enum class ESessionType
 class ISession
 {
    public:
-    //! Retrieve session's display name.
-    //! It may do nothing if there's no active connection.
+    //! Retrieve session's display name. It might do nothing if there's no active connection.
     virtual void FetchSessionDisplayName(std::string*) {}
 
     //! Initialize session with given string uri.
@@ -30,9 +29,12 @@ class ISession
     //! Render content of sessions inside of session list labels
     virtual void RenderSessionListEntityContent() {}
 
-    //! Called when session is being closed.
-    //! After this function called, destructor will be invoked.
-    virtual void OnCloseSession() {}
+    //! Returns whether this session is connected to server
+    virtual bool IsSessionOpen() const { return false; }
+
+    //! Close this session. Reconnecting should be handled inside of
+    //! the function RenderSessionListEntityContent()
+    virtual void CloseSession() {}
 
     //! Ticks this session for rendering. Called only when rendering of this session is allowed.
     virtual void RenderTickSession() {}

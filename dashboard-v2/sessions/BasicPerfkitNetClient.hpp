@@ -3,11 +3,14 @@
 //
 
 #pragma once
+#include <perfkit/extension/net/protocol.hpp>
+
 #include "interfaces/Session.hpp"
 
 namespace perfkit::msgpack::rpc {
 class context;
 class if_context_monitor;
+struct session_profile;
 }  // namespace perfkit::msgpack::rpc
 
 class BasicPerfkitNetClient : public ISession
@@ -19,10 +22,15 @@ class BasicPerfkitNetClient : public ISession
     BasicPerfkitNetClient();
     ~BasicPerfkitNetClient();
 
+    void FetchSessionDisplayName(std::string*) final;
+    void RenderTickSession() final;
+    void TickSession() final;
+
    protected:
     //! @note Connection to server must be unique!
     perfkit::msgpack::rpc::context* GetRpc() { return &*_rpc; }
 
    public:
-
+    void _onSessionCreate_(perfkit::msgpack::rpc::session_profile const&) {}
+    void _onSessionDispose_(perfkit::msgpack::rpc::session_profile const&) {}
 };

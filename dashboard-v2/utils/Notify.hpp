@@ -3,6 +3,8 @@
 //
 
 #pragma once
+#include <optional>
+
 #include <spdlog/fmt/fmt.h>
 
 enum class NotifySeverity
@@ -18,13 +20,19 @@ class NotifyToast
 {
     friend class NotifyContext;
 
+   public:
+    struct Content
+    {
+        NotifySeverity Severity = NotifySeverity::Info;
+        string Title;
+        vector<function<bool()>> ContentDecos;  // returns true if toast should be closed
+        steady_clock::time_point Lifespan = steady_clock::now() + 3s;
+        steady_clock::time_point Birth;
+        int IdAllocated = -1;
+    };
+
    private:
-    NotifySeverity _severity = NotifySeverity::Info;
-    string _title;
-    vector<function<bool()>> _contentDecos;  // returns true if toast should be closed
-    steady_clock::time_point _lifespan = steady_clock::now() + 3s;
-    steady_clock::time_point _spawned;
-    int _idAlloc = -1;
+    std::optional<Content> _body = Content{};
 
    public:
     NotifyToast() noexcept              = default;
@@ -33,10 +41,13 @@ class NotifyToast
     NotifyToast(NotifyToast const&) noexcept       = delete;
     NotifyToast& operator=(NotifyToast const&) noexcept = delete;
 
+    ~NotifyToast();
+
    public:
-    NotifyToast&& Severity(NotifySeverity value) && { return _severity = value, _self(); }
-    NotifyToast&& Title(string title) && { return _title = std::move(title), _self(); }
     void Commit() &&;
+
+    NotifyToast&& Severity(NotifySeverity value) && { return _body->Severity = value, _self(); }
+    NotifyToast&& Title(string title) && { return _body->Title = std::move(title), _self(); }
 
     NotifyToast&& AddString(string content) &&;
 
@@ -53,7 +64,7 @@ class NotifyToast
     template <typename Duration_>
     NotifyToast&& Lifespan(Duration_&& dur) &&
     {
-        _lifespan = steady_clock::now() + dur;
+        _body->Lifespan = steady_clock::now() + dur;
         return _self();
     }
 
