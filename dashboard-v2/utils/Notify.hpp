@@ -38,7 +38,7 @@ class NotifyToast
     std::optional<Content> _body = Content{};
 
    public:
-    NotifyToast() noexcept              = default;
+    NotifyToast() noexcept;
     NotifyToast(NotifyToast&&) noexcept = default;
     NotifyToast& operator=(NotifyToast&&) noexcept = default;
     NotifyToast(NotifyToast const&) noexcept       = delete;
@@ -47,8 +47,6 @@ class NotifyToast
     ~NotifyToast();
 
    public:
-    void Commit() &&;
-
     NotifyToast&& Severity(NotifySeverity value) && { return _body->Severity = value, _self(); }
     NotifyToast&& Trivial() && { return std::move(*this).Severity(NotifySeverity::Trivial); }
     NotifyToast&& Wanrning() && { return std::move(*this).Severity(NotifySeverity::Warning); }

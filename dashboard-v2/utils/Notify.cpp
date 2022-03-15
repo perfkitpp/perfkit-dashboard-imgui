@@ -11,6 +11,7 @@
 #include <perfkit/common/futils.hxx>
 #include <perfkit/common/macros.hxx>
 #include <perfkit/common/utility/cleanup.hxx>
+#include <spdlog/spdlog.h>
 
 #include "Application.hpp"
 #include "imgui.h"
@@ -24,6 +25,8 @@ static class NotifyContext
     std::map<steady_clock::time_point, decltype(_toasts)::iterator> _timeouts;
 
     vector<int> _idPool;
+
+    shared_ptr<spdlog::logger> _logNotify = spdlog::default_logger()->clone("Notify");
 
    public:
     void Render()
@@ -172,6 +175,11 @@ static class NotifyContext
         toast._body.reset();
     }
 
+    void Logging(spdlog::level::level_enum loglevel, string const& content)
+    {
+        _logNotify->log(loglevel, content);
+    }
+
    private:
     void preEraseToast(decltype(_toasts)::iterator iter)
     {
@@ -183,8 +191,35 @@ static class NotifyContext
     }
 } gNoti;
 
+static spdlog::level::level_enum
+toSpdlogLevel(NotifySeverity value)
+{
+    switch (value)
+    {
+        case NotifySeverity::Trivial:
+            return spdlog::level::debug;
+
+        case NotifySeverity::Info:
+            return spdlog::level::info;
+
+        case NotifySeverity::Warning:
+            return spdlog::level::warn;
+
+        case NotifySeverity::Error:
+            return spdlog::level::err;
+
+        case NotifySeverity::Fatal:
+            return spdlog::level::critical;
+
+        default:
+            return spdlog::level::trace;
+    }
+}
+
 NotifyToast&& NotifyToast::String(string content) &&
 {
+    gNoti.Logging(toSpdlogLevel(_body->Severity), content);
+
     _body->ContentDecos.emplace_back(
             [content = std::move(content)] {
                 ImGui::TextUnformatted(content.c_str(), content.c_str() + content.size());
@@ -212,14 +247,13 @@ NotifyToast&& NotifyToast::Button(function<void()> handler, string label) &&
     return _self();
 }
 
+NotifyToast::NotifyToast() noexcept
+{
+}
+
 NotifyToast::~NotifyToast()
 {
     if (not _body) { return; }
-    gNoti.Commit(std::move(*this));
-}
-
-void NotifyToast::Commit() &&
-{
     gNoti.Commit(std::move(*this));
 }
 
@@ -231,6 +265,8 @@ NotifyToast&& NotifyToast::Custom(function<bool()> handler) &&
 
 NotifyToast&& NotifyToast::Title(string content) &&
 {
+    gNoti.Logging(toSpdlogLevel(_body->Severity), "<Title> " + content);
+
     _body->ContentDecos.emplace_back(
             [severity = _body->Severity, content = std::move(content)] {
                 using namespace ImGui;
@@ -251,6 +287,7 @@ NotifyToast&& NotifyToast::Title(string content) &&
                 ImGui::PopStyleColor();
                 return false;
             });
+
     return _self();
 }
 
