@@ -32,6 +32,7 @@ class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNe
     void RenderTickSession() final;
     void TickSession() override;
     void CloseSession() override;
+    void InitializeSession(const string& keyUri) override;
 
    private:
     void tickHeartbeat();

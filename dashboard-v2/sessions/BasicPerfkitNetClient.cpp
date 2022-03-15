@@ -14,15 +14,17 @@ using namespace net::message;
 class PerfkitNetClientRpcMonitor : public msgpack::rpc::if_context_monitor
 {
    public:
-    BasicPerfkitNetClient* _owner = nullptr;
+    std::weak_ptr<BasicPerfkitNetClient> _owner;
 
     void on_new_session(const msgpack::rpc::session_profile& profile) noexcept override
     {
-        _owner->_onSessionCreate_(profile);
+        if (auto lc = _owner.lock())
+            lc->_onSessionCreate_(profile);
     }
     void on_dispose_session(const msgpack::rpc::session_profile& profile) noexcept override
     {
-        _owner->_onSessionDispose_(profile);
+        if (auto lc = _owner.lock())
+            lc->_onSessionDispose_(profile);
     }
 };
 
@@ -40,15 +42,19 @@ BasicPerfkitNetClient::BasicPerfkitNetClient()
             });
 
     // Create monitor
-    auto monitor    = std::make_shared<PerfkitNetClientRpcMonitor>();
-    monitor->_owner = this;
-    _monitor        = monitor;
+    auto monitor = std::make_shared<PerfkitNetClientRpcMonitor>();
+    _monitor     = monitor;
 
     // Create RPC context
     _rpc = std::make_unique<msgpack::rpc::context>(
             std::move(service),
             [](auto&& fn) { asio::dispatch(std::forward<decltype(fn)>(fn)); },
             _monitor);
+}
+
+void BasicPerfkitNetClient::InitializeSession(const string& keyUri)
+{
+    ((PerfkitNetClientRpcMonitor*)&*_monitor)->_owner = weak_from_this();
 }
 
 void BasicPerfkitNetClient::FetchSessionDisplayName(std::string* outName)

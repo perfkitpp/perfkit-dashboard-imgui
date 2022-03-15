@@ -14,6 +14,7 @@
 
 void PerfkitTcpRawClient::InitializeSession(const string& keyUri)
 {
+    BasicPerfkitNetClient::InitializeSession(keyUri);
     _uri = keyUri;
 }
 
