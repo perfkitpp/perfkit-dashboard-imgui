@@ -31,6 +31,7 @@ class Application
     unique_ptr<asio::io_context> _ioc;
     vector<SessionNode> _sessions;
     std::string _workspacePath;
+    bool _workspacePathChanged = true;
 
     // UI Flags - View
     bool _bDrawSessionList = true;
@@ -65,6 +66,8 @@ class Application
             string_view optionalDefaultDisplayName = {});
 
    private:
+    void tickGraphicsMainThread();
+
     void drawMenuContents();
     void drawSessionList(bool* bKeepOpen);
     void tickSessions() {}

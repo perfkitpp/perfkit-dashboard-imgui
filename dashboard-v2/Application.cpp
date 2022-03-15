@@ -60,6 +60,9 @@ void Application::TickMainThread()
     if (_bShowDemo) { ImGui::ShowDemoWindow(&_bShowDemo); }
 
     tickSessions();
+
+    // Tick graphics
+    tickGraphicsMainThread();
 }
 
 void Application::PostMainThreadEvent(perfkit::function<void()> callable)
@@ -130,9 +133,9 @@ void Application::drawMenuContents()
         if (ImGui::MenuItem("Save workspace"))
             saveWorkspace();
         if (ImGui::MenuItem("Save workspace as"))
-            ;
+            NotifyToast{}.Fatal().String("Not Implemented: " __FILE__ ":{}", __LINE__);
         if (ImGui::MenuItem("Load workspace"))
-            ;
+            NotifyToast{}.Fatal().String("Not Implemented: " __FILE__ ":{}", __LINE__);
     }
 
     if (CondInvoke(ImGui::BeginMenu("View"), &ImGui::EndMenu))

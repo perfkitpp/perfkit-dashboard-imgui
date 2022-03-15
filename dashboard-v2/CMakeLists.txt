@@ -8,6 +8,7 @@ set(
 
         main.cpp
         Application.cpp
+        Application-Graphics.cpp
 
         utils/Notify.cpp
 

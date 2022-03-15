@@ -132,7 +132,7 @@ void PerfkitTcpRawClient::startConnection()
     }
     catch (asio::system_error& ec)
     {
-        NotifyToast{}.Error().String("Connection failed: ({}) {}", ec.code().value(), ec.what());
+        NotifyToast{}.Error().String("Connection failed: {}", ec.code().value());
         fnTransitTo(EConnectionState::Offline);
     }
 }
