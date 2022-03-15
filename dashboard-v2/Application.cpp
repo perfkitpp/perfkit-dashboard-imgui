@@ -128,14 +128,11 @@ void Application::drawMenuContents()
     if (CondInvoke(ImGui::BeginMenu("File"), &ImGui::EndMenu))
     {
         if (ImGui::MenuItem("Save workspace"))
-            NotifyToast{}.Severity(NotifySeverity(rand() % (int)NotifySeverity::Fatal + 1)).Title("글쎄요!!").Commit();
+            saveWorkspace();
         if (ImGui::MenuItem("Save workspace as"))
-            NotifyToast{}
-                    .Permanent()
-                    .String("Below is button to press!")
-                    .Button([] { NotifyToast{}.String("Hello~~").Commit(); },
-                            "Press Okay");
-        ImGui::MenuItem("Load workspace");
+            ;
+        if (ImGui::MenuItem("Load workspace"))
+            ;
     }
 
     if (CondInvoke(ImGui::BeginMenu("View"), &ImGui::EndMenu))
