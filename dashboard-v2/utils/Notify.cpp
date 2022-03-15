@@ -14,6 +14,7 @@
 #include <spdlog/spdlog.h>
 
 #include "Application.hpp"
+#include "imgui-extension.h"
 #include "imgui.h"
 
 static class NotifyContext
@@ -292,6 +293,29 @@ NotifyToast&& NotifyToast::Title(string content) &&
                 ImGui::Separator();
 
                 ImGui::PopStyleColor();
+                return false;
+            });
+
+    return _self();
+}
+
+NotifyToast&& NotifyToast::Separate() &&
+{
+    _body->ContentDecos.emplace_back(
+            [] {
+                ImGui::Separator();
+                return false;
+            });
+
+    return _self();
+}
+
+NotifyToast&& NotifyToast::Spinner(int color) &&
+{
+    _body->ContentDecos.emplace_back(
+            [color] {
+                ImGui::Spinner("SpinnerCommon", color);
+                ImGui::SameLine();
                 return false;
             });
 

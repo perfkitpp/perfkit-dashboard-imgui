@@ -32,9 +32,10 @@ void PerfkitTcpRawClient::RenderSessionListEntityContent()
                 _state = EConnectionState::Connecting;
                 asio::post(bind_front_weak(weak_from_this(), &PerfkitTcpRawClient::startConnection, this));
 
-                NotifyToast{}
+                NotifyToast{"Now Connecting ..."}
                         .Permanent()
-                        .String("Opening tcp raw client to [{}]", _uri)
+                        .Spinner()
+                        .String("(TCP_RAW) {}", _uri)
                         .Custom([this] { return _state != EConnectionState::Connecting; });
 
                 _uiStateMessage = fmt::format("Connecting to [{}] ...", _uri);
@@ -86,9 +87,9 @@ void PerfkitTcpRawClient::startConnection()
     string address;
     int port;
 
-    if (auto pos = uri.find_last_of(":"); pos == uri.npos)
+    if (auto pos = uri.find_last_of(':'); pos == uri.npos)
     {
-        NotifyToast{}.Error().String("Invalid URI: {}", uri);
+        NotifyToast{"Invalid URI"}.Error().String("Colon not found '{}'", uri);
         fnTransitTo(EConnectionState::Offline);
         return;
     }
@@ -99,7 +100,7 @@ void PerfkitTcpRawClient::startConnection()
         auto convResult = std::from_chars(portStr.data(), portStr.data() + portStr.size(), port);
         if (convResult.ec != std::errc{} || port > 65535)
         {
-            NotifyToast{}.Error().String("Invalid URI (Port number parsing failed): {}", uri);
+            NotifyToast{"Invalid URI"}.Error().String("Port number parsing failed: {}", portStr);
             fnTransitTo(EConnectionState::Offline);
             return;
         }
@@ -112,9 +113,12 @@ void PerfkitTcpRawClient::startConnection()
         addr = asio::ip::make_address(address);
         // TODO: If failed to retrieve address, try resolve host via http
     }
-    catch (asio::system_error&)
+    catch (asio::system_error& ec)
     {
-        NotifyToast{}.Error().String("Failed to retrive IP: {}", address);
+        NotifyToast{"Connection Failed"}
+                .Error()
+                .String("Retriving IP failed - '{}'", address)
+                .String(">> ERROR {}", ec.code().value());
         fnTransitTo(EConnectionState::Offline);
         return;
     }
@@ -127,12 +131,12 @@ void PerfkitTcpRawClient::startConnection()
         _socket.open(_endpoint.protocol());
         _socket.connect(_endpoint);
 
-        NotifyToast{}.String("Connection to session [{}] successfully established.", _uri);
+        NotifyToast{"Connected"}.String("Connection to session [{}] successfully established.", _uri);
         fnTransitTo(EConnectionState::OnlineReadOnly);
     }
     catch (asio::system_error& ec)
     {
-        NotifyToast{}.Error().String("Connection failed: {}", ec.code().value());
+        NotifyToast{"Connection Failed"}.Error().String(">> ERROR {}", ec.code().value());
         fnTransitTo(EConnectionState::Offline);
     }
 }

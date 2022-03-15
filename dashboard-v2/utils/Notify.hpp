@@ -69,7 +69,10 @@ class NotifyToast
 
     NotifyToast&& Permanent() && { return _body->bInfinity = true, _self(); }
 
+    NotifyToast&& Separate() &&;
     NotifyToast&& String(string content) &&;
+
+    NotifyToast&& Spinner(int color = 0xffffffff) &&;
 
     template <typename Fmt_, typename... Args_>
     NotifyToast&& String(Fmt_&& fmtstr, Args_&&... args) &&
