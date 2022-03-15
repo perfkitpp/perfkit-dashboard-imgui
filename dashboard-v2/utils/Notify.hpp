@@ -39,7 +39,19 @@ class NotifyToast
 
    public:
     NotifyToast() noexcept = default;
-    NotifyToast(std::string title) noexcept { std::move(*this).Title(std::move(title)); }
+
+    template <typename Fmt_, typename... Args_>
+    NotifyToast&& Title(Fmt_&& fmt, Args_&&... args) &&
+    {
+        return std::move(*this).Title(
+                fmt::format(std::forward<Fmt_>(fmt), std::forward<Args_>(args)...));
+    }
+
+    template <typename Fmt_, typename... Args_>
+    explicit NotifyToast(Fmt_&& fmt, Args_&&... args) noexcept
+    {
+        std::move(*this).Title(std::forward<Fmt_>(fmt), std::forward<Args_>(args)...);
+    }
 
     NotifyToast(NotifyToast&&) noexcept = default;
     NotifyToast& operator=(NotifyToast&&) noexcept = default;
