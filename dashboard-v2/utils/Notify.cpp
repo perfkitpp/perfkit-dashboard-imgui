@@ -39,14 +39,18 @@ static class NotifyContext
         while (not newToasts.empty())
         {
             auto iter = newToasts.begin();
+
+            if (not _toasts.empty())
+                iter->stateHeightOffset = _toasts.back().stateHeightOffset;
+
             _toasts.splice(_toasts.end(), newToasts, newToasts.begin());
             _timeouts.try_emplace(iter->Lifespan, iter);
             iter->Birth = steady_clock::now();
 
             if (_idPool.empty())
-                iter->IdAllocated = _toasts.size();
+                iter->stateIdAlloc = _toasts.size();
             else
-                iter->IdAllocated = _idPool.back(), _idPool.pop_back();
+                iter->stateIdAlloc = _idPool.back(), _idPool.pop_back();
         }
 
         // Display all toasts
@@ -70,16 +74,18 @@ static class NotifyContext
             constexpr auto Transition      = 0.4f;
             constexpr auto DefaultOpacity  = 0.6f;
 
-            float height   = 0.;
-            auto timeNow   = steady_clock::now();
-            using secondsf = std::chrono::duration<double>;
+            float height            = 0.f;
+            auto timeNow            = steady_clock::now();
+            using secondsf          = std::chrono::duration<double>;
+            auto const heightDecVal = 360.f * ImGui::GetIO().DeltaTime;
 
             for (auto iter = _toasts.begin(); iter != _toasts.end();)
             {
-                auto& toast = *iter;
+                auto& toast             = *iter;
+                toast.stateHeightOffset = std::max(0.f, toast.stateHeightOffset - heightDecVal);
 
                 SetNextWindowPos(
-                        ImVec2(posVp.x - PaddingX, posVp.y - PaddingY - height),
+                        ImVec2(posVp.x - PaddingX, posVp.y - PaddingY - height - iter->stateHeightOffset),
                         ImGuiCond_Always,
                         ImVec2(1.f, 1.f));
 
@@ -103,7 +109,8 @@ static class NotifyContext
                 if (toast.Title.empty()) { flags |= ImGuiWindowFlags_NoTitleBar; }
 
                 bool bKeepOpen = true;
-                Begin(perfkit::futils::usprintf("%s###PDASH_TOAST%d", toast.Title.c_str(), toast.IdAllocated), &bKeepOpen, flags);
+                SetNextWindowSizeConstraints({150, -1}, sizeVp);
+                Begin(perfkit::futils::usprintf("%s###PDASH_TOAST%d", toast.Title.c_str(), toast.stateIdAlloc), &bKeepOpen, flags);
                 CPPH_CALL_ON_EXIT(End());
 
                 PushTextWrapPos(sizeVp.x / 4.f);
@@ -111,7 +118,7 @@ static class NotifyContext
 
                 // Close condition
                 bool bCloseToast = not bKeepOpen;
-                if (IsWindowHovered() && IsMouseClicked(ImGuiMouseButton_Middle))
+                if (IsWindowHovered() && IsMouseDoubleClicked(0))
                     bCloseToast = true;
 
                 // Render all decorations
@@ -129,13 +136,13 @@ static class NotifyContext
                     for (; it->second != iter; ++it) {}
                     assert(it->second == iter);
 
+                    preEraseToast(iter);
                     _timeouts.erase(it);
-                    _idPool.push_back(toast.IdAllocated);
                     iter = _toasts.erase(iter);
                     continue;
                 }
 
-                height += GetWindowHeight() + PaddingMessageY;
+                height += (toast.toastHeightCache = GetWindowHeight() + PaddingMessageY);
                 ++iter;
             }
         }
@@ -147,7 +154,7 @@ static class NotifyContext
 
             for (auto& [_, iter] : perfkit::make_iterable(_timeouts.begin(), end))
             {
-                _idPool.push_back(iter->IdAllocated);
+                preEraseToast(iter);
                 _toasts.erase(iter);
             }
 
@@ -160,6 +167,16 @@ static class NotifyContext
         std::lock_guard _lc_{_mtxQueue};
         _queue.emplace_back(std::move(*toast._body));
         toast._body.reset();
+    }
+
+   private:
+    void preEraseToast(decltype(_toasts)::iterator iter)
+    {
+        _idPool.push_back(iter->stateIdAlloc);
+
+        auto offset = iter->toastHeightCache;
+        while (++iter != _toasts.end())
+            iter->stateHeightOffset += offset;
     }
 } gNoti;
 

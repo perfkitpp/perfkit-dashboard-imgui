@@ -28,7 +28,10 @@ class NotifyToast
         vector<function<bool()>> ContentDecos;  // returns true if toast should be closed
         steady_clock::time_point Lifespan = steady_clock::now() + 5s;
         steady_clock::time_point Birth;
-        int IdAllocated = -1;
+
+        int stateIdAlloc        = -1;
+        float stateHeightOffset = 0.f;
+        float toastHeightCache  = 0.f;
     };
 
    private:

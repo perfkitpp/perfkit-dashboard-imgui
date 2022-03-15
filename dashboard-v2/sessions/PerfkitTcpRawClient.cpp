@@ -4,6 +4,8 @@
 
 #include "PerfkitTcpRawClient.hpp"
 
+#include <asio/post.hpp>
+
 #include "utils/Notify.hpp"
 
 void PerfkitTcpRawClient::InitializeSession(const string& keyUri)
@@ -18,7 +20,6 @@ bool PerfkitTcpRawClient::ShouldRenderSessionListEntityContent() const
 
 void PerfkitTcpRawClient::RenderSessionListEntityContent()
 {
-    ISession::RenderSessionListEntityContent();
 }
 
 bool PerfkitTcpRawClient::IsSessionOpen() const
