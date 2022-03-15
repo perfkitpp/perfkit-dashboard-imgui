@@ -38,14 +38,17 @@ static class NotifyContext
         // Make all pending toasts current
         while (not newToasts.empty())
         {
-            auto iter = newToasts.begin();
+            auto iter               = newToasts.begin();
+            iter->stateHeightOffset = 44;
 
             if (not _toasts.empty())
-                iter->stateHeightOffset = _toasts.back().stateHeightOffset;
+                iter->stateHeightOffset += _toasts.back().stateHeightOffset;
 
             _toasts.splice(_toasts.end(), newToasts, newToasts.begin());
-            _timeouts.try_emplace(iter->Lifespan, iter);
             iter->Birth = steady_clock::now();
+
+            if (not iter->bInfinity)
+                _timeouts.try_emplace(iter->Lifespan, iter);
 
             if (_idPool.empty())
                 iter->stateIdAlloc = _toasts.size();
@@ -100,17 +103,17 @@ static class NotifyContext
                 CPPH_CALL_ON_EXIT(PopStyleColor());
 
                 float timeFromSpawn    = secondsf(timeNow - toast.Birth).count();
-                float timeUntilDispose = secondsf(toast.Lifespan - timeNow).count();
+                float timeUntilDispose = toast.bInfinity ? Transition : secondsf(toast.Lifespan - timeNow).count();
 
                 float opacity = DefaultOpacity * std::min(timeFromSpawn / Transition, timeUntilDispose / Transition);
                 SetNextWindowBgAlpha(opacity);
 
-                auto flags = ToastFlags;
-                if (toast.Title.empty()) { flags |= ImGuiWindowFlags_NoTitleBar; }
+                auto wndFlags = ToastFlags;
+                if (toast.Title.empty()) { wndFlags |= ImGuiWindowFlags_NoTitleBar; }
 
                 bool bKeepOpen = true;
                 SetNextWindowSizeConstraints({150, -1}, sizeVp);
-                Begin(perfkit::futils::usprintf("%s###PDASH_TOAST%d", toast.Title.c_str(), toast.stateIdAlloc), &bKeepOpen, flags);
+                Begin(perfkit::futils::usprintf("%s###PDASH_TOAST%d", toast.Title.c_str(), toast.stateIdAlloc), &bKeepOpen, wndFlags);
                 CPPH_CALL_ON_EXIT(End());
 
                 PushTextWrapPos(sizeVp.x / 4.f);
@@ -130,14 +133,15 @@ static class NotifyContext
                 // If given toast is erased ...
                 if (bCloseToast)
                 {
-                    auto [it, end] = _timeouts.equal_range(toast.Lifespan);
-                    assert(it != end);
-
-                    for (; it->second != iter; ++it) {}
-                    assert(it->second == iter);
-
                     preEraseToast(iter);
-                    _timeouts.erase(it);
+
+                    auto [it, end] = _timeouts.equal_range(toast.Lifespan);
+                    if (it != end)
+                    {
+                        for (; it->second != iter; ++it) {}
+                        _timeouts.erase(it);
+                    }
+
                     iter = _toasts.erase(iter);
                     continue;
                 }
@@ -180,7 +184,7 @@ static class NotifyContext
     }
 } gNoti;
 
-NotifyToast&& NotifyToast::AddString(string content) &&
+NotifyToast&& NotifyToast::String(string content) &&
 {
     _body->ContentDecos.emplace_back(
             [content = std::move(content)] {
@@ -191,7 +195,7 @@ NotifyToast&& NotifyToast::AddString(string content) &&
     return _self();
 }
 
-NotifyToast&& NotifyToast::AddButton(function<void()> handler, string label) &&
+NotifyToast&& NotifyToast::Button(function<void()> handler, string label) &&
 {
     _body->ContentDecos.emplace_back(
             [handler = std::move(handler), label = std::move(label)] {
@@ -218,6 +222,12 @@ NotifyToast::~NotifyToast()
 void NotifyToast::Commit() &&
 {
     gNoti.Commit(std::move(*this));
+}
+
+NotifyToast&& NotifyToast::Custom(function<bool()> handler) &&
+{
+    _body->ContentDecos.emplace_back(std::move(handler));
+    return _self();
 }
 
 void RenderNotifies()

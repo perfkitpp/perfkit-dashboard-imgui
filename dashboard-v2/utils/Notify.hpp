@@ -29,6 +29,7 @@ class NotifyToast
         steady_clock::time_point Lifespan = steady_clock::now() + 5s;
         steady_clock::time_point Birth;
 
+        bool bInfinity          = false;
         int stateIdAlloc        = -1;
         float stateHeightOffset = 0.f;
         float toastHeightCache  = 0.f;
@@ -50,19 +51,28 @@ class NotifyToast
     void Commit() &&;
 
     NotifyToast&& Severity(NotifySeverity value) && { return _body->Severity = value, _self(); }
+    NotifyToast&& Trivial() && { return std::move(*this).Severity(NotifySeverity::Trivial); }
+    NotifyToast&& Wanrning() && { return std::move(*this).Severity(NotifySeverity::Warning); }
+    NotifyToast&& Error() && { return std::move(*this).Severity(NotifySeverity::Error); }
+    NotifyToast&& Fatal() && { return std::move(*this).Severity(NotifySeverity::Fatal); }
+
+    NotifyToast&& Infinity() && { return _body->bInfinity = true, _self(); }
+
     NotifyToast&& Title(string title) && { return _body->Title = std::move(title), _self(); }
 
-    NotifyToast&& AddString(string content) &&;
+    NotifyToast&& String(string content) &&;
 
     template <typename Fmt_, typename... Args_>
-    NotifyToast&& AddString(Fmt_&& fmtstr, Args_&&... args) &&
+    NotifyToast&& String(Fmt_&& fmtstr, Args_&&... args) &&
     {
         return (std::move(*this))
-                .AddString(fmt::format(std::forward<Fmt_>(fmtstr), std::forward<Args_>(args)...));
+                .String(fmt::format(std::forward<Fmt_>(fmtstr), std::forward<Args_>(args)...));
     }
 
-    NotifyToast&& AddButton(function<void()> handler, string label = "Okay") &&;
-    NotifyToast&& AddButton2(function<void()> onYes, function<void()> onNo, string labelYes = "Yes", string labelNo = "No") &&;
+    NotifyToast&& Button(function<void()> handler, string label = "Okay") &&;
+    NotifyToast&& ButtonYesNo(function<void()> onYes, function<void()> onNo, string labelYes = "Yes", string labelNo = "No") &&;
+
+    NotifyToast&& Custom(function<bool()> handler) &&;
 
     template <typename Duration_>
     NotifyToast&& Lifespan(Duration_&& dur) &&
