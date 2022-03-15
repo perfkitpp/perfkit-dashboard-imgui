@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#include <spdlog/fmt/fmt.h>
 
 enum class NotifySeverity
 {
@@ -38,6 +39,14 @@ class NotifyToast
     void Commit() &&;
 
     NotifyToast&& AddString(string content) &&;
+
+    template <typename Fmt_, typename... Args_>
+    NotifyToast&& AddString(Fmt_&& fmtstr, Args_&&... args) &&
+    {
+        return (std::move(*this))
+                .AddString(fmt::format(std::forward<Fmt_>(fmtstr), std::forward<Args_>(args)...));
+    }
+
     NotifyToast&& AddButton(function<void()> handler, string label = "Okay") &&;
     NotifyToast&& AddButton2(function<void()> onYes, function<void()> onNo, string labelYes = "Yes", string labelNo = "No") &&;
 

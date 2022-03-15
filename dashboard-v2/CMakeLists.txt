@@ -9,9 +9,9 @@ set(
         main.cpp
         Application.cpp
 
-        interfaces/Session.cpp
-        sessions/IndepServerClientSession.cpp
         utils/Notify.cpp
+        
+        sessions/BasicPerfkitNetClient.cpp
 )
 
 #

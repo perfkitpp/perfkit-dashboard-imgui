@@ -58,7 +58,9 @@ static class NotifyContext
             posVp.y += sizeVp.y;
 
             constexpr auto ToastFlags = ImGuiWindowFlags_AlwaysAutoResize
-                                      | ImGuiWindowFlags_NoDecoration
+                                      | ImGuiWindowFlags_NoResize
+                                      | ImGuiWindowFlags_NoScrollbar
+                                      | ImGuiWindowFlags_NoCollapse
                                       | ImGuiWindowFlags_NoNav
                                       | ImGuiWindowFlags_NoBringToFrontOnFocus
                                       | ImGuiWindowFlags_NoFocusOnAppearing;
@@ -97,26 +99,20 @@ static class NotifyContext
                 float opacity = DefaultOpacity * std::min(timeFromSpawn / Transition, timeUntilDispose / Transition);
                 SetNextWindowBgAlpha(opacity);
 
-                Begin(perfkit::futils::usprintf("##PDASH_TOAST%d", toast._idAlloc), NULL, ToastFlags);
+                auto flags = ToastFlags;
+                if (toast._title.empty()) { flags |= ImGuiWindowFlags_NoTitleBar; }
+
+                bool bKeepOpen = true;
+                Begin(perfkit::futils::usprintf("%s###PDASH_TOAST%d", toast._title.c_str(), toast._idAlloc), &bKeepOpen, flags);
                 CPPH_CALL_ON_EXIT(End());
 
                 PushTextWrapPos(sizeVp.x / 4.f);
                 CPPH_CALL_ON_EXIT(PopTextWrapPos());
 
                 // Close condition
-                bool bCloseToast = false;
+                bool bCloseToast = not bKeepOpen;
                 if (IsWindowHovered() && IsMouseClicked(ImGuiMouseButton_Middle))
                     bCloseToast = true;
-
-                // Render title
-                if (not toast._title.empty())
-                {
-                    auto& str = toast._title;
-                    TextUnformatted(str.c_str(), str.c_str() + str.size());
-
-                    if (not toast._contentDecos.empty())
-                        Separator();
-                }
 
                 // Render all decorations
                 for (auto& deco : toast._contentDecos)
