@@ -81,7 +81,8 @@ static class NotifyContext
                                       | ImGuiWindowFlags_NoNav
                                       | ImGuiWindowFlags_NoTitleBar
                                       | ImGuiWindowFlags_NoBringToFrontOnFocus
-                                      | ImGuiWindowFlags_NoFocusOnAppearing;
+                                      | ImGuiWindowFlags_NoFocusOnAppearing
+                                      | ImGuiWindowFlags_NoSavedSettings;
             constexpr auto PaddingX        = 20.f;
             constexpr auto PaddingY        = 20.f;
             constexpr auto PaddingMessageY = 10.f;
