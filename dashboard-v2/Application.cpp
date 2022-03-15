@@ -157,11 +157,21 @@ void Application::drawMenuContents()
 void Application::drawSessionList(bool* bKeepOpen)
 {
     CPPH_CALL_ON_EXIT(ImGui::End());
-    if (not ImGui::Begin("Sessions", bKeepOpen, ImGuiWindowFlags_MenuBar)) { return; }
+    if (not ImGui::Begin("Sessions", bKeepOpen)) { return; }
 
-    if (CondInvoke(ImGui::BeginMenuBar(), &ImGui::EndMenuBar))
-        if (CondInvoke(ImGui::BeginMenu("Add Session"), &ImGui::EndMenu))
-            drawAddSessionMenu();
+    ImGui::AlignTextToFramePadding(), ImGui::Text("Add Session");
+    {
+        CPPH_CALL_ON_EXIT(ImGui::EndChild());
+        static float AddNewHeight = 0.f;
+        ImGui::BeginChild("Session-AddNew", {0, AddNewHeight}, true);
+        drawAddSessionMenu();
+
+        AddNewHeight = ImGui::GetCursorPosY() + 5.f;
+    }
+
+    ImGui::AlignTextToFramePadding(), ImGui::Text("Sessions");
+    CPPH_CALL_ON_EXIT(ImGui::EndChild());
+    ImGui::BeginChild("Session-List", {0, 0}, true);
 
     char textBuf[256];
     auto const colorBase    = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyleColorVec4(ImGuiCol_Header));
@@ -324,7 +334,7 @@ void Application::drawAddSessionMenu()
     }
 
     // Expose add session button only when conditions are valid
-    if (state->bActivateButton && (ImGui::Button("Apply", {-1, 0}) || ImGui::IsKeyPressed(ImGuiKey_Enter, false)))
+    if (state->bActivateButton && (ImGui::Button("Create", {-1, 0}) || ImGui::IsKeyPressed(ImGuiKey_Enter, false)))
     {
         RegisterSessionMainThread(state->UriBuffer, state->Selected);
         ImGui::MarkIniSettingsDirty();
@@ -368,7 +378,8 @@ bool Application::RegisterSessionMainThread(
         NotifyToast{}
                 .Severity(NotifySeverity::Error)
                 .Title("Session Creation Failed")
-                .String("[URI {}]: Given session type is not implemented yet ...", keyString);
+                .String("URI [{}]: Given session type is not implemented yet ...", keyString);
+
         return false;
     }
 
@@ -429,6 +440,7 @@ void Application::saveWorkspace()
         }
 
         GConfig::Workspace::ArchivedSessions.commit(std::move(archive));
+
         NotifyToast{}.Trivial().String("{} sessions exported to {}", _sessions.size(), _workspacePath);
     }
 

@@ -151,8 +151,8 @@ int main(int, char**)
         ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 5.f);                                                     // Round borders
         ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(43.f / 255.f, 43.f / 255.f, 43.f / 255.f, 100.f / 255.f));  // Background color
         RenderNotifies();
-        ImGui::PopStyleVar(1);  // Don't forget to Pop()
         ImGui::PopStyleColor(1);
+        ImGui::PopStyleVar(1);  // Don't forget to Pop()
 
         // Rendering
         ImGui::Render();
