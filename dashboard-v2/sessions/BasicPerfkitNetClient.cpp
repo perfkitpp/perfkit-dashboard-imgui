@@ -115,7 +115,7 @@ void BasicPerfkitNetClient::tickHeartbeat()
         }
         else
         {
-            NotifyToast{"Heartbeat! {}", waitResult};
+            NotifyToast{}.String("Heartbeat! {}", waitResult);
         }
     }
 }

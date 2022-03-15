@@ -38,7 +38,7 @@ void PerfkitTcpRawClient::RenderSessionListEntityContent()
                         .Permanent()
                         .Spinner()
                         .String("(TCP_RAW) {}", _uri)
-                        .Custom([this] { return _state != EConnectionState::Connecting; });
+                        .Custom([this, self = weak_from_this()] { return self.expired() || _state != EConnectionState::Connecting; });
 
                 _uiStateMessage = fmt::format("Connecting to [{}] ...", _uri);
             }
