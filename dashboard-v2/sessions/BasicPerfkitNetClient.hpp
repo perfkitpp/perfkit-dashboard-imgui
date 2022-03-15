@@ -13,7 +13,7 @@ class if_context_monitor;
 struct session_profile;
 }  // namespace perfkit::msgpack::rpc
 
-class BasicPerfkitNetClient : public ISession
+class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNetClient>, public ISession
 {
     unique_ptr<perfkit::msgpack::rpc::context> _rpc;
     shared_ptr<perfkit::msgpack::rpc::if_context_monitor> _monitor;

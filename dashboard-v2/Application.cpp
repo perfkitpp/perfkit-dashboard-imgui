@@ -10,11 +10,28 @@
 #include <asio/io_context.hpp>
 #include <asio/post.hpp>
 #include <imgui.h>
+#include <imgui_internal.h>
 #include <perfkit/common/algorithm/std.hxx>
+#include <perfkit/common/helper/nlohmann_json_macros.hxx>
 #include <perfkit/common/macros.hxx>
 #include <perfkit/common/utility/cleanup.hxx>
+#include <perfkit/configs.h>
 
 #include "interfaces/Session.hpp"
+
+PERFKIT_CATEGORY(GConfig::Workspace)
+{
+    struct SessionArchive
+    {
+        string Key;
+        int Type = 0;
+        string DisplayName;
+
+        CPPHEADERS_DEFINE_NLOHMANN_JSON_ARCHIVER(SessionArchive, Key, Type, DisplayName);
+    };
+
+    PERFKIT_CONFIGURE(ArchivedSessions, vector<SessionArchive>{}).confirm();
+}
 
 Application* Application::Get()
 {
@@ -58,6 +75,47 @@ void Application::DispatchMainThreadEvent(perfkit::function<void()> callable)
 Application::Application()
         : _ioc(std::make_unique<asio::io_context>())
 {
+    ImGuiSettingsHandler ini_handler;
+    ini_handler.TypeName = "DashboardV2";
+    ini_handler.TypeHash = ImHashStr(ini_handler.TypeName);
+    ini_handler.UserData = this;
+    ini_handler.ReadOpenFn
+            = [](ImGuiContext*, ImGuiSettingsHandler*, const char* name) {
+                  if (strcmp(name, "ConfPaths") == 0)
+                      return (void*)1;
+                  else
+                      return (void*)nullptr;
+              };
+
+    ini_handler.ReadLineFn
+            = [](ImGuiContext*, ImGuiSettingsHandler* h, void* p, const char* data) {
+                  if (not p) { return; }
+
+                  auto self = (Application*)h->UserData;
+                  if (strncmp(data, "WorkspaceFile", strlen("WorkspaceFile")) == 0)
+                  {
+                      self->_workspacePath.resize(1024);
+                      sscanf(data, "WorkspaceFile=%s", self->_workspacePath.data());
+                      self->_workspacePath.resize(strlen(self->_workspacePath.c_str()));
+
+                      self->loadWorkspace();
+                  }
+              };
+
+    ini_handler.WriteAllFn
+            = [](ImGuiContext*, ImGuiSettingsHandler* h, ImGuiTextBuffer* buf) {
+                  auto self = (Application*)h->UserData;
+                  if (self->_workspacePath.empty())
+                      self->_workspacePath = "perfkit-workspace.json";
+
+                  buf->appendf("[%s][%s]\n", h->TypeName, "ConfPaths");
+                  buf->appendf("WorkspaceFile=%s\n", self->_workspacePath.c_str());
+                  buf->append("\n");
+
+                  self->saveWorkspace();
+              };
+
+    ImGui::GetCurrentContext()->SettingsHandlers.push_back(ini_handler);
 }
 
 Application::~Application() = default;
@@ -203,6 +261,7 @@ void Application::drawSessionList(bool* bKeepOpen)
             {
                 iter = _sessions.erase(iter);
                 ImGui::CloseCurrentPopup();
+                ImGui::MarkIniSettingsDirty();
                 continue;
             }
 
@@ -268,6 +327,7 @@ void Application::drawAddSessionMenu()
     if (state->bActivateButton && (ImGui::Button("Apply", {-1, 0}) || ImGui::IsKeyPressed(ImGuiKey_Enter, false)))
     {
         RegisterSessionMainThread(state->UriBuffer, state->Selected);
+        ImGui::MarkIniSettingsDirty();
         state->bActivateButton      = false;
         state->bSetNextFocusToInput = true;
     }
@@ -332,4 +392,46 @@ bool Application::isSessionExist(std::string_view name, ESessionType type)
 
     auto predFindDup = [&](auto&& elem) { return elem.Key == name && elem.Type == type; };
     return (_sessions.end() != find_if(_sessions, predFindDup));
+}
+
+void Application::loadWorkspace()
+{
+    if (not perfkit::configs::import_file(_workspacePath))
+    {
+        NotifyToast{}.Error().String("Config path '{}' is not a valid file.", _workspacePath);
+        return;
+    }
+
+    GConfig::Workspace::update();
+
+    // Load Sessions
+    {
+        _sessions.clear();
+        for (auto& desc : *GConfig::Workspace::ArchivedSessions)
+            RegisterSessionMainThread(desc.Key, ESessionType(desc.Type), desc.DisplayName);
+        NotifyToast{}.String("{} sessions loaded", _sessions.size());
+    }
+}
+
+void Application::saveWorkspace()
+{
+    // Export Sessions
+    {
+        std::vector<GConfig::Workspace::SessionArchive> archive;
+        archive.reserve(_sessions.size());
+
+        for (auto& sess : _sessions)
+        {
+            auto arch         = &archive.emplace_back();
+            arch->Key         = sess.Key;
+            arch->DisplayName = sess.CachedDisplayName;
+            arch->Type        = int(sess.Type);
+        }
+
+        GConfig::Workspace::ArchivedSessions.commit(std::move(archive));
+        NotifyToast{}.Trivial().String("{} sessions exported to {}", _sessions.size(), _workspacePath);
+    }
+
+    GConfig::Workspace::update();
+    perfkit::configs::export_to(_workspacePath);
 }

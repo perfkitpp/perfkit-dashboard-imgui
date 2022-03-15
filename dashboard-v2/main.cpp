@@ -127,6 +127,9 @@ int main(int, char**)
         io.Fonts->AddFontFromFileTTF("fonts/font-1.ttf", 14.f, &cfg, io.Fonts->GetGlyphRangesKorean());
     }
 
+    // Assure application initialization before drawing first frame.
+    Application::Get();
+
     // Main loop
     while (!glfwWindowShouldClose(window))
     {

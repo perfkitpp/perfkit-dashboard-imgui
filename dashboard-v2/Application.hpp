@@ -30,6 +30,7 @@ class Application
    private:
     unique_ptr<asio::io_context> _ioc;
     vector<SessionNode> _sessions;
+    std::string _workspacePath;
 
     // UI Flags - View
     bool _bDrawSessionList = true;
@@ -53,7 +54,11 @@ class Application
     ~Application();
 
    public:
+    //! Ticks application on main thread.
     void TickMainThread();
+
+    //! Register session with given key ...
+    //! All sessions must be
     bool RegisterSessionMainThread(
             string keyString,
             ESessionType type,
@@ -65,6 +70,8 @@ class Application
     void tickSessions() {}
 
     void drawAddSessionMenu();
+    void loadWorkspace();
+    void saveWorkspace();
 
    private:
     bool isSessionExist(std::string_view name, ESessionType type);

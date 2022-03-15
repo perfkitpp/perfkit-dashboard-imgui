@@ -30,7 +30,7 @@ void PerfkitTcpRawClient::RenderSessionListEntityContent()
                 if (_socket.is_open()) { _socket.close(); }
 
                 _state = EConnectionState::Connecting;
-                asio::post([&] { startConnection(); });
+                asio::post(bind_front_weak(weak_from_this(), &PerfkitTcpRawClient::startConnection, this));
 
                 NotifyToast{}
                         .Permanent()

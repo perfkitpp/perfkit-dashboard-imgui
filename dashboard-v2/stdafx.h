@@ -7,8 +7,11 @@
 #include <perfkit/common/functional.hxx>
 #include <perfkit/common/futils.hxx>
 
+using perfkit::bind_front;
+using perfkit::bind_front_weak;
 using perfkit::function;
 using perfkit::futils::usprintf;
+
 using std::shared_ptr;
 using std::string;
 using std::string_view;

@@ -50,6 +50,9 @@ BasicPerfkitNetClient::BasicPerfkitNetClient()
 
 void BasicPerfkitNetClient::FetchSessionDisplayName(std::string* outName)
 {
+    if (not IsSessionOpen())
+        return;
+
     outName->assign("Example");
 }
 
