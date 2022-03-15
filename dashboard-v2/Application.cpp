@@ -214,7 +214,6 @@ void Application::drawSessionList(bool* bKeepOpen)
         ImGui::SameLine();
         ImGui::TextColored({.5f, .5f, .5f, 1.f}, "%s", sess.Key.c_str());
 
-        if (bIsSessionOpen)
         {
             ImGui::SameLine();
 
@@ -451,4 +450,23 @@ void Application::saveWorkspace()
 
     GConfig::Workspace::update();
     perfkit::configs::export_to(_workspacePath);
+}
+
+void Application::tickSessions()
+{
+    for (auto& sess : _sessions)
+    {
+        sess.Ref->TickSession();
+        if (not sess.bShow) { continue; }
+
+        CPPH_CALL_ON_EXIT(ImGui::End());
+        auto nameStr = usprintf("%s@%s###%s-%d.SSNWND",
+                                sess.CachedDisplayName.c_str(),
+                                sess.Key.c_str(),
+                                sess.Key.c_str(),
+                                sess.Type);
+
+        if (not ImGui::Begin(nameStr, &sess.bShow)) { continue; }
+        sess.Ref->RenderTickSession();
+    }
 }

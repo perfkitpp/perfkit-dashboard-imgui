@@ -12,12 +12,16 @@ namespace perfkit::msgpack::rpc {
 class context;
 class if_context_monitor;
 struct session_profile;
+struct rpc_wait_handle;
 }  // namespace perfkit::msgpack::rpc
 
 class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNetClient>, public ISession
 {
     unique_ptr<perfkit::msgpack::rpc::context> _rpc;
     shared_ptr<perfkit::msgpack::rpc::if_context_monitor> _monitor;
+
+    unique_ptr<perfkit::msgpack::rpc::rpc_wait_handle> _hrpcHeartbeat;
+
     perfkit::poll_timer _timHeartbeat{1s};
 
    public:
@@ -26,10 +30,11 @@ class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNe
 
     void FetchSessionDisplayName(std::string*) final;
     void RenderTickSession() final;
-    void TickSession() final;
+    void TickSession() override;
+    void CloseSession() override;
 
    private:
-    void sendHeartbeat();
+    void tickHeartbeat();
 
    protected:
     //! @note Connection to server must be unique!

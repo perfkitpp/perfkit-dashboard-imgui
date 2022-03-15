@@ -68,6 +68,8 @@ bool PerfkitTcpRawClient::IsSessionOpen() const
 
 void PerfkitTcpRawClient::CloseSession()
 {
+    BasicPerfkitNetClient::CloseSession();
+
     GetRpc()->disconnect_all();
     _state = EConnectionState::Offline;
 }

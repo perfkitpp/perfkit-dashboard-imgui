@@ -5,6 +5,7 @@
 #include "BasicPerfkitNetClient.hpp"
 
 #include <asio/dispatch.hpp>
+#include <asio/post.hpp>
 #include <perfkit/common/refl/extension/msgpack-rpc.hxx>
 
 using namespace perfkit;
@@ -27,6 +28,8 @@ class PerfkitNetClientRpcMonitor : public msgpack::rpc::if_context_monitor
 
 BasicPerfkitNetClient::BasicPerfkitNetClient()
 {
+    _hrpcHeartbeat = std::make_unique<msgpack::rpc::rpc_wait_handle>();
+
     // Create service
     auto service = msgpack::rpc::service_info{};
     service.serve(
@@ -69,8 +72,9 @@ void BasicPerfkitNetClient::RenderTickSession()
 
 void BasicPerfkitNetClient::TickSession()
 {
-    if (_timHeartbeat.check())
-        sendHeartbeat();
+    if (not IsSessionOpen()) { return; }
+
+    tickHeartbeat();
 }
 
 void BasicPerfkitNetClient::_onSessionCreate_(const msgpack::rpc::session_profile& profile)
@@ -81,6 +85,7 @@ void BasicPerfkitNetClient::_onSessionCreate_(const msgpack::rpc::session_profil
 void BasicPerfkitNetClient::_onSessionDispose_(const msgpack::rpc::session_profile& profile)
 {
     NotifyToast("Rpc Session Disposed").String(profile.peer_name);
+    CloseSession();
 }
 
 BasicPerfkitNetClient::~BasicPerfkitNetClient()
@@ -88,12 +93,35 @@ BasicPerfkitNetClient::~BasicPerfkitNetClient()
     _rpc.reset();
 }
 
-void BasicPerfkitNetClient::sendHeartbeat()
+void BasicPerfkitNetClient::tickHeartbeat()
 {
-    auto fnHeartbeat =
-            [&] {
-                service::heartbeat(*GetRpc()).rpc(nullptr);
-            };
+    if (not _timHeartbeat.check_sparse()) { return; }
+    auto& handle = *_hrpcHeartbeat;
 
-    asio::dispatch(bind_front_weak(weak_from_this(), fnHeartbeat));
+    if (not handle)
+    {
+        handle = service::heartbeat(*_rpc).rpc_async(nullptr);
+
+        if (not handle)
+            CloseSession();
+    }
+    else
+    {
+        auto waitResult = _rpc->rpc_wait(&*_hrpcHeartbeat, 0ms);
+        if (waitResult == perfkit::msgpack::rpc::rpc_status::timeout)
+        {
+            _rpc->rpc_abort(std::move(handle));
+            CloseSession();
+        }
+        else
+        {
+            NotifyToast{"Heartbeat! {}", waitResult};
+        }
+    }
+}
+
+void BasicPerfkitNetClient::CloseSession()
+{
+    ISession::CloseSession();
+    *_hrpcHeartbeat = {};
 }

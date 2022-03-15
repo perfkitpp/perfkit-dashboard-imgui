@@ -70,7 +70,7 @@ class Application
 
     void drawMenuContents();
     void drawSessionList(bool* bKeepOpen);
-    void tickSessions() {}
+    void tickSessions();
 
     void drawAddSessionMenu();
     void loadWorkspace();
