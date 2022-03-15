@@ -269,9 +269,13 @@ void Application::drawSessionList(bool* bKeepOpen)
             ImGui::Text("Are you sure to unregister this session?");
             if (ImGui::Button("Yes"))
             {
+                auto name = iter->Key;
+
                 iter = _sessions.erase(iter);
                 ImGui::CloseCurrentPopup();
                 ImGui::MarkIniSettingsDirty();
+
+                NotifyToast("Session Erased").String(name);
                 continue;
             }
 
@@ -350,9 +354,8 @@ bool Application::RegisterSessionMainThread(
 {
     if (isSessionExist(keyString, type))
     {
-        NotifyToast{}
-                .Severity(NotifySeverity::Error)
-                .Title("Session Creation Failed")
+        NotifyToast{"Session Creation Failed"}
+                .Error()
                 .String("Session key {} already exist", keyString);
         return false;
     }
@@ -375,9 +378,8 @@ bool Application::RegisterSessionMainThread(
 
     if (not session)
     {
-        NotifyToast{}
-                .Severity(NotifySeverity::Error)
-                .Title("Session Creation Failed")
+        NotifyToast{"Session Creation Failed"}
+                .Error()
                 .String("URI [{}]: Given session type is not implemented yet ...", keyString);
 
         return false;
@@ -393,7 +395,8 @@ bool Application::RegisterSessionMainThread(
     elem->Ref->InitializeSession(elem->Key);
     elem->Ref->FetchSessionDisplayName(&elem->CachedDisplayName);
 
-    NotifyToast{}.String("Session {}@{} Created", elem->CachedDisplayName, elem->Key);
+    NotifyToast{"Session Created"}.String("{}@{}", elem->CachedDisplayName, elem->Key);
+
     return true;
 }
 

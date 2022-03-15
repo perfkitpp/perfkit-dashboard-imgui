@@ -18,10 +18,10 @@
 
 static class NotifyContext
 {
-    std::list<NotifyToast::Content> _queue;
+    std::list<unique_ptr<NotifyToast::Content>> _queue;
     std::mutex _mtxQueue;
 
-    std::list<NotifyToast::Content> _toasts;
+    std::list<unique_ptr<NotifyToast::Content>> _toasts;
     std::map<steady_clock::time_point, decltype(_toasts)::iterator> _timeouts;
 
     vector<int> _idPool;
@@ -29,6 +29,11 @@ static class NotifyContext
     shared_ptr<spdlog::logger> _logNotify = spdlog::default_logger()->clone("Notify");
 
    public:
+    NotifyContext() noexcept
+    {
+        _logNotify->set_level(spdlog::level::trace);
+    }
+
     void Render()
     {
         // Below code makes multithreading notification request available.
@@ -41,22 +46,23 @@ static class NotifyContext
         // Make all pending toasts current
         while (not newToasts.empty())
         {
-            auto iter               = newToasts.begin();
-            iter->stateHeightOffset = 44;
+            auto iter                 = newToasts.begin();
+            auto& ptoast              = *iter;
+            ptoast->stateHeightOffset = 44;
 
             if (not _toasts.empty())
-                iter->stateHeightOffset += _toasts.back().stateHeightOffset;
+                ptoast->stateHeightOffset += _toasts.back()->stateHeightOffset;
 
             _toasts.splice(_toasts.end(), newToasts, newToasts.begin());
-            iter->Birth = steady_clock::now();
+            ptoast->Birth = steady_clock::now();
 
-            if (not iter->bInfinity)
-                _timeouts.try_emplace(iter->Lifespan, iter);
+            if (not ptoast->bInfinity)
+                _timeouts.try_emplace(ptoast->Lifespan, iter);
 
             if (_idPool.empty())
-                iter->stateIdAlloc = _toasts.size();
+                ptoast->stateIdAlloc = _toasts.size();
             else
-                iter->stateIdAlloc = _idPool.back(), _idPool.pop_back();
+                ptoast->stateIdAlloc = _idPool.back(), _idPool.pop_back();
         }
 
         // Display all toasts
@@ -84,19 +90,25 @@ static class NotifyContext
             float height            = 0.f;
             auto timeNow            = steady_clock::now();
             using secondsf          = std::chrono::duration<double>;
-            auto const heightDecVal = 360.f * ImGui::GetIO().DeltaTime;
+            auto const deltaTime    = ImGui::GetIO().DeltaTime;
+            auto const heightDecVal = 80.f * deltaTime;
 
             for (auto iter = _toasts.begin(); iter != _toasts.end();)
             {
-                auto& toast             = *iter;
-                toast.stateHeightOffset = std::max(0.f, toast.stateHeightOffset - heightDecVal);
+                auto& toast = *iter;
+
+                {
+                    auto fixedDecr           = toast->stateHeightOffset - heightDecVal;
+                    auto rationalDescr       = toast->stateHeightOffset * (1.f - 6.f * deltaTime);
+                    toast->stateHeightOffset = std::max(0.f, std::min(fixedDecr, rationalDescr));
+                }
 
                 SetNextWindowPos(
-                        ImVec2(posVp.x - PaddingX, posVp.y - PaddingY - height - iter->stateHeightOffset),
+                        ImVec2(posVp.x - PaddingX, posVp.y - PaddingY - height - (*iter)->stateHeightOffset),
                         ImGuiCond_Always,
                         ImVec2(1.f, 1.f));
 
-                switch (toast.Severity)
+                switch (toast->Severity)
                 {
                     case NotifySeverity::Trivial: PushStyleColor(ImGuiCol_Border, 0xff'cccccc); break;
                     case NotifySeverity::Info: PushStyleColor(ImGuiCol_Border, 0xff'44ff44); break;
@@ -106,8 +118,8 @@ static class NotifyContext
                 }
                 CPPH_CALL_ON_EXIT(PopStyleColor());
 
-                float timeFromSpawn    = secondsf(timeNow - toast.Birth).count();
-                float timeUntilDispose = toast.bInfinity ? Transition : secondsf(toast.Lifespan - timeNow).count();
+                float timeFromSpawn    = secondsf(timeNow - toast->Birth).count();
+                float timeUntilDispose = toast->bInfinity ? Transition : secondsf(toast->Lifespan - timeNow).count();
 
                 float opacity = DefaultOpacity * std::min(timeFromSpawn / Transition, timeUntilDispose / Transition);
                 SetNextWindowBgAlpha(opacity);
@@ -115,7 +127,7 @@ static class NotifyContext
                 auto wndFlags  = ToastFlags;
                 bool bKeepOpen = true;
                 SetNextWindowSizeConstraints({150, -1}, sizeVp);
-                Begin(perfkit::futils::usprintf("###PDASH_TOAST%d", toast.stateIdAlloc), &bKeepOpen, wndFlags);
+                Begin(perfkit::futils::usprintf("###PDASH_TOAST%d", toast->stateIdAlloc), &bKeepOpen, wndFlags);
                 CPPH_CALL_ON_EXIT(End());
 
                 PushTextWrapPos(sizeVp.x / 4.f);
@@ -127,7 +139,7 @@ static class NotifyContext
                     bCloseToast = true;
 
                 // Render all decorations
-                for (auto& deco : toast.ContentDecos)
+                for (auto& deco : toast->ContentDecos)
                 {
                     bCloseToast |= deco();
                 }
@@ -137,7 +149,7 @@ static class NotifyContext
                 {
                     preEraseToast(iter);
 
-                    auto [it, end] = _timeouts.equal_range(toast.Lifespan);
+                    auto [it, end] = _timeouts.equal_range(toast->Lifespan);
                     if (it != end)
                     {
                         for (; it->second != iter; ++it) {}
@@ -148,7 +160,7 @@ static class NotifyContext
                     continue;
                 }
 
-                height += (toast.toastHeightCache = GetWindowHeight() + PaddingMessageY);
+                height += (toast->toastHeightCache = GetWindowHeight() + PaddingMessageY);
                 ++iter;
             }
         }
@@ -171,8 +183,7 @@ static class NotifyContext
     void Commit(NotifyToast&& toast)
     {
         std::lock_guard _lc_{_mtxQueue};
-        _queue.emplace_back(std::move(*toast._body));
-        toast._body.reset();
+        _queue.emplace_back(std::move(toast._body));
     }
 
     void Logging(spdlog::level::level_enum loglevel, string const& content)
@@ -183,11 +194,11 @@ static class NotifyContext
    private:
     void preEraseToast(decltype(_toasts)::iterator iter)
     {
-        _idPool.push_back(iter->stateIdAlloc);
+        _idPool.push_back((*iter)->stateIdAlloc);
 
-        auto offset = iter->toastHeightCache;
+        auto offset = (*iter)->toastHeightCache;
         while (++iter != _toasts.end())
-            iter->stateHeightOffset += offset;
+            (*iter)->stateHeightOffset += offset;
     }
 } gNoti;
 
@@ -247,10 +258,6 @@ NotifyToast&& NotifyToast::Button(function<void()> handler, string label) &&
     return _self();
 }
 
-NotifyToast::NotifyToast() noexcept
-{
-}
-
 NotifyToast::~NotifyToast()
 {
     if (not _body) { return; }
@@ -268,10 +275,10 @@ NotifyToast&& NotifyToast::Title(string content) &&
     gNoti.Logging(toSpdlogLevel(_body->Severity), "<Title> " + content);
 
     _body->ContentDecos.emplace_back(
-            [severity = _body->Severity, content = std::move(content)] {
+            [severity = &_body->Severity, content = std::move(content)] {
                 using namespace ImGui;
 
-                switch (severity)
+                switch (*severity)
                 {
                     case NotifySeverity::Trivial: PushStyleColor(ImGuiCol_Text, 0xff'cccccc); break;
                     case NotifySeverity::Info: PushStyleColor(ImGuiCol_Text, 0xff'44ff44); break;

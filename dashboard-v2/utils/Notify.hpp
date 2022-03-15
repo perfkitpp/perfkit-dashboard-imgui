@@ -35,10 +35,12 @@ class NotifyToast
     };
 
    private:
-    std::optional<Content> _body = Content{};
+    unique_ptr<Content> _body{new Content{}};
 
    public:
-    NotifyToast() noexcept;
+    NotifyToast() noexcept = default;
+    NotifyToast(std::string title) noexcept { std::move(*this).Title(std::move(title)); }
+
     NotifyToast(NotifyToast&&) noexcept = default;
     NotifyToast& operator=(NotifyToast&&) noexcept = default;
     NotifyToast(NotifyToast const&) noexcept       = delete;
