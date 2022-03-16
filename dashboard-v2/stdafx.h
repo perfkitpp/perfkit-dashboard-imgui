@@ -26,7 +26,7 @@ namespace detail {
 template <typename Callable_>
 struct ConditionalFinalInvoke
 {
-    bool cond;
+    bool      cond;
     Callable_ callable;
 
     ~ConditionalFinalInvoke() noexcept(std::is_nothrow_invocable_v<Callable_>)

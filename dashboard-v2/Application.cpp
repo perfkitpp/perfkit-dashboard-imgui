@@ -24,7 +24,7 @@ PERFKIT_CATEGORY(GConfig::Workspace)
     struct SessionArchive
     {
         string Key;
-        int Type = 0;
+        int    Type = 0;
         string DisplayName;
 
         CPPHEADERS_DEFINE_NLOHMANN_JSON_ARCHIVER(SessionArchive, Key, Type, DisplayName);
@@ -173,7 +173,7 @@ void Application::drawSessionList(bool* bKeepOpen)
     CPPH_CALL_ON_EXIT(ImGui::EndChild());
     ImGui::BeginChild("Session-List", {0, 0}, true);
 
-    char textBuf[256];
+    char       textBuf[256];
     auto const colorBase    = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyleColorVec4(ImGuiCol_Header));
     auto const offsetActive = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyleColorVec4(ImGuiCol_HeaderActive)) - colorBase;
     auto const offsetHover  = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyleColorVec4(ImGuiCol_HeaderHovered)) - colorBase;
@@ -184,9 +184,9 @@ void Application::drawSessionList(bool* bKeepOpen)
         sess.Ref->FetchSessionDisplayName(&sess.CachedDisplayName);
 
         bool const bIsSessionOpen = sess.Ref->IsSessionOpen();
-        bool bOpenStatus          = true;
-        auto headerFlag           = 0;
-        int colorPopCount         = 3;
+        bool       bOpenStatus    = true;
+        auto       headerFlag     = 0;
+        int        colorPopCount  = 3;
         CPPH_CALL_ON_EXIT(ImGui::PopStyleColor(colorPopCount));
 
         auto baseColor       = bIsSessionOpen ? 0xff'264d22 : 0xff'282828;
@@ -272,7 +272,7 @@ void Application::drawSessionList(bool* bKeepOpen)
             {
                 auto name = iter->Key;
 
-                iter = _sessions.erase(iter);
+                iter      = _sessions.erase(iter);
                 ImGui::CloseCurrentPopup();
                 ImGui::MarkIniSettingsDirty();
 
@@ -294,7 +294,7 @@ void Application::drawSessionList(bool* bKeepOpen)
 void Application::drawAddSessionMenu()
 {
     constexpr char const* ItemNames[] = {"-- NONE --", "Tcp Raw Client", "WebSocket Client"};
-    auto state                        = &_addSessionModalState;
+    auto                  state       = &_addSessionModalState;
 
     static_assert(std::size(ItemNames) == int(ESessionType::ENUM_MAX_VALUE));
 
@@ -350,8 +350,8 @@ void Application::drawAddSessionMenu()
 
 shared_ptr<ISession> CreatePerfkitTcpRawClient();
 
-bool Application::RegisterSessionMainThread(
-        string keyString, ESessionType type, string_view optionalDefaultDisplayName)
+bool                 Application::RegisterSessionMainThread(
+                        string keyString, ESessionType type, string_view optionalDefaultDisplayName)
 {
     if (isSessionExist(keyString, type))
     {

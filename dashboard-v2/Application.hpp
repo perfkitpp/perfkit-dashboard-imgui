@@ -17,21 +17,21 @@ class Application
 {
     struct SessionNode
     {
-        string Key;
-        ESessionType Type;
+        string                     Key;
+        ESessionType               Type;
         shared_ptr<class ISession> Ref;
 
-        bool bShow         = false;
-        bool bPendingClose = false;
+        bool                       bShow         = false;
+        bool                       bPendingClose = false;
 
-        string CachedDisplayName;
+        string                     CachedDisplayName;
     };
 
    private:
     unique_ptr<asio::io_context> _ioc;
-    vector<SessionNode> _sessions;
-    std::string _workspacePath;
-    bool _workspacePathChanged = true;
+    vector<SessionNode>          _sessions;
+    std::string                  _workspacePath;
+    bool                         _workspacePathChanged = true;
 
     // UI Flags - View
     bool _bDrawSessionList = true;
@@ -43,10 +43,10 @@ class Application
     // UI State - Add New Session
     struct
     {
-        bool bActivateButton      = false;
-        bool bSetNextFocusToInput = false;
-        ESessionType Selected     = {};
-        char UriBuffer[1024]      = {};
+        bool         bActivateButton      = false;
+        bool         bSetNextFocusToInput = false;
+        ESessionType Selected             = {};
+        char         UriBuffer[1024]      = {};
     } _addSessionModalState;
 
    public:
@@ -61,9 +61,9 @@ class Application
     //! Register session with given key ...
     //! All sessions must be
     bool RegisterSessionMainThread(
-            string keyString,
+            string       keyString,
             ESessionType type,
-            string_view optionalDefaultDisplayName = {});
+            string_view  optionalDefaultDisplayName = {});
 
    private:
     void tickGraphicsMainThread();

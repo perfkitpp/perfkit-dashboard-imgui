@@ -6,7 +6,7 @@
 
 #include <asio/dispatch.hpp>
 #include <asio/post.hpp>
-#include <perfkit/common/refl/extension/msgpack-rpc.hxx>
+#include <perfkit/common/refl/msgpack-rpc/context.hxx>
 
 using namespace perfkit;
 using namespace net::message;
@@ -16,7 +16,7 @@ class PerfkitNetClientRpcMonitor : public msgpack::rpc::if_context_monitor
    public:
     std::weak_ptr<BasicPerfkitNetClient> _owner;
 
-    void on_new_session(const msgpack::rpc::session_profile& profile) noexcept override
+    void                                 on_new_session(const msgpack::rpc::session_profile& profile) noexcept override
     {
         if (auto lc = _owner.lock())
             lc->_onSessionCreate_(profile);
@@ -30,8 +30,6 @@ class PerfkitNetClientRpcMonitor : public msgpack::rpc::if_context_monitor
 
 BasicPerfkitNetClient::BasicPerfkitNetClient()
 {
-    _hrpcHeartbeat = std::make_unique<msgpack::rpc::rpc_wait_handle>();
-
     // Create service
     auto service = msgpack::rpc::service_info{};
     service.serve(
@@ -90,7 +88,7 @@ void BasicPerfkitNetClient::_onSessionCreate_(const msgpack::rpc::session_profil
 
 void BasicPerfkitNetClient::_onSessionDispose_(const msgpack::rpc::session_profile& profile)
 {
-    NotifyToast("Rpc Session Disposed").String(profile.peer_name);
+    NotifyToast("Rpc Session Disposed").Wanrning().String(profile.peer_name);
     CloseSession();
 }
 
@@ -101,33 +99,32 @@ BasicPerfkitNetClient::~BasicPerfkitNetClient()
 
 void BasicPerfkitNetClient::tickHeartbeat()
 {
-    if (not _timHeartbeat.check_sparse()) { return; }
-    auto& handle = *_hrpcHeartbeat;
+    if (not _timHeartbeat.check()) { return; }
 
-    if (not handle)
+    if (_hrpcHeartbeat && not _hrpcHeartbeat.wait(0ms))
     {
-        handle = service::heartbeat(*_rpc).rpc_async(nullptr);
+        NotifyToast{"Heartbeat failed"};
 
-        if (not handle)
-            CloseSession();
+        CloseSession();
+        return;
     }
-    else
-    {
-        auto waitResult = _rpc->rpc_wait(&*_hrpcHeartbeat, 0ms);
-        if (waitResult == perfkit::msgpack::rpc::rpc_status::timeout)
-        {
-            _rpc->rpc_abort(std::move(handle));
-            CloseSession();
-        }
-        else
-        {
-            NotifyToast{}.String("Heartbeat! {}", waitResult);
-        }
-    }
+
+    auto onHeartbeat =
+            [this](auto&& exception) {
+                if (exception)
+                    NotifyToast{"Heartbeat returned error"}
+                            .Error()
+                            .String(exception->what());
+                else
+                    NotifyToast{"Heartbeat!"};
+            };
+
+    _hrpcHeartbeat = service::heartbeat(*_rpc).async_rpc(
+            bind_front_weak(weak_from_this(), std::move(onHeartbeat)));
 }
 
 void BasicPerfkitNetClient::CloseSession()
 {
     ISession::CloseSession();
-    *_hrpcHeartbeat = {};
+    _hrpcHeartbeat.abort();
 }

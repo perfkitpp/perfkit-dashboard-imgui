@@ -19,14 +19,13 @@ class PerfkitTcpRawClient : public BasicPerfkitNetClient
     };
 
    private:
-    string _uri;
-    EConnectionState _state;
+    string                  _uri;    // Key URI
+    EConnectionState        _state;  // Current connection state
 
-    asio::system_executor _exec;
-    asio::ip::tcp::endpoint _endpoint;
+    asio::system_executor   _exec;      // System executor
+    asio::ip::tcp::endpoint _endpoint;  // Active endpoint
 
-    // UI State
-    string _uiStateMessage;
+    string                  _uiStateMessage;  // UI State
 
    public:
     void InitializeSession(const string& keyUri) override;

@@ -4,10 +4,10 @@ Language: Cpp
 AccessModifierOffset: -1
 AlignAfterOpenBracket: Align
 # AlignArrayOfStructures: Right
-AlignConsecutiveMacros: true
-AlignConsecutiveAssignments: true
-AlignConsecutiveBitFields: true
-AlignConsecutiveDeclarations: false
+AlignConsecutiveMacros: Consecutive
+AlignConsecutiveAssignments: AcrossEmptyLines
+AlignConsecutiveBitFields: AcrossEmptyLines
+AlignConsecutiveDeclarations: AcrossEmptyLines
 AlignEscapedNewlines: Left
 AlignOperands: AlignAfterOperator
 AlignTrailingComments: true

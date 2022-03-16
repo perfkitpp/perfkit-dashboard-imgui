@@ -19,15 +19,15 @@
 
 static class NotifyContext
 {
-    std::list<unique_ptr<NotifyToast::Content>> _queue;
-    std::mutex _mtxQueue;
+    std::list<unique_ptr<NotifyToast::Content>>                     _queue;
+    std::mutex                                                      _mtxQueue;
 
-    std::list<unique_ptr<NotifyToast::Content>> _toasts;
+    std::list<unique_ptr<NotifyToast::Content>>                     _toasts;
     std::map<steady_clock::time_point, decltype(_toasts)::iterator> _timeouts;
 
-    vector<int> _idPool;
+    vector<int>                                                     _idPool;
 
-    shared_ptr<spdlog::logger> _logNotify = spdlog::default_logger()->clone("Notify");
+    shared_ptr<spdlog::logger>                                      _logNotify = spdlog::default_logger()->clone("Notify");
 
    public:
     NotifyContext() noexcept
@@ -47,7 +47,7 @@ static class NotifyContext
         // Make all pending toasts current
         while (not newToasts.empty())
         {
-            auto iter                 = newToasts.begin();
+            auto  iter                = newToasts.begin();
             auto& ptoast              = *iter;
             ptoast->stateHeightOffset = 44;
 
@@ -91,11 +91,11 @@ static class NotifyContext
             constexpr auto Transition      = 0.4f;
             constexpr auto DefaultOpacity  = 0.6f;
 
-            float height            = 0.f;
-            auto timeNow            = steady_clock::now();
-            using secondsf          = std::chrono::duration<double>;
-            auto const deltaTime    = ImGui::GetIO().DeltaTime;
-            auto const heightDecVal = 80.f * deltaTime;
+            float          height          = 0.f;
+            auto           timeNow         = steady_clock::now();
+            using secondsf                 = std::chrono::duration<double>;
+            auto const deltaTime           = ImGui::GetIO().DeltaTime;
+            auto const heightDecVal        = 80.f * deltaTime;
 
             for (auto iter = _toasts.begin(); iter != _toasts.end();)
             {
@@ -107,7 +107,7 @@ static class NotifyContext
                     toast->stateHeightOffset = std::max(0.f, std::min(fixedDecr, rationalDescr));
                 }
 
-                auto entityHeight = height + (*iter)->stateHeightOffset;
+                auto   entityHeight = height + (*iter)->stateHeightOffset;
                 ImVec2 nextPos(posVp.x - PaddingX, posVp.y - PaddingY - entityHeight);
                 SetNextWindowPos(nextPos, ImGuiCond_Always, ImVec2(1.f, 1.f));
 
@@ -131,7 +131,7 @@ static class NotifyContext
                 float timeFromSpawn    = secondsf(timeNow - toast->Birth).count();
                 float timeUntilDispose = toast->bInfinity ? Transition : secondsf(toast->Lifespan - timeNow).count();
 
-                float opacity = DefaultOpacity * std::min(timeFromSpawn / Transition, timeUntilDispose / Transition);
+                float opacity          = DefaultOpacity * std::min(timeFromSpawn / Transition, timeUntilDispose / Transition);
                 SetNextWindowBgAlpha(opacity);
 
                 auto wndFlags  = ToastFlags;
