@@ -189,7 +189,7 @@ void Application::drawSessionList(bool* bKeepOpen)
         int        colorPopCount  = 3;
         CPPH_CALL_ON_EXIT(ImGui::PopStyleColor(colorPopCount));
 
-        auto baseColor       = bIsSessionOpen ? 0xff'264d22 : 0xff'282828;
+        auto baseColor       = bIsSessionOpen ? 0xff'362d16 : 0xff'282828;
         baseColor            = sess.bPendingClose ? 0xff'37b8db : baseColor;
         sess.bPendingClose   = sess.bPendingClose && bIsSessionOpen;
         bool bRenderContents = sess.Ref->ShouldRenderSessionListEntityContent();
@@ -208,31 +208,29 @@ void Application::drawSessionList(bool* bKeepOpen)
             ImGui::PushStyleColor(ImGuiCol_HeaderHovered, baseColor + offsetHover);
         }
 
-        sprintf(textBuf, "%s##SLB-%s-%d", sess.CachedDisplayName.c_str(), sess.Key.c_str(), sess.Type);
+        sprintf(textBuf, "%s###SLB-%s-%d",
+                sess.CachedDisplayName.c_str(), sess.Key.c_str(), sess.Type);
 
+        ImGui::PushStyleColor(ImGuiCol_Text, bIsSessionOpen ? 0xffffffff : 0xffbbbbbb);
         bRenderContents &= ImGui::CollapsingHeader(textBuf, &bOpenStatus, headerFlag);
-        ImGui::SameLine();
-        ImGui::TextColored({.5f, .5f, .5f, 1.f}, "%s", sess.Key.c_str());
+        ImGui::PopStyleColor();
 
+        if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) { sess.bShow = not sess.bShow; }
+
+        if (bIsSessionOpen)
         {
             ImGui::SameLine();
-
-            if (sess.bShow)
-                sprintf(textBuf, "[HIDE]###OPN-%s-%d", sess.Key.c_str(), sess.Type);
-            else
-                sprintf(textBuf, "[SHOW]###OPN-%s-%d", sess.Key.c_str(), sess.Type);
-
-            int buttonBase = sess.bShow ? 0xff'6ccf48 : baseColor;
-
-            CPPH_CALL_ON_EXIT(ImGui::PopStyleColor(4));
-            ImGui::PushStyleColor(ImGuiCol_Button, buttonBase);
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive, buttonBase + offsetActive);
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, buttonBase + offsetHover);
-            ImGui::PushStyleColor(ImGuiCol_Text, 0xffcccccc);
-
-            if (ImGui::Button(textBuf, {-18, 0}))
-                sess.bShow = not sess.bShow, NotifyToast{}.String("Toggle!");
+            ImGui::TextColored({0, 1, 0, 1}, " [%c]", "-\\|/"[int(ImGui::GetTime() / 0.33) % 4]);
         }
+
+        if (sess.bShow)
+        {
+            ImGui::SameLine();
+            ImGui::TextColored({1, 1, 0, 1}, "[*]");
+        }
+
+        ImGui::SameLine();
+        ImGui::TextColored({.5f, .5f, .5f, 1.f}, "%s", sess.Key.c_str());
 
         if (bRenderContents)
         {

@@ -51,4 +51,11 @@ auto CondInvoke(bool condition, Callable&& callable)
 void DispatchEventMainThread(function<void()>);
 void PostEventMainThread(function<void()>);
 
+template <class Owner_, typename Callable_>
+void PostEventMainThreadWeak(Owner_&& weakPtr, Callable_&& callable)
+{
+    PostEventMainThread(bind_front_weak(
+            weakPtr, std::forward<Callable_>(callable)));
+}
+
 #include "utils/Notify.hpp"

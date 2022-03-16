@@ -98,12 +98,10 @@ void BasicPerfkitNetClient::_onSessionCreate_(const msgpack::rpc::session_profil
         return;
     }
 
-    DispatchEventMainThread(
-            bind_front_weak(
-                    weak_from_this(),
-                    [this, info = std::move(info)]() mutable {
-                        _session_info = std::move(info);
-                    }));
+    PostEventMainThreadWeak(weak_from_this(),
+                            [this, info = std::move(info)]() mutable {
+                                _session_info = std::move(info);
+                            });
 }
 
 void BasicPerfkitNetClient::_onSessionDispose_(const msgpack::rpc::session_profile& profile)
@@ -136,7 +134,7 @@ void BasicPerfkitNetClient::tickHeartbeat()
                             .Error()
                             .String(exception->what());
                 else
-                    NotifyToast{"Heartbeat!"};
+                    NotifyToast{}.Trivial().String("Heartbeat!");
             };
 
     _hrpcHeartbeat = service::heartbeat(*_rpc).async_rpc(

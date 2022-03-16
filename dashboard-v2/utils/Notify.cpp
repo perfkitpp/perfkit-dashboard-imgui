@@ -303,7 +303,7 @@ NotifyToast&& NotifyToast::Title(string content) &&
                 switch (*severity)
                 {
                     case NotifySeverity::Trivial: PushStyleColor(ImGuiCol_Text, 0xff'cccccc); break;
-                    case NotifySeverity::Info: PushStyleColor(ImGuiCol_Text, 0xff'44ff44); break;
+                    case NotifySeverity::Info: PushStyleColor(ImGuiCol_Text, 0xff'44dd44); break;
                     case NotifySeverity::Warning: PushStyleColor(ImGuiCol_Text, 0xff'22ffff); break;
                     case NotifySeverity::Error: PushStyleColor(ImGuiCol_Text, 0xff'6666ff); break;
                     case NotifySeverity::Fatal: PushStyleColor(ImGuiCol_Text, 0xff'0000ff); break;
