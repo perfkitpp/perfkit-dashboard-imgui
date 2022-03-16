@@ -16,7 +16,8 @@ class PerfkitNetClientRpcMonitor : public msgpack::rpc::if_context_monitor
    public:
     std::weak_ptr<BasicPerfkitNetClient> _owner;
 
-    void                                 on_new_session(const msgpack::rpc::session_profile& profile) noexcept override
+   public:
+    void on_new_session(const msgpack::rpc::session_profile& profile) noexcept override
     {
         if (auto lc = _owner.lock())
             lc->_onSessionCreate_(profile);
@@ -60,7 +61,10 @@ void BasicPerfkitNetClient::FetchSessionDisplayName(std::string* outName)
     if (not IsSessionOpen())
         return;
 
-    outName->assign("Example");
+    outName->clear();
+    fmt::format_to(
+            std::back_inserter(*outName), "{}@{}",
+            _session_info.name, _session_info.hostname);
 }
 
 void BasicPerfkitNetClient::RenderTickSession()
@@ -84,6 +88,22 @@ void BasicPerfkitNetClient::TickSession()
 void BasicPerfkitNetClient::_onSessionCreate_(const msgpack::rpc::session_profile& profile)
 {
     NotifyToast("Rpc Session Created").String(profile.peer_name);
+
+    auto info   = decltype(service::session_info)::return_type{};
+    auto result = service::session_info(*_rpc).rpc(&info, 1s);
+
+    if (result != msgpack::rpc::rpc_status::okay)
+    {
+        NotifyToast{"Rpc invocation failed"}.Error().String(to_string(result));
+        return;
+    }
+
+    DispatchEventMainThread(
+            bind_front_weak(
+                    weak_from_this(),
+                    [this, info = std::move(info)]() mutable {
+                        _session_info = std::move(info);
+                    }));
 }
 
 void BasicPerfkitNetClient::_onSessionDispose_(const msgpack::rpc::session_profile& profile)

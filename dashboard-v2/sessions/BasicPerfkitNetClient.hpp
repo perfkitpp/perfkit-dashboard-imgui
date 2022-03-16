@@ -20,9 +20,15 @@ class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNe
     unique_ptr<perfkit::msgpack::rpc::context>            _rpc;
     shared_ptr<perfkit::msgpack::rpc::if_context_monitor> _monitor;
 
-    perfkit::msgpack::rpc::request_handle                 _hrpcHeartbeat;
+    //
+    perfkit::msgpack::rpc::request_handle _hrpcHeartbeat;
 
-    perfkit::poll_timer                                   _timHeartbeat{1s};
+    //
+    perfkit::poll_timer _timHeartbeat{1s};
+
+    //
+    using service = perfkit::net::message::service;
+    service::session_info_t _session_info;
 
    public:
     BasicPerfkitNetClient();

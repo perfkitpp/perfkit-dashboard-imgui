@@ -91,9 +91,9 @@ static class NotifyContext
             constexpr auto Transition      = 0.4f;
             constexpr auto DefaultOpacity  = 0.6f;
 
-            float          height          = 0.f;
-            auto           timeNow         = steady_clock::now();
-            using secondsf                 = std::chrono::duration<double>;
+            using Seconds                  = std::chrono::duration<double>;
+            float      height              = 0.f;
+            auto       timeNow             = steady_clock::now();
             auto const deltaTime           = ImGui::GetIO().DeltaTime;
             auto const heightDecVal        = 80.f * deltaTime;
 
@@ -128,8 +128,8 @@ static class NotifyContext
                 }
                 CPPH_CALL_ON_EXIT(PopStyleColor());
 
-                float timeFromSpawn    = secondsf(timeNow - toast->Birth).count();
-                float timeUntilDispose = toast->bInfinity ? Transition : secondsf(toast->Lifespan - timeNow).count();
+                float timeFromSpawn    = Seconds(timeNow - toast->Birth).count();
+                float timeUntilDispose = toast->bInfinity ? Transition : Seconds(toast->Lifespan - timeNow).count();
 
                 float opacity          = DefaultOpacity * std::min(timeFromSpawn / Transition, timeUntilDispose / Transition);
                 SetNextWindowBgAlpha(opacity);
