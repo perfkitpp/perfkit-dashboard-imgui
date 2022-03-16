@@ -6,7 +6,7 @@
 
 #include <asio/dispatch.hpp>
 #include <asio/post.hpp>
-#include <perfkit/common/refl/extension/msgpack-rpc.hxx>
+#include <perfkit/common/refl/msgpack-rpc/context.hxx>
 
 using namespace perfkit;
 using namespace net::message;
@@ -30,8 +30,6 @@ class PerfkitNetClientRpcMonitor : public msgpack::rpc::if_context_monitor
 
 BasicPerfkitNetClient::BasicPerfkitNetClient()
 {
-    _hrpcHeartbeat = std::make_unique<msgpack::rpc::rpc_wait_handle>();
-
     // Create service
     auto service = msgpack::rpc::service_info{};
     service.serve(
@@ -101,33 +99,30 @@ BasicPerfkitNetClient::~BasicPerfkitNetClient()
 
 void BasicPerfkitNetClient::tickHeartbeat()
 {
-    if (not _timHeartbeat.check_sparse()) { return; }
-    auto& handle = *_hrpcHeartbeat;
+    if (not _timHeartbeat.check()) { return; }
 
-    if (not handle)
+    if (_hrpcHeartbeat && not _hrpcHeartbeat.wait(0ms))
     {
-        handle = service::heartbeat(*_rpc).rpc_async(nullptr);
+        CloseSession();
+        return;
+    }
 
-        if (not handle)
-            CloseSession();
-    }
-    else
-    {
-        auto waitResult = _rpc->rpc_wait(&*_hrpcHeartbeat, 0ms);
-        if (waitResult == perfkit::msgpack::rpc::rpc_status::timeout)
-        {
-            _rpc->rpc_abort(std::move(handle));
-            CloseSession();
-        }
-        else
-        {
-            NotifyToast{}.String("Heartbeat! {}", waitResult);
-        }
-    }
+    auto onHeartbeat =
+            [this](auto&& exception) {
+                if (exception)
+                    NotifyToast{"Heartbeat Failed"}
+                            .Error()
+                            .String(exception->what());
+                else
+                    NotifyToast{"Heartbeat!"};
+            };
+
+    _hrpcHeartbeat = service::heartbeat(*_rpc).async_rpc(
+            bind_front_weak(weak_from_this(), std::move(onHeartbeat)));
 }
 
 void BasicPerfkitNetClient::CloseSession()
 {
     ISession::CloseSession();
-    *_hrpcHeartbeat = {};
+    _hrpcHeartbeat.abort();
 }

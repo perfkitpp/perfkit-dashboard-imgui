@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#include <perfkit/common/refl/msgpack-rpc/request_handle.hxx>
 #include <perfkit/common/timer.hxx>
 #include <perfkit/extension/net/protocol.hpp>
 
@@ -12,7 +13,6 @@ namespace perfkit::msgpack::rpc {
 class context;
 class if_context_monitor;
 struct session_profile;
-struct rpc_wait_handle;
 }  // namespace perfkit::msgpack::rpc
 
 class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNetClient>, public ISession
@@ -20,7 +20,7 @@ class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNe
     unique_ptr<perfkit::msgpack::rpc::context> _rpc;
     shared_ptr<perfkit::msgpack::rpc::if_context_monitor> _monitor;
 
-    unique_ptr<perfkit::msgpack::rpc::rpc_wait_handle> _hrpcHeartbeat;
+    perfkit::msgpack::rpc::request_handle _hrpcHeartbeat;
 
     perfkit::poll_timer _timHeartbeat{1s};
 

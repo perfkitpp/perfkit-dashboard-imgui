@@ -7,8 +7,8 @@
 #include <charconv>
 
 #include <asio/post.hpp>
-#include <perfkit/common/refl/extension/msgpack-rpc.hxx>
-#include <perfkit/common/refl/extension/msgpack-rpc/asio.hxx>
+#include <perfkit/common/refl/msgpack-rpc/context.hxx>
+#include <perfkit/common/refl/msgpack-rpc/asio.hxx>
 
 #include "imgui-extension.h"
 
