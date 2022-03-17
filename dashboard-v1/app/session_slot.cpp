@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2022. Seungwoo Kang
+// Copyright (c) 2021-2022. Seungwoo Kang
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -31,7 +31,7 @@
 
 #include "application.hpp"
 #include "classes/connection/plain_tcp.hpp"
-#include "imgui-extension.h"
+#include "imgui_extension.h"
 #include "imgui_internal.h"
 #include "implot.h"
 #include "spdlog/spdlog.h"

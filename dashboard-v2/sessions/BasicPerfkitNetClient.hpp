@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#include <TextEditor.h>
 #include <perfkit/common/refl/msgpack-rpc/request_handle.hxx>
 #include <perfkit/common/timer.hxx>
 #include <perfkit/extension/net/protocol.hpp>
@@ -28,7 +29,10 @@ class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNe
 
     //
     using service = perfkit::net::message::service;
-    service::session_info_t _session_info;
+    service::session_info_t _sessionInfo;
+
+    // TTY
+    TextEditor _tty;
 
    public:
     BasicPerfkitNetClient();

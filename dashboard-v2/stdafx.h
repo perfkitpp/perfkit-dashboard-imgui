@@ -58,4 +58,26 @@ void PostEventMainThreadWeak(Owner_&& weakPtr, Callable_&& callable)
             weakPtr, std::forward<Callable_>(callable)));
 }
 
+template <typename Fmt_, typename... Args_>
+float* FloatRegistry(Fmt_&& fmt, Args_&&... args)
+{
+    static char keybuf[256];
+    auto        n = snprintf(keybuf, sizeof keybuf, fmt, args...);
+
+    float*      FloatRegistryImpl(string_view key);
+    return FloatRegistryImpl(string_view(keybuf, n));
+}
+
+float* FloatRegistry(std::string_view key)
+{
+    float* FloatRegistryImpl(string_view key);
+    return FloatRegistryImpl(key);
+}
+
+float* FloatRegistry(char const* key)
+{
+    float* FloatRegistryImpl(string_view key);
+    return FloatRegistryImpl(key);
+}
+
 #include "utils/Notify.hpp"

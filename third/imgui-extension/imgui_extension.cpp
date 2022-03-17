@@ -22,10 +22,13 @@
 //
 // project home: https://github.com/perfkitpp
 
-#include "imgui-extension.h"
+#include "imgui_extension.h"
 
 #include <algorithm>
 #include <cmath>
+#include <map>
+#include <string>
+#include <string_view>
 
 #include "imgui_internal.h"
 
@@ -36,14 +39,14 @@ bool Spinner(const char* label, const ImU32& color, float radius, int thickness,
     if (window->SkipItems)
         return false;
 
-    ImGuiContext& g         = *GImGui;
+    ImGuiContext&     g     = *GImGui;
     const ImGuiStyle& style = g.Style;
-    const ImGuiID id        = window->GetID(label);
+    const ImGuiID     id    = window->GetID(label);
 
-    ImVec2 pos = window->DC.CursorPos;
-    ImVec2 size((radius)*2, (radius + style.FramePadding.y) * 2);
+    ImVec2            pos   = window->DC.CursorPos;
+    ImVec2            size((radius)*2, (radius + style.FramePadding.y) * 2);
 
-    const ImRect bb(pos, ImVec2(pos.x + size.x, pos.y + size.y));
+    const ImRect      bb(pos, ImVec2(pos.x + size.x, pos.y + size.y));
     ItemSize(bb, style.FramePadding.y);
     if (!ItemAdd(bb, id))
         return false;
@@ -51,13 +54,13 @@ bool Spinner(const char* label, const ImU32& color, float radius, int thickness,
     // Render
     window->DrawList->PathClear();
 
-    int num_segments = 30;
-    int start        = abs(ImSin(time * 1.8f) * (num_segments - 5));
+    int          num_segments = 30;
+    int          start        = abs(ImSin(time * 1.8f) * (num_segments - 5));
 
-    const float a_min = IM_PI * 2.0f * ((float)start) / (float)num_segments;
-    const float a_max = IM_PI * 2.0f * ((float)num_segments - 3) / (float)num_segments;
+    const float  a_min        = IM_PI * 2.0f * ((float)start) / (float)num_segments;
+    const float  a_max        = IM_PI * 2.0f * ((float)num_segments - 3) / (float)num_segments;
 
-    const ImVec2 centre = ImVec2(pos.x + radius, pos.y + radius + style.FramePadding.y);
+    const ImVec2 centre       = ImVec2(pos.x + radius, pos.y + radius + style.FramePadding.y);
 
     for (int i = 0; i < num_segments; i++)
     {
@@ -70,7 +73,7 @@ bool Spinner(const char* label, const ImU32& color, float radius, int thickness,
     return true;
 }
 
-void LoadingIndicatorCircle(const char* label,
+void LoadingIndicatorCircle(const char*   label,
                             const ImVec4& main_color, const ImVec4& backdrop_color,
                             const float indicator_radius,
                             const int circle_count, const float speed)
@@ -81,29 +84,29 @@ void LoadingIndicatorCircle(const char* label,
         return;
     }
 
-    ImGuiContext& g  = *GImGui;
-    const ImGuiID id = window->GetID(label);
+    ImGuiContext& g             = *GImGui;
+    const ImGuiID id            = window->GetID(label);
 
-    const ImVec2 pos          = window->DC.CursorPos;
-    const float circle_radius = indicator_radius / 10.0f;
-    const ImRect bb(pos, ImVec2(pos.x + indicator_radius * 2.0f,
-                                pos.y + indicator_radius * 2.0f));
-    auto& style = ImGui::GetStyle();
+    const ImVec2  pos           = window->DC.CursorPos;
+    const float   circle_radius = indicator_radius / 10.0f;
+    const ImRect  bb(pos, ImVec2(pos.x + indicator_radius * 2.0f,
+                                 pos.y + indicator_radius * 2.0f));
+    auto&         style = ImGui::GetStyle();
     ItemSize(bb, style.FramePadding.y);
     if (!ItemAdd(bb, id))
     {
         return;
     }
 
-    const float t            = g.Time;
-    const auto degree_offset = 2.0f * IM_PI / circle_count;
+    const float t             = g.Time;
+    const auto  degree_offset = 2.0f * IM_PI / circle_count;
 
     for (int i = 0; i < circle_count; ++i)
     {
         const auto x      = indicator_radius * std::sin(degree_offset * i);
         const auto y      = indicator_radius * std::cos(degree_offset * i);
         const auto growth = std::max(0.0f, std::sin(t * speed - i * degree_offset));
-        ImVec4 color;
+        ImVec4     color;
         color.x = main_color.x * growth + backdrop_color.x * (1.0f - growth);
         color.y = main_color.y * growth + backdrop_color.y * (1.0f - growth);
         color.z = main_color.z * growth + backdrop_color.z * (1.0f - growth);
@@ -115,13 +118,13 @@ void LoadingIndicatorCircle(const char* label,
     }
 }
 
-void InputTextLeft(const char* label,
-                   const char* hint,
-                   char* buf,
-                   size_t bufSize,
-                   ImGuiInputTextFlags flags,
+void InputTextLeft(const char*            label,
+                   const char*            hint,
+                   char*                  buf,
+                   size_t                 bufSize,
+                   ImGuiInputTextFlags    flags,
                    ImGuiInputTextCallback callback,
-                   void* userData)
+                   void*                  userData)
 {
     ImGui::Text(label);
     ImGui::SameLine();
@@ -134,4 +137,35 @@ double GetGlobalTime()
 {
     return GImGui->Time;
 }
+
+template <typename... Args_>
+float* findStorage(Args_&&... args)
+{
+    static std::map<std::string, float> _storage;
+    char                                buf[128];
+    snprintf(buf, sizeof buf, args...);
+
+    auto iter = _storage.find(buf);
+    if (iter == _storage.end())
+    {
+        iter = _storage.try_emplace(std::string{buf}, 0.f).first;
+    }
+
+    return &iter->second;
+}
+
+bool BeginChildAutoHeight(const char* key, float width, ImGuiWindowFlags flags)
+{
+    auto heightPtr = findStorage("%s?%s", ImGui::GetCurrentWindow()->Name, key);
+    return ImGui::BeginChild(key, {width, *heightPtr}, true, flags);
+}
+
+void EndChildAutoHeight(const char* key)
+{
+    float height = GetCursorPosY();
+
+    ImGui::EndChild();
+    *findStorage("%s?%s", ImGui::GetCurrentWindow()->Name, key) = height + 5.f;
+}
+
 }  // namespace ImGui

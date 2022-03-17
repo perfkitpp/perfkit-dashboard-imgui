@@ -14,7 +14,7 @@
 #include <spdlog/spdlog.h>
 
 #include "Application.hpp"
-#include "imgui-extension.h"
+#include "imgui_extension.h"
 #include "imgui.h"
 
 static class NotifyContext

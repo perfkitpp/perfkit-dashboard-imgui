@@ -14,7 +14,7 @@ add_library(
         ImGuiColorTextEdit/TextEditor.cpp
         implot/implot.cpp
         implot/implot_items.cpp
-        imgui-extension/imgui-extension.cpp
+        imgui-extension/imgui_extension.cpp
 )
 
 target_include_directories(
@@ -27,6 +27,13 @@ target_include_directories(
         ${OpenGL_INCLUDE_DIRS}
         ImGuiColorTextEdit
         imgui-extension
+)
+
+target_compile_definitions(
+        ${PROJECT_NAME}
+
+        PUBLIC
+        IMGUI_DEFINE_MATH_OPERATORS
 )
 
 target_link_libraries(

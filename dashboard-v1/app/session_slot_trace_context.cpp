@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2022. Seungwoo Kang
+// Copyright (c) 2021-2022. Seungwoo Kang
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -31,7 +31,7 @@
 #include <charconv>
 #include <set>
 
-#include <imgui-extension.h>
+#include <imgui_extension.h>
 #include <implot.h>
 #include <range/v3/view/map.hpp>
 #include <range/v3/view/transform.hpp>

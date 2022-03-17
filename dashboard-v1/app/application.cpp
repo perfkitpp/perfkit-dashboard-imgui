@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2022. Seungwoo Kang
+// Copyright (c) 2021-2022. Seungwoo Kang
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -35,7 +35,7 @@
 #include <asio/post.hpp>
 #include <spdlog/spdlog.h>
 
-#include "imgui-extension.h"
+#include "imgui_extension.h"
 #include "imgui.h"
 #include "perfkit/common/algorithm.hxx"
 #include "perfkit/common/utility/cleanup.hxx"
@@ -366,4 +366,4 @@ void gui::detail::modal_single_server_connect(bool* connStat)
 void gui::detail::modal_api_server_connect(bool* connStat)
 {
 }
-}  // namespace application
+}  // namespace applic

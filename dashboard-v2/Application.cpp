@@ -10,6 +10,7 @@
 #include <asio/io_context.hpp>
 #include <asio/post.hpp>
 #include <imgui.h>
+#include <imgui_extension.h>
 #include <imgui_internal.h>
 #include <perfkit/common/algorithm/std.hxx>
 #include <perfkit/common/helper/nlohmann_json_macros.hxx>
@@ -160,14 +161,9 @@ void Application::drawSessionList(bool* bKeepOpen)
     if (not ImGui::Begin("Sessions", bKeepOpen)) { return; }
 
     ImGui::AlignTextToFramePadding(), ImGui::Text("Add Session");
-    {
-        CPPH_CALL_ON_EXIT(ImGui::EndChild());
-        static float AddNewHeight = 0.f;
-        ImGui::BeginChild("Session-AddNew", {0, AddNewHeight}, true);
-        drawAddSessionMenu();
 
-        AddNewHeight = ImGui::GetCursorPosY() + 5.f;
-    }
+    if (auto _scope_ = ImGui::ChildWindowGuard("Session-AddNew"))
+        drawAddSessionMenu();
 
     ImGui::AlignTextToFramePadding(), ImGui::Text("Sessions");
     CPPH_CALL_ON_EXIT(ImGui::EndChild());
@@ -189,7 +185,7 @@ void Application::drawSessionList(bool* bKeepOpen)
         int        colorPopCount  = 3;
         CPPH_CALL_ON_EXIT(ImGui::PopStyleColor(colorPopCount));
 
-        auto baseColor       = bIsSessionOpen ? 0xff'362d16 : 0xff'282828;
+        auto baseColor       = bIsSessionOpen ? 0xff'113d16 : 0xff'080808;
         baseColor            = sess.bPendingClose ? 0xff'37b8db : baseColor;
         sess.bPendingClose   = sess.bPendingClose && bIsSessionOpen;
         bool bRenderContents = sess.Ref->ShouldRenderSessionListEntityContent();
@@ -236,11 +232,14 @@ void Application::drawSessionList(bool* bKeepOpen)
         {
             sprintf(textBuf, "%s##CHLD-%s-%d", sess.CachedDisplayName.c_str(), sess.Key.c_str(), sess.Type);
 
-            ImGui::TreePush();
-            sess.Ref->RenderSessionListEntityContent();
-            ImGui::TreePop();
+            ImGui::PushStyleColor(ImGuiCol_ChildBg, ImGui::GetStyleColorVec4(ImGuiCol_ChildBg) - ImVec4{.1, .1, .1, .0});
+            CPPH_CALL_ON_EXIT(ImGui::PopStyleColor());
 
-            ImGui::Separator();
+            CPPH_CALL_ON_EXIT(ImGui::EndChild());
+            if (ImGui::BeginChild(textBuf, {0, 250}, true))
+            {
+                sess.Ref->RenderSessionListEntityContent();
+            }
         }
 
         sprintf(textBuf, "Unregister##%s-%d", sess.Key.c_str(), sess.Type);
@@ -336,8 +335,12 @@ void Application::drawAddSessionMenu()
         }
     }
 
+    if (not state->bActivateButton) { return; }
+
     // Expose add session button only when conditions are valid
-    if (state->bActivateButton && (ImGui::Button("Create", {-1, 0}) || ImGui::IsKeyPressed(ImGuiKey_Enter, false)))
+    ImGui::Spacing();
+
+    if ((ImGui::Button("Create", {-1, 0}) || ImGui::IsKeyPressed(ImGuiKey_Enter, false)))
     {
         RegisterSessionMainThread(state->UriBuffer, state->Selected);
         ImGui::MarkIniSettingsDirty();

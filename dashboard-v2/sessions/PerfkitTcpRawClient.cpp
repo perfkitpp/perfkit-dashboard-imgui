@@ -10,7 +10,7 @@
 #include <perfkit/common/refl/msgpack-rpc/asio.hxx>
 #include <perfkit/common/refl/msgpack-rpc/context.hxx>
 
-#include "imgui-extension.h"
+#include "imgui_extension.h"
 
 void PerfkitTcpRawClient::InitializeSession(const string& keyUri)
 {

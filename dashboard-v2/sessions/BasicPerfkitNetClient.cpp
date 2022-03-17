@@ -33,12 +33,11 @@ BasicPerfkitNetClient::BasicPerfkitNetClient()
 {
     // Create service
     auto service = msgpack::rpc::service_info{};
-    service.serve(
-            notify::tty,
-            [](tty_output_t& h) {
-                printf("%s", h.content.c_str());
-                fflush(stdout);
-            });
+    service.serve(notify::tty,
+                  [](tty_output_t& h) {
+                      printf("%s", h.content.c_str());
+                      fflush(stdout);
+                  });
 
     // Create monitor
     auto monitor = std::make_shared<PerfkitNetClientRpcMonitor>();
@@ -64,11 +63,17 @@ void BasicPerfkitNetClient::FetchSessionDisplayName(std::string* outName)
     outName->clear();
     fmt::format_to(
             std::back_inserter(*outName), "{}@{}",
-            _session_info.name, _session_info.hostname);
+            _sessionInfo.name, _sessionInfo.hostname);
 }
 
 void BasicPerfkitNetClient::RenderTickSession()
 {
+    char tbuf[128];
+    auto genId =
+            [&](char const* tag) {
+
+            };
+
     // State summary (bandwidth, memory usage, etc ...)
 
     // Basic buttons for opening config/trace
@@ -100,7 +105,7 @@ void BasicPerfkitNetClient::_onSessionCreate_(const msgpack::rpc::session_profil
 
     PostEventMainThreadWeak(weak_from_this(),
                             [this, info = std::move(info)]() mutable {
-                                _session_info = std::move(info);
+                                _sessionInfo = std::move(info);
                             });
 }
 

@@ -23,6 +23,7 @@
 // project home: https://github.com/perfkitpp
 
 #pragma once
+#include <algorithm>
 #include <string_view>
 
 #include "imgui.h"
@@ -30,24 +31,49 @@
 namespace ImGui {
 double GetGlobalTime();
 
-bool Spinner(
-        const char* label,
-        const ImU32& color,
-        float radius  = 5.f,
-        int thickness = 2,
-        double time   = GetGlobalTime());
+bool   Spinner(
+          const char*  label,
+          const ImU32& color,
+          float        radius    = 5.f,
+          int          thickness = 2,
+          double       time      = GetGlobalTime());
 
 void LoadingIndicatorCircle(
-        const char* label,
+        const char*   label,
         const ImVec4& main_color, const ImVec4& backdrop_color,
         float indicator_radius = 6.,
         int circle_count = 6, float speed = 2.);
 
-void InputTextLeft(const char* label,
-                   const char* hint,
-                   char* buf,
-                   size_t bufSize,
-                   ImGuiInputTextFlags flags       = 0,
+void InputTextLeft(const char*            label,
+                   const char*            hint,
+                   char*                  buf,
+                   size_t                 bufSize,
+                   ImGuiInputTextFlags    flags    = 0,
                    ImGuiInputTextCallback callback = nullptr,
-                   void* userData                  = nullptr);
+                   void*                  userData = nullptr);
+
+bool BeginChildAutoHeight(char const* key, float width = 0., ImGuiWindowFlags flags = 0);
+void EndChildAutoHeight(const char* key);
+
+class ChildWindowGuard
+{
+    char _buf[256];
+    bool _draw = false;
+
+   public:
+    explicit ChildWindowGuard(char const* key, float width = 0., ImGuiWindowFlags flags = 0) noexcept
+    {
+        _buf[255] = 0;
+        strncpy(_buf, key, std::min(sizeof _buf - 1, strlen(key)));
+        _draw = BeginChildAutoHeight(_buf, width, flags);
+    }
+
+    ~ChildWindowGuard() noexcept
+    {
+        EndChildAutoHeight(_buf);
+    }
+
+    operator bool() const noexcept { return _draw; }
+};
+
 }  // namespace ImGui
