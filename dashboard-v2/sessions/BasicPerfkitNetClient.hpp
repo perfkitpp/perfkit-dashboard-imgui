@@ -19,6 +19,9 @@ struct session_profile;
 
 class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNetClient>, public ISession
 {
+    string _key;
+
+    //
     unique_ptr<perfkit::msgpack::rpc::context>            _rpc;
     shared_ptr<perfkit::msgpack::rpc::if_context_monitor> _monitor;
     std::shared_ptr<nullptr_t>                            _rpcFlushGuard = std::make_shared<nullptr_t>();

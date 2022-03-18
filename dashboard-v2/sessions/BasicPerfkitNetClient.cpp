@@ -63,6 +63,7 @@ BasicPerfkitNetClient::BasicPerfkitNetClient()
 
 void BasicPerfkitNetClient::InitializeSession(const string& keyUri)
 {
+    _key                                              = keyUri;
     ((PerfkitNetClientRpcMonitor*)&*_monitor)->_owner = weak_from_this();
 }
 
@@ -88,7 +89,7 @@ void BasicPerfkitNetClient::RenderTickSession()
     ImGui::PushStyleColor(ImGuiCol_Header, IsSessionOpen() ? 0xff'257d47 : ImGui::GetColorU32(ImGuiCol_Header));
     bool bKeepConnection = true;
 
-    if (ImGui::CollapsingHeader("Summary", &bKeepConnection, ImGuiTreeNodeFlags_DefaultOpen))
+    if (ImGui::CollapsingHeader(usprintf("%s###SessInfo", _key.c_str()), &bKeepConnection, ImGuiTreeNodeFlags_DefaultOpen))
         if (CPPH_TMPVAR{ImGui::ChildWindowGuard{"SummaryGroup"}})
         {
             if (ShouldRenderSessionListEntityContent())
@@ -133,8 +134,8 @@ void BasicPerfkitNetClient::_onSessionCreate_(const msgpack::rpc::session_profil
 {
     NotifyToast("Rpc Session Created").String(profile.peer_name);
 
-    auto info   = decltype(service::session_info)::return_type{};
-    auto result = service::session_info(*_rpc).rpc(&info, 1s);
+    auto sesionInfo = decltype(service::session_info)::return_type{};
+    auto result     = service::session_info(*_rpc).rpc(&sesionInfo, 1s);
 
     if (result != msgpack::rpc::rpc_status::okay)
     {
@@ -142,8 +143,14 @@ void BasicPerfkitNetClient::_onSessionCreate_(const msgpack::rpc::session_profil
         return;
     }
 
+    auto ttyContent = decltype(service::fetch_tty)::return_type{};
+    service::fetch_tty(*_rpc).rpc(&ttyContent, 0);
+
     PostEventMainThreadWeak(weak_from_this(),
-                            [this, info = std::move(info), peer = profile.peer_name]() mutable {
+                            [this,
+                             info       = std::move(sesionInfo),
+                             peer       = profile.peer_name,
+                             ttyContent = std::move(ttyContent)]() mutable {
                                 _sessionInfo  = std::move(info);
 
                                 auto introStr = fmt::format(
@@ -167,7 +174,8 @@ void BasicPerfkitNetClient::_onSessionCreate_(const msgpack::rpc::session_profil
 
                                 _ttyQueue.access(
                                         [&](string& str) {
-                                            str.append(std::move(introStr));
+                                            str.append(introStr);
+                                            str.append(ttyContent.content);
                                         });
                             });
 }
@@ -227,7 +235,8 @@ void BasicPerfkitNetClient::tickHeartbeat()
 void BasicPerfkitNetClient::CloseSession()
 {
     ISession::CloseSession();
-    _hrpcHeartbeat.abort();
+
+    if (_hrpcHeartbeat) { _hrpcHeartbeat.abort(); }
 }
 
 void BasicPerfkitNetClient::drawTTY()
@@ -297,34 +306,32 @@ void BasicPerfkitNetClient::drawTTY()
 
     ImGui::Spacing();
 
-    if (CPPH_CALL_ON_EXIT(ImGui::EndChild()); ImGui::BeginChild("TtySendText", {}, true))
     {
-        ImGui::Checkbox("Scroll Lock", &_.bScrollLock);
-        ImGui::SameLine();
+        auto beginCursorPos = ImGui::GetCursorPosY();
 
-        if (ImGui::Button("Clear All"))
+        if (CPPH_TMPVAR{ImGui::ChildWindowGuard{"ConfPanel"}})
         {
-            _.colorizeFence = 0;
-            _tty.SetReadOnly(false);
-            _tty.SelectAll();
-            _tty.Delete();
-            _tty.SetReadOnly(true);
+            ImGui::Checkbox("Scroll Lock", &_.bScrollLock);
+            ImGui::SameLine();
+
+            if (ImGui::Button("Clear All"))
+            {
+                _.colorizeFence = 0;
+                _tty.SetReadOnly(false);
+                _tty.SelectAll();
+                _tty.Delete();
+                _tty.SetReadOnly(true);
+            }
         }
 
-        ImGui::Separator();
-
-        ImGui::Text("$");
-        ImGui::SameLine();
         ImGui::SetNextItemWidth(-1);
-        ImGui::InputText("##EnterCommand", _.cmdBuf, sizeof _.cmdBuf);
-        _.uiControlPadHeight = ImGui::GetCursorPosY() + ImGui::GetStyle().WindowPadding.y;
+        ImGui::InputTextWithHint("##EnterCommand", "Enter Command Here", _.cmdBuf, sizeof _.cmdBuf);
+        _.uiControlPadHeight = ImGui::GetCursorPosY() - beginCursorPos;
     }
 }
 
 void BasicPerfkitNetClient::drawButtonsPanel()
 {
-    auto contentWdiv3 = ImGui::GetContentRegionAvail().x / 3;
-
     ImGui::Checkbox("Config Window", &_uiState.bConfigOpen);
     ImGui::SameLine(), ImGui::Checkbox("Trace Window", &_uiState.bTraceOpen);
 }
