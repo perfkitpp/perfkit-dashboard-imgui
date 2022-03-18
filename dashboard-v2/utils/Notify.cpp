@@ -16,6 +16,7 @@
 #include "Application.hpp"
 #include "imgui.h"
 #include "imgui_extension.h"
+#include "imgui_internal.h"
 
 static class NotifyContext
 {
@@ -89,7 +90,7 @@ static class NotifyContext
             constexpr auto PaddingY        = 20.f;
             constexpr auto PaddingMessageY = 10.f;
             constexpr auto Transition      = 0.4f;
-            constexpr auto DefaultOpacity  = 0.6f;
+            constexpr auto DefaultOpacity  = 1.0f;
 
             using Seconds                  = std::chrono::duration<double>;
             float      height              = 0.f;
@@ -131,23 +132,36 @@ static class NotifyContext
                 float timeFromSpawn    = Seconds(timeNow - toast->Birth).count();
                 float timeUntilDispose = toast->bInfinity ? Transition : Seconds(toast->Lifespan - timeNow).count();
 
-                float opacity          = DefaultOpacity * std::min(timeFromSpawn / Transition, timeUntilDispose / Transition);
-                ImGui::PushStyleVar(ImGuiStyleVar_Alpha, opacity);
+                float opacity          = std::min(1.f, std::min(timeFromSpawn / Transition, timeUntilDispose / Transition));
+                ImGui::PushStyleVar(ImGuiStyleVar_Alpha, opacity * (toast->stateHovering ? 1.f : 0.75f));
                 CPPH_CALL_ON_EXIT(ImGui::PopStyleVar());
+                toast->stateHovering = false;
 
-                auto wndFlags  = ToastFlags;
-                bool bKeepOpen = true;
+                auto wndFlags        = ToastFlags;
+                bool bKeepOpen       = true;
+                SetNextWindowBgAlpha(0.6f);
                 SetNextWindowSizeConstraints({150, -1}, sizeVp);
+
                 Begin(perfkit::futils::usprintf("###PDASH_TOAST%d", toast->stateIdAlloc), &bKeepOpen, wndFlags);
                 CPPH_CALL_ON_EXIT(End());
+
+                ImGui::BringWindowToDisplayFront(ImGui::GetCurrentWindow());
 
                 PushTextWrapPos(sizeVp.x / 4.f);
                 CPPH_CALL_ON_EXIT(PopTextWrapPos());
 
                 // Close condition
                 bool bCloseToast = not bKeepOpen;
-                if (IsWindowHovered() && IsMouseDoubleClicked(0))
-                    bCloseToast = true;
+                if (IsWindowHovered())
+                {
+                    toast->stateHovering = true;
+
+                    if (IsMouseDoubleClicked(ImGuiMouseButton_Left))
+                    {
+                        toast->OnForceClose();
+                        bCloseToast = true;
+                    }
+                }
 
                 // Render all decorations
                 for (auto& deco : toast->ContentDecos)
