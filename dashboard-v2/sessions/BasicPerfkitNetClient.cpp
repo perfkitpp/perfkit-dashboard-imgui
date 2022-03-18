@@ -95,12 +95,12 @@ void BasicPerfkitNetClient::RenderTickSession()
                     CPPH_CALL_ON_EXIT(ImGui::PopStyleColor(2));
                     if (*ptr)
                     {
-                        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xff126767);
+                        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
                         ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
                     }
                     else
                     {
-                        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_ButtonHovered));
+                        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_Button));
                         ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_Button));
                     }
 
@@ -297,38 +297,35 @@ void BasicPerfkitNetClient::drawTTY()
         bFrameHasInput = true;
     });
 
-    if (bFrameHasInput)
+    // When line exceeds maximum allowance ...
+    if (auto ntot = _tty.GetTotalLines(); ntot > 17999)
     {
-        // When line exceeds maximum allowance ...
-        if (auto ntot = _tty.GetTotalLines(); ntot > 17999)
-        {
-            auto lines = _tty.GetTextLines();
-            lines.erase(lines.begin(), lines.begin() + 7999);
+        auto lines = _tty.GetTextLines();
+        lines.erase(lines.begin(), lines.begin() + 7999);
 
-            _tty.SetTextLines(lines);
-            _tty.ForceColorize(_tty.GetTotalLines() - 128, -128);
+        _tty.SetTextLines(lines);
+        _tty.ForceColorize(_tty.GetTotalLines() - 128, -128);
+        _.colorizeFence = _tty.GetTotalLines();
+    }
+
+    // Apply colorization
+    // Limited number of lines can be colorized at once
+    if (_.timColorize.check_sparse())
+        if (auto ntot = _tty.GetTotalLines(); ntot != _.colorizeFence)
+        {
+            _.colorizeFence = std::max(_.colorizeFence, ntot - 128);
+            _tty.ForceColorize(_.colorizeFence - 1, -128);
             _.colorizeFence = _tty.GetTotalLines();
         }
 
-        // Apply colorization
-        // Limited number of lines can be colorized at once
-        if (_.timColorize.check_sparse())
-            if (auto ntot = _tty.GetTotalLines(); ntot != _.colorizeFence)
-            {
-                _.colorizeFence = std::max(_.colorizeFence, ntot - 128);
-                _tty.ForceColorize(_.colorizeFence - 1, -128);
-                _.colorizeFence = _tty.GetTotalLines();
-            }
-
-        // Scroll Lock
-        if (not _.bScrollLock)
-        {
-            _tty.MoveBottom();
-            _tty.MoveEnd();
-            auto xscrl = ImGui::GetScrollX();
-            ImGui::SetScrollY(ImGui::GetScrollMaxY());
-            ImGui::SetScrollX(xscrl);
-        }
+    // Scroll Lock
+    if (bFrameHasInput && not _.bScrollLock)
+    {
+        _tty.MoveBottom();
+        _tty.MoveEnd();
+        auto xscrl = ImGui::GetScrollX();
+        ImGui::SetScrollY(ImGui::GetScrollMaxY());
+        ImGui::SetScrollX(xscrl);
     }
 
     // Render

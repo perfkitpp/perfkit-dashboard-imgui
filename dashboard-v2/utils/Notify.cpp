@@ -92,7 +92,6 @@ static class NotifyContext
             constexpr auto PaddingY        = 20.f;
             constexpr auto PaddingMessageY = 10.f;
             constexpr auto Transition      = 0.4f;
-            constexpr auto DefaultOpacity  = 1.0f;
 
             using Seconds                  = std::chrono::duration<double>;
             float      height              = 0.f;
@@ -136,7 +135,7 @@ static class NotifyContext
 
                 float opacity          = std::min(1.f, std::min(timeFromSpawn / Transition, timeUntilDispose / Transition));
                 ImGui::PushStyleVar(ImGuiStyleVar_Alpha, opacity * (toast->stateHovering ? 1.f : 0.75f));
-                SetNextWindowBgAlpha(toast->stateHovering ? 1.f : 0.6f);
+                SetNextWindowBgAlpha(opacity * 0.8f);
 
                 CPPH_CALL_ON_EXIT(ImGui::PopStyleVar());
                 toast->stateHovering = false;
