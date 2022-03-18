@@ -26,6 +26,8 @@ class PerfkitTcpRawClient : public BasicPerfkitNetClient
     asio::ip::tcp::endpoint _endpoint;  // Active endpoint
 
     string                  _uiStateMessage;  // UI State
+    std::atomic<asio::ip::tcp::socket*>
+            _sockPtrConnecting = {};  // Has value during connecting
 
    public:
     void InitializeSession(const string& keyUri) override;

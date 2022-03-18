@@ -30,6 +30,7 @@ void PerfkitTcpRawClient::RenderSessionListEntityContent()
         case EConnectionState::Offline:
             if (ImGui::Button(usprintf("Connect##%s", _uri.c_str()), {-1, 0}))
             {
+                _sockPtrConnecting.store(nullptr);
                 GetRpc()->disconnect_all();
 
                 _state = EConnectionState::Connecting;
@@ -39,7 +40,14 @@ void PerfkitTcpRawClient::RenderSessionListEntityContent()
                         .Permanent()
                         .Spinner()
                         .String("(TCP_RAW) {}", _uri)
-                        .Custom([this, self = weak_from_this()] { return self.expired() || _state != EConnectionState::Connecting; });
+                        .Custom([this, self = weak_from_this()] { return self.expired() || _state != EConnectionState::Connecting; })
+                        .OnForceClose([this] {
+                            auto ptr = _sockPtrConnecting.exchange(nullptr);
+                            if (not ptr) { return; }
+
+                            ptr->close();
+                            _sockPtrConnecting.exchange(ptr);
+                        });
 
                 _uiStateMessage = fmt::format("Connecting to [{}] ...", _uri);
             }
@@ -134,9 +142,12 @@ void PerfkitTcpRawClient::startConnection()
     try
     {
         tcp::socket sock{_exec};
-
         sock.open(_endpoint.protocol());
+
+        _sockPtrConnecting.exchange(&sock);
         sock.connect(_endpoint);
+        while (nullptr == _sockPtrConnecting.exchange(nullptr)) { std::this_thread::sleep_for(10ms); }
+        if (not sock.is_open()) { throw std::runtime_error{"User aborted connection"}; }
 
         NotifyToast{"Connected"}.String("Connection to session [{}] successfully established.", _uri);
         fnTransitTo(EConnectionState::OnlineReadOnly);
@@ -147,6 +158,10 @@ void PerfkitTcpRawClient::startConnection()
     {
         NotifyToast{"Connection Failed"}.Error().String(">> ERROR {}", ec.code().value());
         fnTransitTo(EConnectionState::Offline);
+    }
+    catch (std::exception& ec)
+    {
+        NotifyToast{"Connection Aborted"}.Error().String(">> ERROR {}", ec.what());
     }
 }
 
