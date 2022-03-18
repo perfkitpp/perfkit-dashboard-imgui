@@ -134,12 +134,13 @@ static class NotifyContext
 
                 float opacity          = std::min(1.f, std::min(timeFromSpawn / Transition, timeUntilDispose / Transition));
                 ImGui::PushStyleVar(ImGuiStyleVar_Alpha, opacity * (toast->stateHovering ? 1.f : 0.75f));
+                SetNextWindowBgAlpha(toast->stateHovering ? 1.f : 0.6f);
+
                 CPPH_CALL_ON_EXIT(ImGui::PopStyleVar());
                 toast->stateHovering = false;
 
                 auto wndFlags        = ToastFlags;
                 bool bKeepOpen       = true;
-                SetNextWindowBgAlpha(0.6f);
                 SetNextWindowSizeConstraints({150, -1}, sizeVp);
 
                 Begin(perfkit::futils::usprintf("###PDASH_TOAST%d", toast->stateIdAlloc), &bKeepOpen, wndFlags);
