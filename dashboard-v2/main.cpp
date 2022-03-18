@@ -190,7 +190,7 @@ int main(int, char**)
     }
 
     // Assure application initialization before drawing first frame.
-    Application::CreateSigleton();
+    gApp.create();
 
     // Main loop
     while (!glfwWindowShouldClose(window))
@@ -208,7 +208,7 @@ int main(int, char**)
         ImGui::NewFrame();
 
         // Primary loop
-        Application::Get()->TickMainThread();
+        gApp->TickMainThread();
 
         ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 5.f);                                                     // Round borders
         ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(43.f / 255.f, 43.f / 255.f, 43.f / 255.f, 100.f / 255.f));  // Background color
@@ -248,18 +248,18 @@ int main(int, char**)
     glfwTerminate();
 
     // Cleanup
-    Application::DestroySingleton();
+    gApp.destroy();
     return 0;
 }
 
 void DispatchEventMainThread(function<void()> fn)
 {
-    Application::Get()->PostMainThreadEvent(std::move(fn));
+    gApp->PostMainThreadEvent(std::move(fn));
 }
 
 void PostEventMainThread(function<void()> fn)
 {
-    Application::Get()->DispatchMainThreadEvent(std::move(fn));
+    gApp->DispatchMainThreadEvent(std::move(fn));
 }
 
 #include <map>

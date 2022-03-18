@@ -7,6 +7,8 @@
 #include <memory>
 #include <vector>
 
+#include <perfkit/common/utility/singleton.hxx>
+
 namespace asio {
 class io_context;
 }
@@ -51,8 +53,6 @@ class Application
 
    public:
     static Application* Get();
-    static void         CreateSigleton();
-    static void         DestroySingleton();
 
     Application();
     ~Application();
@@ -90,3 +90,5 @@ class Application
     //! Dispatch
     void DispatchMainThreadEvent(perfkit::function<void()> callable);
 };
+
+constexpr auto gApp = perfkit::singleton_t<Application>{};

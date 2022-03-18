@@ -470,15 +470,5 @@ static unique_ptr<Application> gAppSingleton;
 //
 Application* Application::Get()
 {
-    return &*gAppSingleton;
-}
-
-void Application::CreateSigleton()
-{
-    gAppSingleton = std::make_unique<Application>();
-}
-
-void Application::DestroySingleton()
-{
-    gAppSingleton.reset();
+    return &gApp.get();
 }
