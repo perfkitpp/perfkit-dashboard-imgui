@@ -14,6 +14,9 @@ set(
 
         sessions/BasicPerfkitNetClient.cpp
         sessions/PerfkitTcpRawClient.cpp
+
+        widgets/ConfigWindow.cpp
+        widgets/TraceWindow.cpp
 )
 
 #
