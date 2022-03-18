@@ -77,4 +77,11 @@ class ChildWindowGuard
     operator bool() const noexcept { return _draw; }
 };
 
+void        PushStatefulColors(ImGuiCol idx, ImVec4 const& color);
+void        PushStatefulColorsUni(ImGuiCol idx, ImVec4 const& color);
+void        PopStatefulColors();
+
+inline void PushStatefulColors(ImGuiCol idx, ImU32 color) { PushStatefulColors(idx, ImGui::ColorConvertU32ToFloat4(color)); }
+inline void PushStatefulColorsUni(ImGuiCol idx, ImU32 color) { PushStatefulColorsUni(idx, ImGui::ColorConvertU32ToFloat4(color)); }
+
 }  // namespace ImGui

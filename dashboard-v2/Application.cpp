@@ -165,9 +165,7 @@ void Application::drawSessionList(bool* bKeepOpen)
     ImGui::BeginChild("Session-List", {0, 0}, true);
 
     char       textBuf[256];
-    auto const colorBase    = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyleColorVec4(ImGuiCol_Header));
-    auto const offsetActive = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyleColorVec4(ImGuiCol_HeaderActive)) - colorBase;
-    auto const offsetHover  = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyleColorVec4(ImGuiCol_HeaderHovered)) - colorBase;
+    auto const colorBase = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyleColorVec4(ImGuiCol_Header));
 
     for (auto iter = _sessions.begin(); iter != _sessions.end();)
     {
@@ -177,8 +175,7 @@ void Application::drawSessionList(bool* bKeepOpen)
         bool const bIsSessionOpen = sess.Ref->IsSessionOpen();
         bool       bOpenStatus    = true;
         auto       headerFlag     = 0;
-        int        colorPopCount  = 3;
-        CPPH_CALL_ON_EXIT(ImGui::PopStyleColor(colorPopCount));
+        CPPH_CALL_ON_EXIT(ImGui::PopStatefulColors());
 
         auto baseColor       = bIsSessionOpen ? 0xff'113d16 : 0xff'080808;
         baseColor            = sess.bPendingClose ? 0xff'37b8db : baseColor;
@@ -188,15 +185,11 @@ void Application::drawSessionList(bool* bKeepOpen)
         if (not bRenderContents)
         {
             headerFlag |= ImGuiTreeNodeFlags_Bullet;
-            ImGui::PushStyleColor(ImGuiCol_Header, baseColor);
-            ImGui::PushStyleColor(ImGuiCol_HeaderActive, baseColor);
-            ImGui::PushStyleColor(ImGuiCol_HeaderHovered, baseColor);
+            ImGui::PushStatefulColorsUni(ImGuiCol_Header, baseColor);
         }
         else
         {
-            ImGui::PushStyleColor(ImGuiCol_Header, baseColor);
-            ImGui::PushStyleColor(ImGuiCol_HeaderActive, baseColor + offsetActive);
-            ImGui::PushStyleColor(ImGuiCol_HeaderHovered, baseColor + offsetHover);
+            ImGui::PushStatefulColors(ImGuiCol_Header, baseColor);
         }
 
         sprintf(textBuf, "%s###SLB-%s-%d",
@@ -453,15 +446,17 @@ void Application::tickSessions()
         sess.Ref->TickSession();
         if (not sess.bShow) { continue; }
 
-        CPPH_CALL_ON_EXIT(ImGui::End());
         auto nameStr = usprintf("%s@%s###%s-%d.SSNWND",
                                 sess.CachedDisplayName.c_str(),
                                 sess.Key.c_str(),
                                 sess.Key.c_str(),
                                 sess.Type);
 
-        if (not ImGui::Begin(nameStr, &sess.bShow)) { continue; }
-        sess.Ref->RenderTickSession();
+        ImGui::SetNextWindowSize({640, 480}, ImGuiCond_Once);
+        if (CPPH_CALL_ON_EXIT(ImGui::End()); ImGui::Begin(nameStr, &sess.bShow))
+        {
+            sess.Ref->RenderTickSession();
+        }
     }
 }
 

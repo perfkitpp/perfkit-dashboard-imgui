@@ -37,6 +37,13 @@ class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNe
     TextEditor              _tty;
     perfkit::locked<string> _ttyQueue;
 
+    // Flags
+    struct
+    {
+        bool bConfigOpen = false;
+        bool bTraceOpen  = false;
+    } _uiState;
+
    public:
     BasicPerfkitNetClient();
     ~BasicPerfkitNetClient();
@@ -50,7 +57,8 @@ class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNe
    private:
     void tickHeartbeat();
 
-    void tickTTY();
+    void drawButtonsPanel();
+    void drawTTY();
 
    protected:
     //! @note Connection to server must be unique!

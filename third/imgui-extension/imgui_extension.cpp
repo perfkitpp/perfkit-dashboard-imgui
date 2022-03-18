@@ -158,7 +158,8 @@ bool BeginChildAutoHeight(const char* key, float width, ImGuiWindowFlags flags)
 {
     auto heightPtr = findStorage("%s?%s", ImGui::GetCurrentWindow()->Name, key);
     if (*heightPtr == 0) { *heightPtr = 1.f; };
-    return ImGui::BeginChild(key, {width, *heightPtr}, true, flags);
+    auto height = *heightPtr + ImGui::GetStyle().WindowPadding.y - 2;
+    return ImGui::BeginChild(key, {width, height}, true, flags);
 }
 
 void EndChildAutoHeight(const char* key)
@@ -166,7 +167,30 @@ void EndChildAutoHeight(const char* key)
     float height = GetCursorPosY();
 
     ImGui::EndChild();
-    *findStorage("%s?%s", ImGui::GetCurrentWindow()->Name, key) = height + 5.f;
+    *findStorage("%s?%s", ImGui::GetCurrentWindow()->Name, key) = height;
+}
+
+void PushStatefulColors(ImGuiCol idx, ImVec4 const& color)
+{
+    auto& base   = ImGui::GetStyleColorVec4(idx);
+    auto& state1 = ImGui::GetStyleColorVec4(idx + 1);
+    auto& state2 = ImGui::GetStyleColorVec4(idx + 2);
+
+    ImGui::PushStyleColor(idx + 0, color);
+    ImGui::PushStyleColor(idx + 1, color + state1 - base);
+    ImGui::PushStyleColor(idx + 2, color + state2 - base);
+}
+
+void PopStatefulColors()
+{
+    ImGui::PopStyleColor(3);
+}
+
+void PushStatefulColorsUni(ImGuiCol idx, const ImVec4& color)
+{
+    ImGui::PushStyleColor(idx, color);
+    ImGui::PushStyleColor(idx + 1, color);
+    ImGui::PushStyleColor(idx + 2, color);
 }
 
 }  // namespace ImGui

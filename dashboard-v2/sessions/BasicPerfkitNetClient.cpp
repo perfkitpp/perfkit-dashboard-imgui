@@ -6,7 +6,10 @@
 
 #include <asio/dispatch.hpp>
 #include <asio/post.hpp>
+#include <perfkit/common/macros.hxx>
 #include <perfkit/common/refl/msgpack-rpc/context.hxx>
+
+#include "imgui_extension.h"
 
 using namespace perfkit;
 using namespace net::message;
@@ -76,14 +79,47 @@ void BasicPerfkitNetClient::FetchSessionDisplayName(std::string* outName)
 
 void BasicPerfkitNetClient::RenderTickSession()
 {
+    auto constexpr HEADER_FLAGS
+            = ImGuiTreeNodeFlags_NoTreePushOnOpen
+            | ImGuiTreeNodeFlags_FramePadding
+            | ImGuiTreeNodeFlags_SpanFullWidth;
+
     // State summary (bandwidth, memory usage, etc ...)
+    ImGui::PushStyleColor(ImGuiCol_Header, IsSessionOpen() ? 0xff'257d47 : ImGui::GetColorU32(ImGuiCol_Header));
+    bool bKeepConnection = true;
+
+    if (ImGui::CollapsingHeader("Summary", &bKeepConnection, ImGuiTreeNodeFlags_DefaultOpen))
+        if (CPPH_TMPVAR{ImGui::ChildWindowGuard{"SummaryGroup"}})
+        {
+            if (ShouldRenderSessionListEntityContent())
+            {
+                CPPH_TMPVAR{ImGui::ChildWindowGuard{"ConnectionInfo"}};
+                RenderSessionListEntityContent();
+                ImGui::Spacing();
+            }
+
+            ImGui::Text("Session State Here");
+        }
+
+    if (not bKeepConnection)
+    {
+        CloseSession();
+    }
+
+    ImGui::PopStyleColor();
 
     // Basic buttons for opening config/trace
+    if (CPPH_TMPVAR{ImGui::ChildWindowGuard{"ButtonsPanel"}})
+        drawButtonsPanel();
 
-    // List of available GUI window
+    // List of available GUI windows
+    if (ImGui::TreeNodeEx("Windows", HEADER_FLAGS))
+        ;
 
-    if (ImGui::CollapsingHeader("Terminal", ImGuiTreeNodeFlags_DefaultOpen))
-        tickTTY();
+    // TTY
+    if (ImGui::TreeNodeEx("Terminal", ImGuiTreeNodeFlags_DefaultOpen | HEADER_FLAGS))
+        if (CPPH_CALL_ON_EXIT(ImGui::EndChild()); ImGui::BeginChild("TerminalGroup", {}, true))
+            drawTTY();
 }
 
 void BasicPerfkitNetClient::TickSession()
@@ -107,14 +143,52 @@ void BasicPerfkitNetClient::_onSessionCreate_(const msgpack::rpc::session_profil
     }
 
     PostEventMainThreadWeak(weak_from_this(),
-                            [this, info = std::move(info)]() mutable {
-                                _sessionInfo = std::move(info);
+                            [this, info = std::move(info), peer = profile.peer_name]() mutable {
+                                _sessionInfo  = std::move(info);
+
+                                auto introStr = fmt::format(
+                                        "\n\n"
+                                        "+---------------------------------------- NEW SESSION -----------------------------------------\n"
+                                        "| \n"
+                                        "| \n"
+                                        "| Name               : {}\n"
+                                        "| Host               : {}\n"
+                                        "| Peer               : {}\n"
+                                        "| Number of cores    : {}\n"
+                                        "| \n"
+                                        "| {}\n"
+                                        "+----------------------------------------------------------------------------------------------\n"
+                                        "\n\n",
+                                        _sessionInfo.name,
+                                        _sessionInfo.hostname,
+                                        peer,
+                                        _sessionInfo.num_cores,
+                                        _sessionInfo.description);
+
+                                _ttyQueue.access(
+                                        [&](string& str) {
+                                            str.append(std::move(introStr));
+                                        });
                             });
 }
 
 void BasicPerfkitNetClient::_onSessionDispose_(const msgpack::rpc::session_profile& profile)
 {
     NotifyToast("Rpc Session Disposed").Wanrning().String(profile.peer_name);
+    _ttyQueue.access([&](auto&& str) {
+        str.append(fmt::format(
+                std::locale("en_US.utf-8"),
+                "\n\n"
+                "<eof>\n"
+                "    PEER     : {}\n"
+                "    Rx       : {:<24L} bytes\n"
+                "    Tx       : {:<24L} bytes\n"
+                "</eof>\n"
+                "\n\n",
+                profile.peer_name,
+                profile.total_read,
+                profile.total_write));
+    });
     CloseSession();
 }
 
@@ -156,39 +230,101 @@ void BasicPerfkitNetClient::CloseSession()
     _hrpcHeartbeat.abort();
 }
 
-void BasicPerfkitNetClient::tickTTY()
+void BasicPerfkitNetClient::drawTTY()
 {
     struct TtyContext
     {
         perfkit::poll_timer timColorize{250ms};
         bool                bScrollLock   = false;
         int                 colorizeFence = 0;
+
+        char                cmdBuf[512];
+
+        float               uiControlPadHeight = 0;
     };
-    auto& _ = RefAny<TtyContext>("TTY");
+    auto& _              = RefAny<TtyContext>("TTY");
+    bool  bFrameHasInput = false;
 
     // Retrieve buffer content
-    _ttyQueue.access([this](string& str) {
+    _ttyQueue.access([&](string& str) {
         if (str.empty()) { return; }
         _tty.SetReadOnly(false);
         _tty.AppendTextAtEnd(str.c_str());
         _tty.SetReadOnly(true);
         str.clear();
+
+        bFrameHasInput = true;
     });
 
-    // Apply colorization
-    // Limited number of lines can be colorized at once
-    if (_.timColorize.check_sparse())
-        if (auto ntot = _tty.GetTotalLines(); ntot != _.colorizeFence)
+    if (bFrameHasInput)
+    {
+        // When line exceeds maximum allowance ...
+        if (auto ntot = _tty.GetTotalLines(); ntot > 19999)
         {
-            _.colorizeFence = std::max(_.colorizeFence, ntot - 128);
-            _tty.ForceColorize(_.colorizeFence - 1);
+            TextEditor::Coordinates begin{}, end{};
+            begin.mLine = 0;
+            end.mLine   = 7999;
+
+            _tty.SetReadOnly(false);
+            _tty.SetSelection(begin, end, TextEditor::SelectionMode::Line);
+            _tty.Delete();
+            _tty.SetReadOnly(true);
+
             _.colorizeFence = _tty.GetTotalLines();
         }
 
-    // When line exceeds maximum allowance ...
+        // Apply colorization
+        // Limited number of lines can be colorized at once
+        if (_.timColorize.check_sparse())
+            if (auto ntot = _tty.GetTotalLines(); ntot != _.colorizeFence)
+            {
+                _.colorizeFence = std::max(_.colorizeFence, ntot - 128);
+                _tty.ForceColorize(_.colorizeFence - 1);
+                _.colorizeFence = _tty.GetTotalLines();
+            }
 
-    // Scroll Lock
+        // Scroll Lock
+        if (not _.bScrollLock)
+        {
+            _tty.MoveBottom();
+            _tty.MoveEnd();
+            ImGui::SetScrollY(ImGui::GetScrollMaxY());
+        }
+    }
 
     // Render
-    _tty.Render("Terminal", {}, true);
+    _tty.Render("Terminal", {0, -_.uiControlPadHeight}, true);
+
+    ImGui::Spacing();
+
+    if (CPPH_CALL_ON_EXIT(ImGui::EndChild()); ImGui::BeginChild("TtySendText", {}, true))
+    {
+        ImGui::Checkbox("Scroll Lock", &_.bScrollLock);
+        ImGui::SameLine();
+
+        if (ImGui::Button("Clear All"))
+        {
+            _.colorizeFence = 0;
+            _tty.SetReadOnly(false);
+            _tty.SelectAll();
+            _tty.Delete();
+            _tty.SetReadOnly(true);
+        }
+
+        ImGui::Separator();
+
+        ImGui::Text("$");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(-1);
+        ImGui::InputText("##EnterCommand", _.cmdBuf, sizeof _.cmdBuf);
+        _.uiControlPadHeight = ImGui::GetCursorPosY() + ImGui::GetStyle().WindowPadding.y;
+    }
+}
+
+void BasicPerfkitNetClient::drawButtonsPanel()
+{
+    auto contentWdiv3 = ImGui::GetContentRegionAvail().x / 3;
+
+    ImGui::Checkbox("Config Window", &_uiState.bConfigOpen);
+    ImGui::SameLine(), ImGui::Checkbox("Trace Window", &_uiState.bTraceOpen);
 }
