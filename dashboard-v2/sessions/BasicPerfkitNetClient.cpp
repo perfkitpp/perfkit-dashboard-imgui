@@ -199,7 +199,8 @@ void BasicPerfkitNetClient::_onSessionDispose_(const msgpack::rpc::session_profi
                 profile.total_read,
                 profile.total_write));
     });
-    CloseSession();
+
+    PostEventMainThread(bind_front_weak(weak_from_this(), [this] { CloseSession(); }));
 }
 
 BasicPerfkitNetClient::~BasicPerfkitNetClient()
