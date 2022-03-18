@@ -58,26 +58,35 @@ void PostEventMainThreadWeak(Owner_&& weakPtr, Callable_&& callable)
             weakPtr, std::forward<Callable_>(callable)));
 }
 
-template <typename Fmt_, typename... Args_>
-float* FloatRegistry(Fmt_&& fmt, Args_&&... args)
-{
-    static char keybuf[256];
-    auto        n = snprintf(keybuf, sizeof keybuf, fmt, args...);
+namespace detail {
 
-    float*      FloatRegistryImpl(string_view key);
-    return FloatRegistryImpl(string_view(keybuf, n));
+size_t RetrieveCurrentWindowName(char* buffer, int buflen);
+
+template <typename... Args_>
+string_view MkStrView(Args_&&... args)
+{
+    static char buf[256];
+    auto        n = RetrieveCurrentWindowName(buf, sizeof buf);
+    n += snprintf(buf + n, sizeof buf - n, std::forward<Args_>(args)...);
+
+    return string_view{buf, n};
 }
 
-float* FloatRegistry(std::string_view key)
-{
-    float* FloatRegistryImpl(string_view key);
-    return FloatRegistryImpl(key);
-}
+void GetVar(string_view name, int** dst);
+void GetVar(string_view name, float** dst);
+void GetVar(string_view name, bool** dst);
+void GetVar(string_view name, string** dst);
+}  // namespace detail
 
-float* FloatRegistry(char const* key)
+/**
+ * Should only be called inside of main thread !!
+ */
+template <typename Type_, typename Fmt_, typename... Args_>
+Type_& RefVar(Fmt_&& format, Args_&&... args)
 {
-    float* FloatRegistryImpl(string_view key);
-    return FloatRegistryImpl(key);
+    Type_* ptr;
+    detail::GetVar(detail::MkStrView(format, std::forward<Args_>(args)...), &ptr);
+    return *ptr;
 }
 
 #include "utils/Notify.hpp"

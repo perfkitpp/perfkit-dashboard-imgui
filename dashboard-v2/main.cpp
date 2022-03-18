@@ -8,6 +8,7 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#include "imgui_internal.h"
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #    include <GLES2/gl2.h>
 #endif
@@ -260,16 +261,49 @@ void PostEventMainThread(function<void()> fn)
 }
 
 #include <map>
+#include <variant>
 
-float* FloatRegistryImpl(string_view key)
+using RegistryVariant = std::variant<int, float, bool, std::string>;
+
+template <typename Type_>
+static Type_* LookUpRegistryVar(string_view key)
 {
-    static std::map<std::string, float, std::less<>> _storage;
-    auto                                             iter = _storage.find(key);
+    using Storage = std::map<std::string, RegistryVariant, std::less<>>;
+    static Storage _storage;
+    auto           iter = _storage.find(key);
 
     if (iter == _storage.end())
     {
-        iter = _storage.try_emplace(std::string{key}, 0.f).first;
+        iter = _storage.try_emplace(std::string{key}, Type_{}).first;
     }
 
-    return &iter->second;
+    return &std::get<Type_>(iter->second);
+}
+
+size_t detail::RetrieveCurrentWindowName(char* buffer, int buflen)
+{
+    auto name = ImGui::GetCurrentWindow()->Name;
+    auto ncpy = std::min<int>(buflen, strlen(name));
+    strncpy(buffer, name, ncpy);
+    return ncpy;
+}
+
+void detail::GetVar(string_view name, int** dst)
+{
+    *dst = LookUpRegistryVar<int>(name);
+}
+
+void detail::GetVar(string_view name, float** dst)
+{
+    *dst = LookUpRegistryVar<float>(name);
+}
+
+void detail::GetVar(string_view name, bool** dst)
+{
+    *dst = LookUpRegistryVar<bool>(name);
+}
+
+void detail::GetVar(string_view name, string** dst)
+{
+    *dst = LookUpRegistryVar<string>(name);
 }
