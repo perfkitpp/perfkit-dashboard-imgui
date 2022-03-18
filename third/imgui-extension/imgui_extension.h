@@ -24,6 +24,7 @@
 
 #pragma once
 #include <algorithm>
+#include <string>
 #include <string_view>
 
 #include "imgui.h"
@@ -61,10 +62,10 @@ class ChildWindowGuard
     bool _draw = false;
 
    public:
-    explicit ChildWindowGuard(char const* key, float width = 0., ImGuiWindowFlags flags = 0) noexcept
+    explicit ChildWindowGuard(std::string_view key, float width = 0., ImGuiWindowFlags flags = 0) noexcept
     {
         _buf[255] = 0;
-        strncpy(_buf, key, std::min(sizeof _buf - 1, strlen(key)));
+        strncpy(_buf, key.data(), std::min(sizeof _buf - 1, key.size()));
         _draw = BeginChildAutoHeight(_buf, width, flags);
     }
 

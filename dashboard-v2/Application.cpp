@@ -231,12 +231,10 @@ void Application::drawSessionList(bool* bKeepOpen)
         if (bRenderContents)
         {
             sprintf(textBuf, "%s##CHLD-%s-%d", sess.CachedDisplayName.c_str(), sess.Key.c_str(), sess.Type);
-
             ImGui::PushStyleColor(ImGuiCol_ChildBg, ImGui::GetStyleColorVec4(ImGuiCol_ChildBg) - ImVec4{.1, .1, .1, .0});
             CPPH_CALL_ON_EXIT(ImGui::PopStyleColor());
 
-            CPPH_CALL_ON_EXIT(ImGui::EndChild());
-            if (ImGui::BeginChild(textBuf, {0, 250}, true))
+            if (CPPH_TMPVAR = ImGui::ChildWindowGuard(textBuf))
             {
                 sess.Ref->RenderSessionListEntityContent();
             }

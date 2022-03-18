@@ -157,6 +157,7 @@ float* findStorage(Args_&&... args)
 bool BeginChildAutoHeight(const char* key, float width, ImGuiWindowFlags flags)
 {
     auto heightPtr = findStorage("%s?%s", ImGui::GetCurrentWindow()->Name, key);
+    if (*heightPtr == 0) { *heightPtr = 1.f; };
     return ImGui::BeginChild(key, {width, *heightPtr}, true, flags);
 }
 
