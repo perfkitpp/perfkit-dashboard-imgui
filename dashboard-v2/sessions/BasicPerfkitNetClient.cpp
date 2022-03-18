@@ -86,8 +86,10 @@ void BasicPerfkitNetClient::RenderTickSession()
             | ImGuiTreeNodeFlags_SpanFullWidth;
 
     // Basic buttons for opening config/trace
-    if (CPPH_TMPVAR{ImGui::ScopedChildWindow{"ButtonsPanel"}})
-        drawButtonsPanel();
+    // if (CPPH_TMPVAR{ImGui::ScopedChildWindow{"ButtonsPanel"}})
+    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 8);
+    drawButtonsPanel();
+    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 8);
 
     // State summary (bandwidth, memory usage, etc ...)
     ImGui::PushStyleColor(ImGuiCol_Header, IsSessionOpen() ? 0xff'257d47 : ImGui::GetColorU32(ImGuiCol_Header));
@@ -297,7 +299,9 @@ void BasicPerfkitNetClient::drawTTY()
         {
             _tty.MoveBottom();
             _tty.MoveEnd();
+            auto xscrl = ImGui::GetScrollX();
             ImGui::SetScrollY(ImGui::GetScrollMaxY());
+            ImGui::SetScrollX(xscrl);
         }
     }
 
