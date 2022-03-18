@@ -270,17 +270,13 @@ void BasicPerfkitNetClient::drawTTY()
     if (bFrameHasInput)
     {
         // When line exceeds maximum allowance ...
-        if (auto ntot = _tty.GetTotalLines(); ntot > 19999)
+        if (auto ntot = _tty.GetTotalLines(); ntot > 17999)
         {
-            TextEditor::Coordinates begin{}, end{};
-            begin.mLine = 0;
-            end.mLine   = 7999;
+            auto lines = _tty.GetTextLines();
+            lines.erase(lines.begin(), lines.begin() + 7999);
 
-            _tty.SetReadOnly(false);
-            _tty.SetSelection(begin, end, TextEditor::SelectionMode::Line);
-            _tty.Delete();
-            _tty.SetReadOnly(true);
-
+            _tty.SetTextLines(std::move(lines));
+            _tty.ForceColorize(_tty.GetTotalLines() - 128, -1);
             _.colorizeFence = _tty.GetTotalLines();
         }
 
