@@ -81,17 +81,6 @@ void BasicPerfkitNetClient::FetchSessionDisplayName(std::string* outName)
 
 void BasicPerfkitNetClient::RenderTickSession()
 {
-    auto constexpr HEADER_FLAGS
-            = ImGuiTreeNodeFlags_NoTreePushOnOpen
-            | ImGuiTreeNodeFlags_FramePadding
-            | ImGuiTreeNodeFlags_SpanFullWidth;
-
-    // Basic buttons for opening config/trace
-    // if (CPPH_TMPVAR{ImGui::ScopedChildWindow{"ButtonsPanel"}})
-    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 8);
-    drawButtonsPanel();
-    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 8);
-
     // State summary (bandwidth, memory usage, etc ...)
     ImGui::PushStyleColor(ImGuiCol_Header, IsSessionOpen() ? 0xff'257d47 : ImGui::GetColorU32(ImGuiCol_Header));
     bool bKeepConnection = true;
@@ -99,14 +88,30 @@ void BasicPerfkitNetClient::RenderTickSession()
     if (ImGui::CollapsingHeader(usprintf("%s###SessInfo", _key.c_str()), &bKeepConnection))
         if (CPPH_TMPVAR{ImGui::ScopedChildWindow{"SummaryGroup"}})
         {
-            if (ShouldRenderSessionListEntityContent())
+            auto bRenderEntityContent = ShouldRenderSessionListEntityContent();
+            auto width                = ImGui::GetContentRegionAvail().x / 2 * (bRenderEntityContent);
+            if (CPPH_TMPVAR{ImGui::ScopedChildWindow{"SessionState", width, false}})
             {
-                CPPH_TMPVAR{ImGui::ScopedChildWindow{"ConnectionInfo"}};
-                RenderSessionListEntityContent();
+                if (CPPH_TMPVAR = ImGui::ScopedChildWindow{"SessionButtonPanel"})
+                {
+                    drawButtonsPanel();
+                }
+
                 ImGui::Spacing();
+                ImGui::Text("Session State Here");
             }
 
-            ImGui::Text("Session State Here");
+            if (bRenderEntityContent)
+            {
+                ImGui::SameLine();
+                if (CPPH_TMPVAR{ImGui::ScopedChildWindow{"ConnectionInfo"}})
+                {
+                    ImGui::Text("Connection Control");
+                    ImGui::Separator();
+                    ImGui::Spacing();
+                    RenderSessionListEntityContent();
+                }
+            }
         }
 
     if (not bKeepConnection)
@@ -116,14 +121,8 @@ void BasicPerfkitNetClient::RenderTickSession()
 
     ImGui::PopStyleColor();
 
-    // List of available GUI windows
-    if (ImGui::TreeNodeEx("Windows", HEADER_FLAGS))
-        ;
-
-    // TTY
-    if (ImGui::TreeNodeEx("Terminal", ImGuiTreeNodeFlags_DefaultOpen | HEADER_FLAGS))
-        if (CPPH_CALL_ON_EXIT(ImGui::EndChild()); ImGui::BeginChild("TerminalGroup", {}, true))
-            drawTTY();
+    if (CPPH_CALL_ON_EXIT(ImGui::EndChild()); ImGui::BeginChild("TerminalGroup", {}, true))
+        drawTTY();
 }
 
 void BasicPerfkitNetClient::TickSession()
@@ -191,9 +190,10 @@ void BasicPerfkitNetClient::_onSessionDispose_(const msgpack::rpc::session_profi
                 std::locale("en_US.utf-8"),
                 "\n\n"
                 "<eof>\n"
-                "    PEER     : {}\n"
-                "    Rx       : {:<24L} bytes\n"
-                "    Tx       : {:<24L} bytes\n"
+                "    [PEER] {}\n"
+                "\n"
+                "    [Rx] {:<24L} bytes\n"
+                "    [Tx] {:<24L} bytes\n"
                 "</eof>\n"
                 "\n\n",
                 profile.peer_name,
@@ -275,7 +275,7 @@ void BasicPerfkitNetClient::drawTTY()
             auto lines = _tty.GetTextLines();
             lines.erase(lines.begin(), lines.begin() + 7999);
 
-            _tty.SetTextLines(std::move(lines));
+            _tty.SetTextLines(lines);
             _tty.ForceColorize(_tty.GetTotalLines() - 128, -1);
             _.colorizeFence = _tty.GetTotalLines();
         }
@@ -314,7 +314,7 @@ void BasicPerfkitNetClient::drawTTY()
             ImGui::Checkbox("Scroll Lock", &_.bScrollLock);
             ImGui::SameLine();
 
-            if (ImGui::Button("Clear All"))
+            if (ImGui::Button(" clear "))
             {
                 _.colorizeFence = 0;
                 _tty.SetReadOnly(false);
@@ -322,10 +322,12 @@ void BasicPerfkitNetClient::drawTTY()
                 _tty.Delete();
                 _tty.SetReadOnly(true);
             }
+
+            ImGui::SetNextItemWidth(-1);
+            ImGui::SameLine();
+            ImGui::InputTextWithHint("##EnterCommand", "Enter Command Here", _.cmdBuf, sizeof _.cmdBuf);
         }
 
-        ImGui::SetNextItemWidth(-1);
-        ImGui::InputTextWithHint("##EnterCommand", "Enter Command Here", _.cmdBuf, sizeof _.cmdBuf);
         _.uiControlPadHeight = ImGui::GetCursorPosY() - beginCursorPos;
     }
 }
@@ -334,4 +336,5 @@ void BasicPerfkitNetClient::drawButtonsPanel()
 {
     ImGui::Checkbox("Config Window", &_uiState.bConfigOpen);
     ImGui::SameLine(), ImGui::Checkbox("Trace Window", &_uiState.bTraceOpen);
+    ImGui::SameLine(), ImGui::Checkbox("Graphics Window", &_uiState.bGraphicsOpen);
 }

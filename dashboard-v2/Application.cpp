@@ -53,6 +53,8 @@ void Application::TickMainThread()
 
     if (_bDrawSessionList) { drawSessionList(&_bDrawSessionList); }
     if (_bShowMetrics) { ImGui::ShowMetricsWindow(&_bShowMetrics); }
+    if (_bShowStyles)
+        if (CPPH_CALL_ON_EXIT(ImGui::End()); ImGui::Begin("Styles", &_bShowStyles)) { ImGui::ShowStyleEditor(nullptr); }
     if (_bShowDemo) { ImGui::ShowDemoWindow(&_bShowDemo); }
 
     tickSessions();
@@ -139,9 +141,9 @@ void Application::drawMenuContents()
         ImGui::MenuItem("Sessions", "Ctrl+H", &_bDrawSessionList);
 
         ImGui::Separator();
-        ImGui::TextColored({.5f, .5f, .5f, 1.f}, "Debugging");
-
         ImGui::MenuItem("Metrics", NULL, &_bShowMetrics);
+        ImGui::MenuItem("Styles", NULL, &_bShowStyles);
+        ImGui::Separator();
         ImGui::MenuItem("Demo", NULL, &_bShowDemo);
     }
 
@@ -155,12 +157,11 @@ void Application::drawSessionList(bool* bKeepOpen)
     CPPH_CALL_ON_EXIT(ImGui::End());
     if (not ImGui::Begin("Sessions", bKeepOpen)) { return; }
 
-    ImGui::AlignTextToFramePadding(), ImGui::Text("Add Session");
+    if (ImGui::TreeNodeEx("Add Session", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_SpanAvailWidth))
+        if (CPPH_TMPVAR = ImGui::ScopedChildWindow("Session-AddNew"))
+            drawAddSessionMenu();
 
-    if (auto _scope_ = ImGui::ScopedChildWindow("Session-AddNew"))
-        drawAddSessionMenu();
-
-    ImGui::AlignTextToFramePadding(), ImGui::Text("Sessions");
+    ImGui::AlignTextToFramePadding(), ImGui::BulletText("Sessions");
     CPPH_CALL_ON_EXIT(ImGui::EndChild());
     ImGui::BeginChild("Session-List", {0, 0}, true);
 
@@ -446,7 +447,7 @@ void Application::tickSessions()
         sess.Ref->TickSession();
         if (not sess.bShow) { continue; }
 
-        auto nameStr = usprintf("%s [%s]###%s-%d.SSNWND",
+        auto nameStr = usprintf("%s [%s]###%s??%d.SSNWND",
                                 sess.CachedDisplayName.c_str(),
                                 sess.Key.c_str(),
                                 sess.Key.c_str(),

@@ -41,6 +41,7 @@ class Application
     // UI Flags - Debug
     bool _bShowMetrics = false;
     bool _bShowDemo    = false;
+    bool _bShowStyles  = false;
 
     // UI State - Add New Session
     struct

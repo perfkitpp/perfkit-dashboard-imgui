@@ -142,14 +142,11 @@ double GetGlobalTime()
     return GImGui->Time;
 }
 
-template <typename... Args_>
-float* findStorage(Args_&&... args)
+float* findStorage(std::string_view buf)
 {
-    static std::map<std::string, float> _storage;
-    char                                buf[128];
-    snprintf(buf, sizeof buf, args...);
+    static auto _storage = std::map<std::string, float, std::less<>>{};
 
-    auto iter = _storage.find(buf);
+    auto        iter     = _storage.find(buf);
     if (iter == _storage.end())
     {
         iter = _storage.try_emplace(std::string{buf}, 0.f).first;
@@ -158,12 +155,12 @@ float* findStorage(Args_&&... args)
     return &iter->second;
 }
 
-bool BeginChildAutoHeight(const char* key, float width, ImGuiWindowFlags flags)
+bool BeginChildAutoHeight(const char* key, float width, bool bBorder, ImGuiWindowFlags flags)
 {
-    auto heightPtr = findStorage("%s?%s", ImGui::GetCurrentWindow()->Name, key);
+    auto heightPtr = findStorage(key);
     if (*heightPtr == 0) { *heightPtr = 1.f; };
     auto height = *heightPtr + ImGui::GetStyle().WindowPadding.y - 2;
-    return ImGui::BeginChild(key, {width, height}, true, flags);
+    return ImGui::BeginChild(key, {width, height}, bBorder, flags);
 }
 
 void EndChildAutoHeight(const char* key)
@@ -171,7 +168,7 @@ void EndChildAutoHeight(const char* key)
     float height = GetCursorPosY();
 
     ImGui::EndChild();
-    *findStorage("%s?%s", ImGui::GetCurrentWindow()->Name, key) = height;
+    *findStorage(key) = height;
 }
 
 void PushStatefulColors(ImGuiCol idx, ImVec4 const& color)
@@ -195,6 +192,11 @@ void PushStatefulColorsUni(ImGuiCol idx, const ImVec4& color)
     ImGui::PushStyleColor(idx, color);
     ImGui::PushStyleColor(idx + 1, color);
     ImGui::PushStyleColor(idx + 2, color);
+}
+
+char const* RetrieveCurrentWindowName()
+{
+    return ImGui::GetCurrentWindow()->Name;
 }
 
 }  // namespace ImGui

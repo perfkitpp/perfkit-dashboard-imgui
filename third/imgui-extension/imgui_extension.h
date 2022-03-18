@@ -45,16 +45,18 @@ void LoadingIndicatorCircle(
         float indicator_radius = 6.,
         int circle_count = 6, float speed = 2.);
 
-void InputTextLeft(const char*            label,
-                   const char*            hint,
-                   char*                  buf,
-                   size_t                 bufSize,
-                   ImGuiInputTextFlags    flags    = 0,
-                   ImGuiInputTextCallback callback = nullptr,
-                   void*                  userData = nullptr);
+void        InputTextLeft(const char*            label,
+                          const char*            hint,
+                          char*                  buf,
+                          size_t                 bufSize,
+                          ImGuiInputTextFlags    flags    = 0,
+                          ImGuiInputTextCallback callback = nullptr,
+                          void*                  userData = nullptr);
 
-bool BeginChildAutoHeight(char const* key, float width = 0., ImGuiWindowFlags flags = 0);
-void EndChildAutoHeight(const char* key);
+bool        BeginChildAutoHeight(char const* key, float width = 0., bool bBorder = true, ImGuiWindowFlags flags = 0);
+void        EndChildAutoHeight(const char* key);
+
+char const* RetrieveCurrentWindowName();
 
 class ScopedChildWindow
 {
@@ -62,11 +64,11 @@ class ScopedChildWindow
     bool _draw = false;
 
    public:
-    explicit ScopedChildWindow(std::string_view key, float width = 0., ImGuiWindowFlags flags = 0) noexcept
+    explicit ScopedChildWindow(char const* key, float width = 0., bool bBorder = true, ImGuiWindowFlags flags = 0) noexcept
     {
         _buf[255] = 0;
-        strncpy(_buf, key.data(), std::min(sizeof _buf - 1, key.size()));
-        _draw = BeginChildAutoHeight(_buf, width, flags);
+        snprintf(_buf, sizeof _buf, "%s??%s", RetrieveCurrentWindowName(), key);
+        _draw = BeginChildAutoHeight(_buf, width, bBorder, flags);
     }
 
     ~ScopedChildWindow() noexcept

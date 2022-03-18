@@ -43,8 +43,9 @@ class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNe
     // Flags
     struct
     {
-        bool bConfigOpen = false;
-        bool bTraceOpen  = false;
+        bool bConfigOpen   = false;
+        bool bTraceOpen    = false;
+        bool bGraphicsOpen = false;
     } _uiState;
 
    public:
