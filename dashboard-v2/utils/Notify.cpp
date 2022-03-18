@@ -14,8 +14,8 @@
 #include <spdlog/spdlog.h>
 
 #include "Application.hpp"
-#include "imgui_extension.h"
 #include "imgui.h"
+#include "imgui_extension.h"
 
 static class NotifyContext
 {
@@ -132,7 +132,8 @@ static class NotifyContext
                 float timeUntilDispose = toast->bInfinity ? Transition : Seconds(toast->Lifespan - timeNow).count();
 
                 float opacity          = DefaultOpacity * std::min(timeFromSpawn / Transition, timeUntilDispose / Transition);
-                SetNextWindowBgAlpha(opacity);
+                ImGui::PushStyleVar(ImGuiStyleVar_Alpha, opacity);
+                CPPH_CALL_ON_EXIT(ImGui::PopStyleVar());
 
                 auto wndFlags  = ToastFlags;
                 bool bKeepOpen = true;

@@ -33,7 +33,7 @@
 #include "imgui_internal.h"
 
 namespace ImGui {
-bool Spinner(const char* label, const ImU32& color, float radius, int thickness, double time)
+bool Spinner(const char* label, ImU32 color, float radius, int thickness, double time)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -69,6 +69,10 @@ bool Spinner(const char* label, const ImU32& color, float radius, int thickness,
                                             centre.y + ImSin(a + time * 8) * radius));
     }
 
+    float alpha = ((color & 0xff'000000) >> 24) / 255.f;
+    alpha *= style.Alpha;
+    color &= 0x00'ffffff;
+    color |= (lround(alpha * 255.f) << 24);
     window->DrawList->PathStroke(color, false, thickness);
     return true;
 }
