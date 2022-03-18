@@ -1,4 +1,5 @@
 #pragma once
+#include <any>
 #include <chrono>
 #include <memory>
 #include <string>
@@ -72,10 +73,12 @@ string_view MkStrView(Args_&&... args)
     return string_view{buf, n};
 }
 
-void GetVar(string_view name, int** dst);
-void GetVar(string_view name, float** dst);
-void GetVar(string_view name, bool** dst);
-void GetVar(string_view name, string** dst);
+void      GetVar(string_view name, int** dst);
+void      GetVar(string_view name, float** dst);
+void      GetVar(string_view name, bool** dst);
+void      GetVar(string_view name, string** dst);
+
+std::any& GetAny(string_view name);
 }  // namespace detail
 
 /**
@@ -87,6 +90,21 @@ Type_& RefVar(Fmt_&& format, Args_&&... args)
     Type_* ptr;
     detail::GetVar(detail::MkStrView(format, std::forward<Args_>(args)...), &ptr);
     return *ptr;
+}
+
+template <typename Type_, typename Fmt_, typename... Args_>
+Type_& RefAny(Fmt_&& format, Args_&&... args)
+{
+    std::any& any    = detail::GetAny(detail::MkStrView(format, std::forward<Args_>(args)...));
+    auto      result = std::any_cast<Type_>(&any);
+
+    if (not result)
+    {
+        any    = Type_{};
+        result = std::any_cast<Type_>(&any);
+    }
+
+    return *result;
 }
 
 #include "utils/Notify.hpp"

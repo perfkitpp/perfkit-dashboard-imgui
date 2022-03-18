@@ -4,6 +4,7 @@
 
 #include "Application.hpp"
 
+#include <memory>
 #include <thread>
 
 #include <asio/dispatch.hpp>
@@ -32,12 +33,6 @@ PERFKIT_CATEGORY(GConfig::Workspace)
     };
 
     PERFKIT_CONFIGURE(ArchivedSessions, vector<SessionArchive>{}).confirm();
-}
-
-Application* Application::Get()
-{
-    static Application instance;
-    return &instance;
 }
 
 void Application::TickMainThread()
@@ -468,4 +463,22 @@ void Application::tickSessions()
         if (not ImGui::Begin(nameStr, &sess.bShow)) { continue; }
         sess.Ref->RenderTickSession();
     }
+}
+
+static unique_ptr<Application> gAppSingleton;
+
+//
+Application* Application::Get()
+{
+    return &*gAppSingleton;
+}
+
+void Application::CreateSigleton()
+{
+    gAppSingleton = std::make_unique<Application>();
+}
+
+void Application::DestroySingleton()
+{
+    gAppSingleton.reset();
 }

@@ -34,9 +34,9 @@ BasicPerfkitNetClient::BasicPerfkitNetClient()
     // Create service
     auto service = msgpack::rpc::service_info{};
     service.serve(notify::tty,
-                  [](tty_output_t& h) {
-                      printf("%s", h.content.c_str());
-                      fflush(stdout);
+                  [this](tty_output_t& h) {
+                      auto ref = _ttyQueue.lock();
+                      ref->append(h.content);
                   });
 
     // Create monitor
@@ -46,8 +46,16 @@ BasicPerfkitNetClient::BasicPerfkitNetClient()
     // Create RPC context
     _rpc = std::make_unique<msgpack::rpc::context>(
             std::move(service),
-            [](auto&& fn) { asio::dispatch(std::forward<decltype(fn)>(fn)); },
+            [guard = weak_ptr{_rpcFlushGuard}](auto&& fn) {
+                asio::dispatch(
+                        [guard = guard.lock(), fn = std::forward<decltype(fn)>(fn)] {
+                            fn();
+                        });
+            },
             _monitor);
+
+    // Tty config
+    _tty.SetReadOnly(true);
 }
 
 void BasicPerfkitNetClient::InitializeSession(const string& keyUri)
@@ -68,19 +76,14 @@ void BasicPerfkitNetClient::FetchSessionDisplayName(std::string* outName)
 
 void BasicPerfkitNetClient::RenderTickSession()
 {
-    char tbuf[128];
-    auto genId =
-            [&](char const* tag) {
-
-            };
-
     // State summary (bandwidth, memory usage, etc ...)
 
     // Basic buttons for opening config/trace
 
     // List of available GUI window
 
-    // Terminal
+    if (ImGui::CollapsingHeader("Terminal", ImGuiTreeNodeFlags_DefaultOpen))
+        tickTTY();
 }
 
 void BasicPerfkitNetClient::TickSession()
@@ -117,16 +120,19 @@ void BasicPerfkitNetClient::_onSessionDispose_(const msgpack::rpc::session_profi
 
 BasicPerfkitNetClient::~BasicPerfkitNetClient()
 {
+    std::weak_ptr anchor = std::exchange(_rpcFlushGuard, {});
+    while (not anchor.expired()) { std::this_thread::sleep_for(10ms); }
+
     _rpc.reset();
 }
 
 void BasicPerfkitNetClient::tickHeartbeat()
 {
-    if (not _timHeartbeat.check()) { return; }
+    if (not _timHeartbeat.check_sparse()) { return; }
 
     if (_hrpcHeartbeat && not _hrpcHeartbeat.wait(0ms))
     {
-        NotifyToast{"Heartbeat failed"};
+        NotifyToast{"Heartbeat failed"}.Error();
 
         CloseSession();
         return;
@@ -138,8 +144,6 @@ void BasicPerfkitNetClient::tickHeartbeat()
                     NotifyToast{"Heartbeat returned error"}
                             .Error()
                             .String(exception->what());
-                else
-                    NotifyToast{}.Trivial().String("Heartbeat!");
             };
 
     _hrpcHeartbeat = service::heartbeat(*_rpc).async_rpc(
@@ -150,4 +154,41 @@ void BasicPerfkitNetClient::CloseSession()
 {
     ISession::CloseSession();
     _hrpcHeartbeat.abort();
+}
+
+void BasicPerfkitNetClient::tickTTY()
+{
+    struct TtyContext
+    {
+        perfkit::poll_timer timColorize{250ms};
+        bool                bScrollLock   = false;
+        int                 colorizeFence = 0;
+    };
+    auto& _ = RefAny<TtyContext>("TTY");
+
+    // Retrieve buffer content
+    _ttyQueue.access([this](string& str) {
+        if (str.empty()) { return; }
+        _tty.SetReadOnly(false);
+        _tty.AppendTextAtEnd(str.c_str());
+        _tty.SetReadOnly(true);
+        str.clear();
+    });
+
+    // Apply colorization
+    // Limited number of lines can be colorized at once
+    if (_.timColorize.check_sparse())
+        if (auto ntot = _tty.GetTotalLines(); ntot != _.colorizeFence)
+        {
+            _.colorizeFence = std::max(_.colorizeFence, ntot - 128);
+            _tty.ForceColorize(_.colorizeFence - 1);
+            _.colorizeFence = _tty.GetTotalLines();
+        }
+
+    // When line exceeds maximum allowance ...
+
+    // Scroll Lock
+
+    // Render
+    _tty.Render("Terminal", {}, true);
 }

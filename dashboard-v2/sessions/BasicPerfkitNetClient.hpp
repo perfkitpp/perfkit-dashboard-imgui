@@ -5,6 +5,7 @@
 #pragma once
 #include <TextEditor.h>
 #include <perfkit/common/refl/msgpack-rpc/request_handle.hxx>
+#include <perfkit/common/thread/locked.hxx>
 #include <perfkit/common/timer.hxx>
 #include <perfkit/extension/net/protocol.hpp>
 
@@ -20,6 +21,7 @@ class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNe
 {
     unique_ptr<perfkit::msgpack::rpc::context>            _rpc;
     shared_ptr<perfkit::msgpack::rpc::if_context_monitor> _monitor;
+    std::shared_ptr<nullptr_t>                            _rpcFlushGuard = std::make_shared<nullptr_t>();
 
     //
     perfkit::msgpack::rpc::request_handle _hrpcHeartbeat;
@@ -32,7 +34,8 @@ class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNe
     service::session_info_t _sessionInfo;
 
     // TTY
-    TextEditor _tty;
+    TextEditor              _tty;
+    perfkit::locked<string> _ttyQueue;
 
    public:
     BasicPerfkitNetClient();
@@ -46,6 +49,8 @@ class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNe
 
    private:
     void tickHeartbeat();
+
+    void tickTTY();
 
    protected:
     //! @note Connection to server must be unique!

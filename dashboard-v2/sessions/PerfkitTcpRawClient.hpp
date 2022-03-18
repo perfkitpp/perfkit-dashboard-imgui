@@ -28,6 +28,13 @@ class PerfkitTcpRawClient : public BasicPerfkitNetClient
     string                  _uiStateMessage;  // UI State
 
    public:
+    ~PerfkitTcpRawClient()
+    {
+        _exec.context().stop();
+        _exec.context().join();
+    }
+
+   public:
     void InitializeSession(const string& keyUri) override;
     bool ShouldRenderSessionListEntityContent() const override;
     void RenderSessionListEntityContent() override;

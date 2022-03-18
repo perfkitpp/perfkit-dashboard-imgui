@@ -190,7 +190,7 @@ int main(int, char**)
     }
 
     // Assure application initialization before drawing first frame.
-    Application::Get();
+    Application::CreateSigleton();
 
     // Main loop
     while (!glfwWindowShouldClose(window))
@@ -247,6 +247,8 @@ int main(int, char**)
     glfwDestroyWindow(window);
     glfwTerminate();
 
+    // Cleanup
+    Application::DestroySingleton();
     return 0;
 }
 
@@ -306,4 +308,19 @@ void detail::GetVar(string_view name, bool** dst)
 void detail::GetVar(string_view name, string** dst)
 {
     *dst = LookUpRegistryVar<string>(name);
+}
+
+std::any& detail::GetAny(string_view key)
+{
+    using Storage = std::map<string, std::any, std::less<>>;
+    static Storage _storage;
+
+    auto           iter = _storage.find(key);
+
+    if (iter == _storage.end())
+    {
+        iter = _storage.try_emplace(std::string{key}).first;
+    }
+
+    return iter->second;
 }

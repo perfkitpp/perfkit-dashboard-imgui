@@ -51,6 +51,9 @@ class Application
 
    public:
     static Application* Get();
+    static void         CreateSigleton();
+    static void         DestroySingleton();
+
     Application();
     ~Application();
 
