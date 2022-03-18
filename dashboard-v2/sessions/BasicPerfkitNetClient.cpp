@@ -8,6 +8,7 @@
 #include <asio/post.hpp>
 #include <perfkit/common/macros.hxx>
 #include <perfkit/common/refl/msgpack-rpc/context.hxx>
+#include <perfkit/configs.h>
 
 #include "imgui_extension.h"
 #include "utils/Misc.hpp"
@@ -85,10 +86,11 @@ void BasicPerfkitNetClient::RenderTickSession()
     ImGui::PushStyleColor(ImGuiCol_Header, IsSessionOpen() ? 0xff'257d47 : ImGui::GetColorU32(ImGuiCol_Header));
     bool bKeepConnection        = true;
     auto bOpenSessionInfoHeader = ImGui::CollapsingHeader(
-            usprintf("%s###SessInfo", _key.c_str()),
+            usprintf("%s##SessInfo", _key.c_str()),
             &bKeepConnection);
     ImGui::PopStyleColor(1);
 
+    // Draw subwidget checkboxes
     {
         auto fnWrapCheckbox =
                 [&](const char* label, bool* ptr) {

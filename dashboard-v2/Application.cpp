@@ -21,15 +21,16 @@
 
 #include "interfaces/Session.hpp"
 
-PERFKIT_CATEGORY(GConfig::Workspace)
+PERFKIT_CATEGORY(GConfig::Application)
 {
     struct SessionArchive
     {
-        string Key;
-        int    Type = 0;
-        string DisplayName;
+        string key;
+        int    type = 0;
+        string displayName;
+        bool   bShow = false;
 
-        CPPHEADERS_DEFINE_NLOHMANN_JSON_ARCHIVER(SessionArchive, Key, Type, DisplayName);
+        CPPHEADERS_DEFINE_NLOHMANN_JSON_ARCHIVER(SessionArchive, key, type, displayName, bShow);
     };
 
     PERFKIT_CONFIGURE(ArchivedSessions, vector<SessionArchive>{}).confirm();
@@ -76,6 +77,9 @@ void Application::DispatchMainThreadEvent(perfkit::function<void()> callable)
 Application::Application()
         : _ioc(std::make_unique<asio::io_context>())
 {
+    //
+    // Register INI handler to restore previous workspace configuration file
+    //
     ImGuiSettingsHandler ini_handler;
     ini_handler.TypeName = "DashboardV2";
     ini_handler.TypeHash = ImHashStr(ini_handler.TypeName);
@@ -117,6 +121,44 @@ Application::Application()
               };
 
     ImGui::GetCurrentContext()->SettingsHandlers.push_back(ini_handler);
+
+    //
+    // Register workspace reload event for sessions
+    //
+
+    OnLoadWorkspace +=
+            [this] {
+                GConfig::Application::update();
+
+                // Load Sessions
+                _sessions.clear();
+                for (auto& desc : *GConfig::Application::ArchivedSessions)
+                {
+                    auto sess   = RegisterSessionMainThread(desc.key, ESessionType(desc.type), desc.displayName);
+                    sess->bShow = desc.bShow;
+                }
+
+                NotifyToast{}.String("{} sessions loaded", _sessions.size());
+            };
+
+    // Export Sessions
+    OnDumpWorkspace +=
+            [this] {
+                std::vector<GConfig::Application::SessionArchive> archive;
+                archive.reserve(_sessions.size());
+
+                for (auto& sess : _sessions)
+                {
+                    auto arch         = &archive.emplace_back();
+                    arch->key         = sess.Key;
+                    arch->displayName = sess.CachedDisplayName;
+                    arch->type        = int(sess.Type);
+                    arch->bShow       = sess.bShow;
+                }
+
+                GConfig::Application::ArchivedSessions.commit(std::move(archive));
+                NotifyToast{}.Trivial().String("{} sessions has been exported to {}", _sessions.size(), _workspacePath);
+            };
 }
 
 Application::~Application() = default;
@@ -336,17 +378,19 @@ void Application::drawAddSessionMenu()
     }
 }
 
-shared_ptr<ISession> CreatePerfkitTcpRawClient();
+shared_ptr<ISession>
+     CreatePerfkitTcpRawClient();
 
-bool                 Application::RegisterSessionMainThread(
-                        string keyString, ESessionType type, string_view optionalDefaultDisplayName)
+auto Application::RegisterSessionMainThread(
+        string keyString, ESessionType type, string_view optionalDefaultDisplayName)
+        -> SessionNode*
 {
     if (isSessionExist(keyString, type))
     {
         NotifyToast{"Session Creation Failed"}
                 .Error()
                 .String("Session key {} already exist", keyString);
-        return false;
+        return nullptr;
     }
 
     shared_ptr<ISession> session;
@@ -371,7 +415,7 @@ bool                 Application::RegisterSessionMainThread(
                 .Error()
                 .String("URI [{}]: Given session type is not implemented yet ...", keyString);
 
-        return false;
+        return nullptr;
     }
 
     auto elem               = &_sessions.emplace_back();
@@ -386,7 +430,7 @@ bool                 Application::RegisterSessionMainThread(
 
     NotifyToast{"Session Created"}.String("{}@{}", elem->CachedDisplayName, elem->Key);
 
-    return true;
+    return elem;
 }
 
 bool Application::isSessionExist(std::string_view name, ESessionType type)
@@ -405,38 +449,13 @@ void Application::loadWorkspace()
         return;
     }
 
-    GConfig::Workspace::update();
-
-    // Load Sessions
-    {
-        _sessions.clear();
-        for (auto& desc : *GConfig::Workspace::ArchivedSessions)
-            RegisterSessionMainThread(desc.Key, ESessionType(desc.Type), desc.DisplayName);
-        NotifyToast{}.String("{} sessions loaded", _sessions.size());
-    }
+    OnLoadWorkspace.invoke();
 }
 
 void Application::saveWorkspace()
 {
-    // Export Sessions
-    {
-        std::vector<GConfig::Workspace::SessionArchive> archive;
-        archive.reserve(_sessions.size());
+    OnDumpWorkspace.invoke();
 
-        for (auto& sess : _sessions)
-        {
-            auto arch         = &archive.emplace_back();
-            arch->Key         = sess.Key;
-            arch->DisplayName = sess.CachedDisplayName;
-            arch->Type        = int(sess.Type);
-        }
-
-        GConfig::Workspace::ArchivedSessions.commit(std::move(archive));
-
-        NotifyToast{}.Trivial().String("{} sessions exported to {}", _sessions.size(), _workspacePath);
-    }
-
-    GConfig::Workspace::update();
     perfkit::configs::export_to(_workspacePath);
 }
 

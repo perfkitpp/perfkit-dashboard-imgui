@@ -7,6 +7,7 @@
 #include <memory>
 #include <vector>
 
+#include <perfkit/common/event.hxx>
 #include <perfkit/common/utility/singleton.hxx>
 
 namespace asio {
@@ -28,6 +29,10 @@ class Application
 
         string                     CachedDisplayName;
     };
+
+   public:
+    perfkit::event<> OnLoadWorkspace;
+    perfkit::event<> OnDumpWorkspace;
 
    private:
     unique_ptr<asio::io_context> _ioc;
@@ -64,7 +69,7 @@ class Application
 
     //! Register session with given key ...
     //! All sessions must be
-    bool RegisterSessionMainThread(
+    SessionNode* RegisterSessionMainThread(
             string       keyString,
             ESessionType type,
             string_view  optionalDefaultDisplayName = {});

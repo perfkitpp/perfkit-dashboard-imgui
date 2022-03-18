@@ -92,11 +92,11 @@ Type_& RefVar(Fmt_&& format, Args_&&... args)
     return *ptr;
 }
 
-template <typename Type_, typename Fmt_, typename... Args_>
-Type_& RefAny(Fmt_&& format, Args_&&... args)
+template <typename Type_, typename... Args_>
+Type_& RefAny(char const* format, Args_&&... args)
 {
-    std::any& any    = detail::GetAny(detail::MkStrView(format, std::forward<Args_>(args)...));
-    auto      result = std::any_cast<Type_>(&any);
+    auto& any    = detail::GetAny(detail::MkStrView(format, std::forward<Args_>(args)...));
+    auto  result = std::any_cast<Type_>(&any);
 
     if (not result)
     {
