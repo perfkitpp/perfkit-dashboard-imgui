@@ -85,16 +85,20 @@ void BasicPerfkitNetClient::RenderTickSession()
             | ImGuiTreeNodeFlags_FramePadding
             | ImGuiTreeNodeFlags_SpanFullWidth;
 
+    // Basic buttons for opening config/trace
+    if (CPPH_TMPVAR{ImGui::ScopedChildWindow{"ButtonsPanel"}})
+        drawButtonsPanel();
+
     // State summary (bandwidth, memory usage, etc ...)
     ImGui::PushStyleColor(ImGuiCol_Header, IsSessionOpen() ? 0xff'257d47 : ImGui::GetColorU32(ImGuiCol_Header));
     bool bKeepConnection = true;
 
-    if (ImGui::CollapsingHeader(usprintf("%s###SessInfo", _key.c_str()), &bKeepConnection, ImGuiTreeNodeFlags_DefaultOpen))
-        if (CPPH_TMPVAR{ImGui::ChildWindowGuard{"SummaryGroup"}})
+    if (ImGui::CollapsingHeader(usprintf("%s###SessInfo", _key.c_str()), &bKeepConnection))
+        if (CPPH_TMPVAR{ImGui::ScopedChildWindow{"SummaryGroup"}})
         {
             if (ShouldRenderSessionListEntityContent())
             {
-                CPPH_TMPVAR{ImGui::ChildWindowGuard{"ConnectionInfo"}};
+                CPPH_TMPVAR{ImGui::ScopedChildWindow{"ConnectionInfo"}};
                 RenderSessionListEntityContent();
                 ImGui::Spacing();
             }
@@ -108,10 +112,6 @@ void BasicPerfkitNetClient::RenderTickSession()
     }
 
     ImGui::PopStyleColor();
-
-    // Basic buttons for opening config/trace
-    if (CPPH_TMPVAR{ImGui::ChildWindowGuard{"ButtonsPanel"}})
-        drawButtonsPanel();
 
     // List of available GUI windows
     if (ImGui::TreeNodeEx("Windows", HEADER_FLAGS))
@@ -309,7 +309,7 @@ void BasicPerfkitNetClient::drawTTY()
     {
         auto beginCursorPos = ImGui::GetCursorPosY();
 
-        if (CPPH_TMPVAR{ImGui::ChildWindowGuard{"ConfPanel"}})
+        if (CPPH_TMPVAR{ImGui::ScopedChildWindow{"ConfPanel"}})
         {
             ImGui::Checkbox("Scroll Lock", &_.bScrollLock);
             ImGui::SameLine();

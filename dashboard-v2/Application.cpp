@@ -157,7 +157,7 @@ void Application::drawSessionList(bool* bKeepOpen)
 
     ImGui::AlignTextToFramePadding(), ImGui::Text("Add Session");
 
-    if (auto _scope_ = ImGui::ChildWindowGuard("Session-AddNew"))
+    if (auto _scope_ = ImGui::ScopedChildWindow("Session-AddNew"))
         drawAddSessionMenu();
 
     ImGui::AlignTextToFramePadding(), ImGui::Text("Sessions");
@@ -222,7 +222,7 @@ void Application::drawSessionList(bool* bKeepOpen)
             ImGui::PushStyleColor(ImGuiCol_ChildBg, ImGui::GetStyleColorVec4(ImGuiCol_ChildBg) - ImVec4{.1, .1, .1, .0});
             CPPH_CALL_ON_EXIT(ImGui::PopStyleColor());
 
-            if (CPPH_TMPVAR = ImGui::ChildWindowGuard(textBuf))
+            if (CPPH_TMPVAR = ImGui::ScopedChildWindow(textBuf))
             {
                 sess.Ref->RenderSessionListEntityContent();
             }

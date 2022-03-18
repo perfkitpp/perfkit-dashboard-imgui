@@ -56,20 +56,20 @@ void InputTextLeft(const char*            label,
 bool BeginChildAutoHeight(char const* key, float width = 0., ImGuiWindowFlags flags = 0);
 void EndChildAutoHeight(const char* key);
 
-class ChildWindowGuard
+class ScopedChildWindow
 {
     char _buf[256];
     bool _draw = false;
 
    public:
-    explicit ChildWindowGuard(std::string_view key, float width = 0., ImGuiWindowFlags flags = 0) noexcept
+    explicit ScopedChildWindow(std::string_view key, float width = 0., ImGuiWindowFlags flags = 0) noexcept
     {
         _buf[255] = 0;
         strncpy(_buf, key.data(), std::min(sizeof _buf - 1, key.size()));
         _draw = BeginChildAutoHeight(_buf, width, flags);
     }
 
-    ~ChildWindowGuard() noexcept
+    ~ScopedChildWindow() noexcept
     {
         EndChildAutoHeight(_buf);
     }
