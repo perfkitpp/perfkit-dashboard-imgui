@@ -447,7 +447,7 @@ void Application::tickSessions()
         sess.Ref->TickSession();
         if (not sess.bShow) { continue; }
 
-        auto nameStr = usprintf("%s [%s]###%s??%d.SSNWND",
+        auto nameStr = usprintf("%s [%s]###%s.%d.SSNWND",
                                 sess.CachedDisplayName.c_str(),
                                 sess.Key.c_str(),
                                 sess.Key.c_str(),

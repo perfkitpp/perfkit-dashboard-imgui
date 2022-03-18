@@ -61,7 +61,6 @@ class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNe
    private:
     void tickHeartbeat();
 
-    void drawButtonsPanel();
     void drawTTY();
 
    protected:

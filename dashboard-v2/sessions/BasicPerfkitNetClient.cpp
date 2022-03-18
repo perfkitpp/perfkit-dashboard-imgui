@@ -83,33 +83,65 @@ void BasicPerfkitNetClient::RenderTickSession()
 {
     // State summary (bandwidth, memory usage, etc ...)
     ImGui::PushStyleColor(ImGuiCol_Header, IsSessionOpen() ? 0xff'257d47 : ImGui::GetColorU32(ImGuiCol_Header));
-    bool bKeepConnection = true;
+    bool bKeepConnection        = true;
+    auto bOpenSessionInfoHeader = ImGui::CollapsingHeader(
+            usprintf("%s###SessInfo", _key.c_str()),
+            &bKeepConnection);
+    ImGui::PopStyleColor(1);
 
-    if (ImGui::CollapsingHeader(usprintf("%s###SessInfo", _key.c_str()), &bKeepConnection))
+    {
+        auto fnWrapCheckbox =
+                [&](const char* label, bool* ptr) {
+                    CPPH_CALL_ON_EXIT(ImGui::PopStyleColor(2));
+                    if (*ptr)
+                    {
+                        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xff126767);
+                        ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+                    }
+                    else
+                    {
+                        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_ButtonHovered));
+                        ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_Button));
+                    }
+
+                    ImGui::SameLine();
+                    ImGui::BeginDisabled(not IsSessionOpen());
+                    if (ImGui::SmallButton(label)) { *ptr = !*ptr; }
+                    ImGui::EndDisabled();
+                };
+
+        ImGui::SameLine(0, 10), ImGui::Text("");
+        fnWrapCheckbox(" configs ", &_uiState.bConfigOpen);
+        fnWrapCheckbox(" traces ", &_uiState.bTraceOpen);
+        fnWrapCheckbox(" graphics ", &_uiState.bGraphicsOpen);
+    }
+
+    if (bOpenSessionInfoHeader)
         if (CPPH_TMPVAR{ImGui::ScopedChildWindow{"SummaryGroup"}})
         {
             auto bRenderEntityContent = ShouldRenderSessionListEntityContent();
             auto width                = ImGui::GetContentRegionAvail().x / 2 * (bRenderEntityContent);
             if (CPPH_TMPVAR{ImGui::ScopedChildWindow{"SessionState", width, false}})
             {
-                if (CPPH_TMPVAR = ImGui::ScopedChildWindow{"SessionButtonPanel"})
-                {
-                    drawButtonsPanel();
-                }
-
-                ImGui::Spacing();
-                ImGui::Text("Session State Here");
+                ImGui::BulletText("Session State");
+                ImGui::Separator();
             }
 
             if (bRenderEntityContent)
             {
                 ImGui::SameLine();
+                ImGui::PushStyleColor(ImGuiCol_ChildBg, 0xff121212);
                 if (CPPH_TMPVAR{ImGui::ScopedChildWindow{"ConnectionInfo"}})
                 {
-                    ImGui::Text("Connection Control");
+                    ImGui::PopStyleColor();
+                    ImGui::BulletText("Connection Control");
                     ImGui::Separator();
                     ImGui::Spacing();
                     RenderSessionListEntityContent();
+                }
+                else
+                {
+                    ImGui::PopStyleColor();
                 }
             }
         }
@@ -118,8 +150,6 @@ void BasicPerfkitNetClient::RenderTickSession()
     {
         CloseSession();
     }
-
-    ImGui::PopStyleColor();
 
     if (CPPH_CALL_ON_EXIT(ImGui::EndChild()); ImGui::BeginChild("TerminalGroup", {}, true))
         drawTTY();
@@ -276,7 +306,7 @@ void BasicPerfkitNetClient::drawTTY()
             lines.erase(lines.begin(), lines.begin() + 7999);
 
             _tty.SetTextLines(lines);
-            _tty.ForceColorize(_tty.GetTotalLines() - 128, -1);
+            _tty.ForceColorize(_tty.GetTotalLines() - 128, -128);
             _.colorizeFence = _tty.GetTotalLines();
         }
 
@@ -286,7 +316,7 @@ void BasicPerfkitNetClient::drawTTY()
             if (auto ntot = _tty.GetTotalLines(); ntot != _.colorizeFence)
             {
                 _.colorizeFence = std::max(_.colorizeFence, ntot - 128);
-                _tty.ForceColorize(_.colorizeFence - 1);
+                _tty.ForceColorize(_.colorizeFence - 1, -128);
                 _.colorizeFence = _tty.GetTotalLines();
             }
 
@@ -330,11 +360,4 @@ void BasicPerfkitNetClient::drawTTY()
 
         _.uiControlPadHeight = ImGui::GetCursorPosY() - beginCursorPos;
     }
-}
-
-void BasicPerfkitNetClient::drawButtonsPanel()
-{
-    ImGui::Checkbox("Config Window", &_uiState.bConfigOpen);
-    ImGui::SameLine(), ImGui::Checkbox("Trace Window", &_uiState.bTraceOpen);
-    ImGui::SameLine(), ImGui::Checkbox("Graphics Window", &_uiState.bGraphicsOpen);
 }
