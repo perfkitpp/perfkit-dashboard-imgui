@@ -10,6 +10,7 @@
 #include <perfkit/common/refl/msgpack-rpc/context.hxx>
 
 #include "imgui_extension.h"
+#include "utils/Misc.hpp"
 
 using namespace perfkit;
 using namespace net::message;
@@ -36,7 +37,7 @@ BasicPerfkitNetClient::BasicPerfkitNetClient()
 {
     // Create service
     auto service = msgpack::rpc::service_info{};
-    service.serve(notify::tty,
+    service.route(notify::tty,
                   [this](tty_output_t& h) {
                       auto ref = _ttyQueue.lock();
                       ref->append(h.content);
@@ -260,9 +261,7 @@ void BasicPerfkitNetClient::drawTTY()
     // Retrieve buffer content
     _ttyQueue.access([&](string& str) {
         if (str.empty()) { return; }
-        _tty.SetReadOnly(false);
-        _tty.AppendTextAtEnd(str.c_str());
-        _tty.SetReadOnly(true);
+        xterm_leap_escape(&_tty, str);
         str.clear();
 
         bFrameHasInput = true;

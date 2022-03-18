@@ -11,6 +11,7 @@ set(
         Application-Graphics.cpp
 
         utils/Notify.cpp
+        utils/Misc.cpp
 
         sessions/BasicPerfkitNetClient.cpp
         sessions/PerfkitTcpRawClient.cpp
