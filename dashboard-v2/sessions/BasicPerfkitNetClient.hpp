@@ -23,6 +23,9 @@ class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNe
 {
     using RpcRequestHandle = perfkit::msgpack::rpc::request_handle;
 
+    using service          = perfkit::net::message::service;
+    using notify           = perfkit::net::message::notify;
+
    private:
     string _key;
 
@@ -45,8 +48,8 @@ class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNe
     perfkit::poll_timer _timHeartbeat{1s};
 
     //
-    using service = perfkit::net::message::service;
-    service::session_info_t _sessionInfo;
+    service::session_info_t  _sessionInfo;
+    notify::session_status_t _sessionStats{};
 
     // TTY
     TextEditor              _tty;
@@ -83,6 +86,7 @@ class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNe
     void tickGrahpicsWindow(bool bEnabled) {}
 
     void drawTTY();
+    void drawSessionStateBox();
 
    protected:
     //! @note Connection to server must be unique!

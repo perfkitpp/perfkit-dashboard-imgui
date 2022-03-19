@@ -7,6 +7,7 @@
 #include <asio/dispatch.hpp>
 #include <asio/post.hpp>
 #include <perfkit/common/macros.hxx>
+#include <perfkit/common/refl/archive/json.hpp>
 #include <perfkit/common/refl/msgpack-rpc/context.hxx>
 #include <perfkit/configs.h>
 
@@ -37,12 +38,20 @@ class PerfkitNetClientRpcMonitor : public msgpack::rpc::if_context_monitor
 BasicPerfkitNetClient::BasicPerfkitNetClient()
 {
     // Create service
-    auto service = msgpack::rpc::service_info{};
-    service.route(notify::tty,
-                  [this](tty_output_t& h) {
-                      auto ref = _ttyQueue.lock();
-                      ref->append(h.content);
-                  });
+    auto service_info = msgpack::rpc::service_info{};
+    service_info
+            .route(notify::tty,
+                   [this](tty_output_t& h) {
+                       auto ref = _ttyQueue.lock();
+                       ref->append(h.content);
+                   })
+            .route(notify::new_config_category,
+                   [this](string const& key, notify::config_category_t const& root) {
+                   })
+            .route(notify::session_status,
+                   [this](notify::session_status_t const& arg) {
+                       PostEventMainThreadWeak(weak_from_this(), [this, arg] { _sessionStats = arg; });
+                   });
 
     // Create monitor
     auto monitor = std::make_shared<PerfkitNetClientRpcMonitor>();
@@ -50,7 +59,7 @@ BasicPerfkitNetClient::BasicPerfkitNetClient()
 
     // Create RPC context
     _rpc = std::make_unique<msgpack::rpc::context>(
-            std::move(service),
+            std::move(service_info),
             [guard = weak_ptr{_rpcFlushGuard}](auto&& fn) {
                 asio::dispatch(
                         [guard = guard.lock(), fn = std::forward<decltype(fn)>(fn)] {
@@ -122,11 +131,13 @@ void BasicPerfkitNetClient::RenderTickSession()
         if (CPPH_TMPVAR{ImGui::ScopedChildWindow{"SummaryGroup"}})
         {
             auto bRenderEntityContent = ShouldRenderSessionListEntityContent();
-            auto width                = ImGui::GetContentRegionAvail().x / 2 * (bRenderEntityContent);
+            auto width                = ImGui::GetContentRegionAvail().x * 3 / 5 * (bRenderEntityContent);
             if (CPPH_TMPVAR{ImGui::ScopedChildWindow{"SessionState", width, false}})
             {
-                ImGui::BulletText("Session State");
+                ImGui::BulletText("Stats");
                 ImGui::Separator();
+
+                drawSessionStateBox();
             }
 
             if (bRenderEntityContent)
@@ -136,9 +147,6 @@ void BasicPerfkitNetClient::RenderTickSession()
                 if (CPPH_TMPVAR{ImGui::ScopedChildWindow{"ConnectionInfo"}})
                 {
                     ImGui::PopStyleColor();
-                    ImGui::BulletText("Connection Control");
-                    ImGui::Separator();
-                    ImGui::Spacing();
                     RenderSessionListEntityContent();
                 }
                 else
@@ -401,14 +409,18 @@ void BasicPerfkitNetClient::RenderSessionListEntityContent()
         {
             // Draw login prompt
             static char buf[256];
-            ImGui::InputText(usprintf("ID##%p", this), buf, sizeof buf);
-            ImGui::InputText(usprintf("Password##%p", this), buf, sizeof buf);
 
+            ImGui::Text("ID"), ImGui::SameLine(30), ImGui::SetNextItemWidth(-1);
+            ImGui::InputText(usprintf("##ID.%p", this), buf, sizeof buf);
+            ImGui::Text("PW"), ImGui::SameLine(30), ImGui::SetNextItemWidth(-1);
+            ImGui::InputText(usprintf("##PW.%p", this), buf, sizeof buf);
+
+            ImGui::Spacing();
             if (ImGui::Button(usprintf("LOGIN##%p", this), {-1, 0}))
             {
                 auto fnOnLogin
                         = [this] {
-
+                              service::request_republish_config_registries(*_rpc).notify_one();
                           };
 
                 auto fnOnRpcComplete
@@ -449,4 +461,43 @@ void BasicPerfkitNetClient::RenderSessionListEntityContent()
             ImGui::Text("Logging in ...");
         }
     }
+}
+
+void BasicPerfkitNetClient::drawSessionStateBox()
+{
+    if (not IsSessionOpen())
+    {
+        ImGui::TextDisabled("-- OFFLINE --");
+        return;
+    }
+
+    auto& stat = _sessionStats;
+
+    ImGui::PushStyleColor(ImGuiCol_TextDisabled, 0xff777777);
+
+    ImGui::TextDisabled("Rx:"), ImGui::SameLine();
+    ImGui::TextUnformatted(FormatBitText(stat.bw_in, true, true));
+    ImGui::SameLine(), ImGui::SetCursorPosX(ImGui::GetContentRegionMax().x / 2);
+    ImGui::TextDisabled("Tx:"), ImGui::SameLine();
+    ImGui::TextUnformatted(FormatBitText(stat.bw_out, true, true));
+
+    ImGui::TextDisabled("MEM[VIRT]:"), ImGui::SameLine();
+    ImGui::TextUnformatted(FormatBitText(stat.memory_usage_virtual, false, false));
+    ImGui::SameLine(), ImGui::SetCursorPosX(ImGui::GetContentRegionMax().x / 2);
+    ImGui::TextDisabled("MEM[RES]:"), ImGui::SameLine();
+    ImGui::TextUnformatted(FormatBitText(stat.memory_usage_resident, false, false));
+
+    ImGui::TextDisabled("THRD:"), ImGui::SameLine();
+    ImGui::Text("%d", stat.num_threads);
+    ImGui::SameLine(0, 0), ImGui::TextDisabled(" threads active");
+
+    ImGui::TextDisabled("CPU[SYSTEM]:"), ImGui::SameLine();
+    ImGui::Text("%.2f", (stat.cpu_usage_total_system + stat.cpu_usage_total_user) * 100.);
+    ImGui::SameLine(0, 0), ImGui::TextDisabled(" / 100 %%");
+
+    ImGui::TextDisabled("CPU[SELF]:"), ImGui::SameLine();
+    ImGui::Text("%.2f", (stat.cpu_usage_self_system + stat.cpu_usage_self_user) * 100.);
+    ImGui::SameLine(0, 0), ImGui::TextDisabled(" / %.0f %%", 100. * _sessionInfo.num_cores);
+
+    ImGui::PopStyleColor();
 }
