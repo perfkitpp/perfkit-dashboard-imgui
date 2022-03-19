@@ -13,11 +13,10 @@ using perfkit::bind_front_weak;
 using perfkit::function;
 using perfkit::futils::usprintf;
 
-
-using std::make_shared;
-using std::make_unique;
-using std::make_tuple;
 using std::make_pair;
+using std::make_shared;
+using std::make_tuple;
+using std::make_unique;
 
 using std::shared_ptr;
 using std::string;
@@ -87,7 +86,18 @@ void      GetVar(string_view name, bool** dst);
 void      GetVar(string_view name, string** dst);
 
 std::any& GetAny(string_view name);
+
+double*   RefPersistentNumber(string_view name);
 }  // namespace detail
+
+/**
+ * Refer to number from persistent storage
+ */
+template <typename... Args_>
+double& RefPersistentNumber(Args_&&... strargs)
+{
+    return *detail::RefPersistentNumber(usprintf(strargs...));
+}
 
 /**
  * Should only be called inside of main thread !!

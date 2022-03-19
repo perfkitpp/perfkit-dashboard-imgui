@@ -9,7 +9,9 @@
 #include <perfkit/common/timer.hxx>
 #include <perfkit/extension/net/protocol.hpp>
 
+#include "interfaces/RpcSessionOwner.hpp"
 #include "interfaces/Session.hpp"
+#include "widgets/ConfigWindow.hpp"
 
 namespace perfkit::msgpack::rpc {
 class context;
@@ -19,7 +21,9 @@ struct session_profile;
 
 namespace message = perfkit::net::message;
 
-class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNetClient>, public ISession
+class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNetClient>,
+                              public ISession,
+                              public IRpcSessionOwner
 {
     using RpcRequestHandle = perfkit::msgpack::rpc::request_handle;
 
@@ -55,6 +59,9 @@ class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNe
     TextEditor              _tty;
     perfkit::locked<string> _ttyQueue;
 
+    // Widgets
+    widgets::ConfigWindow _wndConfig{this};
+
     // Flags
     struct
     {
@@ -65,7 +72,7 @@ class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNe
 
    public:
     BasicPerfkitNetClient();
-    ~BasicPerfkitNetClient();
+    ~BasicPerfkitNetClient() override;
 
     void FetchSessionDisplayName(std::string*) final;
     void RenderTickSession() final;
@@ -75,15 +82,14 @@ class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNe
     bool ShouldRenderSessionListEntityContent() const final;
     void RenderSessionListEntityContent() final;
 
+    auto RpcContext() -> perfkit::msgpack::rpc::context* override { return &*_rpc; }
+    auto SessionAnchor() -> weak_ptr<void> override { return _sessionAnchor; }
+
    private:
     virtual void RenderSessionOpenPrompt() = 0;
 
    private:
     void tickHeartbeat();
-
-    void tickConfigsWindow(bool bEnabled) {}
-    void tickTracesWindow(bool bEnabled) {}
-    void tickGrahpicsWindow(bool bEnabled) {}
 
     void drawTTY();
     void drawSessionStateBox();

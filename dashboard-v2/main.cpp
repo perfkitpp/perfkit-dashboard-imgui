@@ -239,6 +239,8 @@ int main(int, char**)
         glfwSwapBuffers(window);
     }
 
+    ImGui::MarkIniSettingsDirty();
+
     // Cleanup
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();

@@ -21,19 +21,29 @@
 
 #include "interfaces/Session.hpp"
 
-PERFKIT_CATEGORY(GConfig::Application)
+static auto PersistentNumberStorage()
 {
-    struct SessionArchive
+    static std::map<string, double, std::less<>> _storage;
+    return &_storage;
+}
+
+PERFKIT_CATEGORY(GConfig)
+{
+    PERFKIT_SUBCATEGORY(Application)
     {
-        string key;
-        int    type = 0;
-        string displayName;
-        bool   bShow = false;
+        struct SessionArchive
+        {
+            string key;
+            int    type = 0;
+            string displayName;
+            bool   bShow = false;
 
-        CPPHEADERS_DEFINE_NLOHMANN_JSON_ARCHIVER(SessionArchive, key, type, displayName, bShow);
-    };
+            CPPHEADERS_DEFINE_NLOHMANN_JSON_ARCHIVER(SessionArchive, key, type, displayName, bShow);
+        };
 
-    PERFKIT_CONFIGURE(ArchivedSessions, vector<SessionArchive>{}).confirm();
+        PERFKIT_CONFIGURE(ArchivedSessions, vector<SessionArchive>{}).confirm();
+        PERFKIT_CONFIGURE(Numbers, std::map<string, double, std::less<>>{}).confirm();
+    }
 }
 
 void Application::TickMainThread()
@@ -126,9 +136,9 @@ Application::Application()
     // Register workspace reload event for sessions
     //
 
-    OnLoadWorkspace +=
+    OnLoadWorkspace.add(
             [this] {
-                GConfig::Application::update();
+                GConfig::update();
 
                 // Load Sessions
                 _sessions.clear();
@@ -138,11 +148,18 @@ Application::Application()
                     sess->bShow = desc.bShow;
                 }
 
-                NotifyToast{}.String("{} sessions loaded", _sessions.size());
-            };
+                // Load global variables
+                *PersistentNumberStorage() = *GConfig::Application::Numbers;
+
+                NotifyToast{"App Config Loaded"}
+                        .Trivial()
+                        .String("{} sessions, {} numbers loaded",
+                                _sessions.size(), PersistentNumberStorage()->size());
+            },
+            perfkit::event_priority::first);
 
     // Export Sessions
-    OnDumpWorkspace +=
+    OnDumpWorkspace.add(
             [this] {
                 std::vector<GConfig::Application::SessionArchive> archive;
                 archive.reserve(_sessions.size());
@@ -157,8 +174,9 @@ Application::Application()
                 }
 
                 GConfig::Application::ArchivedSessions.commit(std::move(archive));
-                NotifyToast{}.Trivial().String("{} sessions has been exported to {}", _sessions.size(), _workspacePath);
-            };
+                GConfig::Application::Numbers.commit(*PersistentNumberStorage());
+            },
+            perfkit::event_priority::last);
 }
 
 Application::~Application() = default;
@@ -491,10 +509,19 @@ void Application::tickSessions()
     }
 }
 
-static unique_ptr<Application> gAppSingleton;
-
 //
 Application* Application::Get()
 {
     return &gApp.get();
+}
+
+double* detail::RefPersistentNumber(string_view name)
+{
+    auto& _storage = *PersistentNumberStorage();
+    auto  iter     = _storage.find(name);
+
+    if (iter == _storage.end())
+        iter = _storage.try_emplace(std::string{name}, 0).first;
+
+    return &iter->second;
 }
