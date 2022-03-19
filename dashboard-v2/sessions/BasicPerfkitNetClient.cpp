@@ -42,13 +42,11 @@ BasicPerfkitNetClient::BasicPerfkitNetClient()
     auto service_info = msgpack::rpc::service_info{};
     service_info
             .route(notify::tty,
-                   [this](tty_output_t& h) {
-                       auto ref = _ttyQueue.lock();
-                       ref->append(h.content);
-                   })
+                   [this](tty_output_t& h) { _ttyQueue.lock()->append(h.content); })
             .route(notify::new_config_category,
-                   [this](string const& key, notify::config_category_t const& root) {
-                   })
+                   bind_front(&decltype(_wndConfig)::HandleNewConfigClass, &_wndConfig))
+            .route(notify::config_entity_update,
+                   bind_front(&decltype(_wndConfig)::HandleConfigUpdate, &_wndConfig))
             .route(notify::session_status,
                    [this](notify::session_status_t const& arg) {
                        PostEventMainThreadWeak(weak_from_this(), [this, arg] { _sessionStats = arg; });
@@ -90,7 +88,7 @@ BasicPerfkitNetClient::BasicPerfkitNetClient()
 
 void BasicPerfkitNetClient::InitializeSession(const string& keyUri)
 {
-    _key = keyUri;
+    _displayKey = _key = keyUri;
     ((PerfkitNetClientRpcMonitor*)&*_monitor)->_owner = weak_from_this();
 }
 
@@ -196,12 +194,18 @@ void BasicPerfkitNetClient::TickSession()
     bool const bIsSessionOpenCache = IsSessionOpen();
     if (bIsSessionOpenCache) { tickHeartbeat(); }
 
-    _wndConfig.TickWindow();
+    _wndConfig.Tick();
+    // _wndTrace.TickWindow();
+    // _wndGraphics.TickWindow();
+
     if (_uiState.bConfigOpen)
     {
-        if (CPPH_CALL_ON_EXIT(ImGui::End()); ImGui::Begin(usprintf("[config] %s", _key.c_str())))
+        ImGui::SetNextWindowSize({240, 320}, ImGuiCond_Once);
+        auto wndName = usprintf("[config] %s###%s.CFGWND", _displayKey.c_str(), _key.c_str());
+
+        if (CPPH_CALL_ON_EXIT(ImGui::End()); ImGui::Begin(wndName, &_uiState.bConfigOpen))
         {
-            _wndConfig.RenderTickWindow();
+            _wndConfig.RenderMainWnd();
         }
     }
 }
@@ -223,41 +227,44 @@ void BasicPerfkitNetClient::_onSessionCreate_(const msgpack::rpc::session_profil
     auto ttyContent = decltype(service::fetch_tty)::return_type{};
     service::fetch_tty(*_rpc).rpc(&ttyContent, 0);
 
-    PostEventMainThreadWeak(weak_from_this(),
-                            [this,
-                             info = std::move(sesionInfo),
-                             peer = profile.peer_name,
-                             ttyContent = std::move(ttyContent),
-                             anchor = anchor]() mutable {
-                                assert(not _sessionAnchor);
-                                _sessionAnchor = anchor;
-                                _sessionInfo = std::move(info);
+    PostEventMainThreadWeak(
+            weak_from_this(),
+            [this,
+             info = std::move(sesionInfo),
+             peer = profile.peer_name,
+             ttyContent = std::move(ttyContent),
+             anchor = anchor]() mutable {
+                assert(not _sessionAnchor);
+                _sessionAnchor = anchor;
+                _sessionInfo = std::move(info);
+                _displayKey = fmt::format(
+                        "{}@{} [{}]", _sessionInfo.name, _sessionInfo.hostname, _key);
 
-                                auto introStr = fmt::format(
-                                        "\n\n"
-                                        "+---------------------------------------- NEW SESSION -----------------------------------------\n"
-                                        "| \n"
-                                        "| \n"
-                                        "| Name               : {}\n"
-                                        "| Host               : {}\n"
-                                        "| Peer               : {}\n"
-                                        "| Number of cores    : {}\n"
-                                        "| \n"
-                                        "| {}\n"
-                                        "+----------------------------------------------------------------------------------------------\n"
-                                        "\n\n",
-                                        _sessionInfo.name,
-                                        _sessionInfo.hostname,
-                                        peer,
-                                        _sessionInfo.num_cores,
-                                        _sessionInfo.description);
+                auto introStr = fmt::format(
+                        "\n\n"
+                        "+---------------------------------------- NEW SESSION -----------------------------------------\n"
+                        "| \n"
+                        "| \n"
+                        "| Name               : {}\n"
+                        "| Host               : {}\n"
+                        "| Peer               : {}\n"
+                        "| Number of cores    : {}\n"
+                        "| \n"
+                        "| {}\n"
+                        "+----------------------------------------------------------------------------------------------\n"
+                        "\n\n",
+                        _sessionInfo.name,
+                        _sessionInfo.hostname,
+                        peer,
+                        _sessionInfo.num_cores,
+                        _sessionInfo.description);
 
-                                _ttyQueue.access(
-                                        [&](string& str) {
-                                            str.append(introStr);
-                                            str.append(ttyContent.content);
-                                        });
-                            });
+                _ttyQueue.access(
+                        [&](string& str) {
+                            str.append(introStr);
+                            str.append(ttyContent.content);
+                        });
+            });
 }
 
 void BasicPerfkitNetClient::_onSessionDispose_(const msgpack::rpc::session_profile& profile)
@@ -319,6 +326,8 @@ void BasicPerfkitNetClient::CloseSession()
     if (_hrpcLogin) { _hrpcLogin.abort(); }
     _authLevel = message::auth_level_t::unauthorized;
     _sessionStats = {};
+
+    _wndConfig.ClearContexts();
 }
 
 void BasicPerfkitNetClient::drawTTY()
@@ -507,11 +516,11 @@ void BasicPerfkitNetClient::drawSessionStateBox()
 
     ImGui::TextDisabled("CPU[SYS]:"), ImGui::SameLine();
     ImGui::Text("%.2f", (stat.cpu_usage_total_system + stat.cpu_usage_total_user) * 100.);
-    ImGui::SameLine(0, 0), ImGui::TextDisabled(" / 100 %%");
+    ImGui::SameLine(0, 0), ImGui::TextDisabled(" / 100%%");
     ImGui::SameLine();
     ImGui::TextDisabled("CPU[SELF]:"), ImGui::SameLine();
     ImGui::Text("%.2f", (stat.cpu_usage_self_system + stat.cpu_usage_self_user) * 100.);
-    ImGui::SameLine(0, 0), ImGui::TextDisabled(" / %.0f %%", 100. * _sessionInfo.num_cores);
+    ImGui::SameLine(0, 0), ImGui::TextDisabled(" / %.0f%%", 100. * _sessionInfo.num_cores);
 
     ImGui::PopStyleColor();
 }

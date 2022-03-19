@@ -32,6 +32,7 @@ class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNe
 
    private:
     string _key;
+    string _displayKey;
 
     //
     unique_ptr<perfkit::msgpack::rpc::context>            _rpc;

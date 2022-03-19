@@ -29,13 +29,6 @@ target_include_directories(
         imgui-extension
 )
 
-target_compile_definitions(
-        ${PROJECT_NAME}
-
-        PUBLIC
-        IMGUI_DEFINE_MATH_OPERATORS
-)
-
 target_compile_features(
         ${PROJECT_NAME}
 

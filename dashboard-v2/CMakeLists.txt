@@ -42,6 +42,13 @@ target_link_libraries(
         perfkit::asio
 )
 
+target_compile_features(
+        ${PROJECT_NAME}
+
+        PRIVATE
+        cxx_std_17
+)
+
 target_include_directories(
         ${PROJECT_NAME}
 
@@ -65,6 +72,7 @@ if (MSVC)
 
             PRIVATE
             /utf-8
+            /Zc:__cplusplus
     )
 endif ()
 

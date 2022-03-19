@@ -1,4 +1,5 @@
 #pragma once
+
 #include <any>
 #include <chrono>
 #include <memory>
@@ -62,8 +63,7 @@ void PostEventMainThread(function<void()>);
 template <class Owner_, typename Callable_>
 void PostEventMainThreadWeak(Owner_&& weakPtr, Callable_&& callable)
 {
-    PostEventMainThread(bind_front_weak(
-            weakPtr, std::forward<Callable_>(callable)));
+    PostEventMainThread(bind_front_weak(weakPtr, std::forward<Callable_>(callable)));
 }
 
 namespace detail {
