@@ -17,17 +17,29 @@ class if_context_monitor;
 struct session_profile;
 }  // namespace perfkit::msgpack::rpc
 
+namespace message = perfkit::net::message;
+
 class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNetClient>, public ISession
 {
+    using RpcRequestHandle = perfkit::msgpack::rpc::request_handle;
+
+   private:
     string _key;
 
     //
     unique_ptr<perfkit::msgpack::rpc::context>            _rpc;
     shared_ptr<perfkit::msgpack::rpc::if_context_monitor> _monitor;
-    std::shared_ptr<nullptr_t>                            _rpcFlushGuard = std::make_shared<nullptr_t>();
+    shared_ptr<void>                                      _rpcFlushGuard = std::make_shared<nullptr_t>();
+
+    // Lifetime anchor of single session.
+    shared_ptr<void> _sessionAnchor;
 
     //
-    perfkit::msgpack::rpc::request_handle _hrpcHeartbeat;
+    RpcRequestHandle _hrpcHeartbeat;
+
+    // Login
+    RpcRequestHandle      _hrpcLogin;
+    message::auth_level_t _authLevel = message::auth_level_t::unauthorized;
 
     //
     perfkit::poll_timer _timHeartbeat{1s};
@@ -57,9 +69,18 @@ class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNe
     void TickSession() override;
     void CloseSession() override;
     void InitializeSession(const string& keyUri) override;
+    bool ShouldRenderSessionListEntityContent() const final;
+    void RenderSessionListEntityContent() final;
+
+   private:
+    virtual void RenderSessionOpenPrompt() = 0;
 
    private:
     void tickHeartbeat();
+
+    void tickConfigsWindow(bool bEnabled) {}
+    void tickTracesWindow(bool bEnabled) {}
+    void tickGrahpicsWindow(bool bEnabled) {}
 
     void drawTTY();
 

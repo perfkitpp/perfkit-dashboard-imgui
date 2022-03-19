@@ -170,13 +170,20 @@ void BasicPerfkitNetClient::RenderTickSession()
 
 void BasicPerfkitNetClient::TickSession()
 {
-    if (not IsSessionOpen()) { return; }
+    bool const bIsSessionOpenCache = IsSessionOpen();
 
-    tickHeartbeat();
+    if (bIsSessionOpenCache)
+    {
+        tickHeartbeat();
+    }
+    else
+    {
+    }
 }
 
 void BasicPerfkitNetClient::_onSessionCreate_(const msgpack::rpc::session_profile& profile)
 {
+    auto anchor = make_shared<nullptr_t>();
     NotifyToast("Rpc Session Created").String(profile.peer_name);
 
     auto sesionInfo = decltype(service::session_info)::return_type{};
@@ -195,27 +202,30 @@ void BasicPerfkitNetClient::_onSessionCreate_(const msgpack::rpc::session_profil
                             [this,
                              info       = std::move(sesionInfo),
                              peer       = profile.peer_name,
-                             ttyContent = std::move(ttyContent)]() mutable {
-                                _sessionInfo  = std::move(info);
+                             ttyContent = std::move(ttyContent),
+                             anchor     = anchor]() mutable {
+                                assert(not _sessionAnchor);
+                                _sessionAnchor = anchor;
+                                _sessionInfo   = std::move(info);
 
-                                auto introStr = fmt::format(
-                                        "\n\n"
-                                        "+---------------------------------------- NEW SESSION -----------------------------------------\n"
-                                        "| \n"
-                                        "| \n"
-                                        "| Name               : {}\n"
-                                        "| Host               : {}\n"
-                                        "| Peer               : {}\n"
-                                        "| Number of cores    : {}\n"
-                                        "| \n"
-                                        "| {}\n"
-                                        "+----------------------------------------------------------------------------------------------\n"
-                                        "\n\n",
-                                        _sessionInfo.name,
-                                        _sessionInfo.hostname,
-                                        peer,
-                                        _sessionInfo.num_cores,
-                                        _sessionInfo.description);
+                                auto introStr  = fmt::format(
+                                         "\n\n"
+                                          "+---------------------------------------- NEW SESSION -----------------------------------------\n"
+                                          "| \n"
+                                          "| \n"
+                                          "| Name               : {}\n"
+                                          "| Host               : {}\n"
+                                          "| Peer               : {}\n"
+                                          "| Number of cores    : {}\n"
+                                          "| \n"
+                                          "| {}\n"
+                                          "+----------------------------------------------------------------------------------------------\n"
+                                          "\n\n",
+                                         _sessionInfo.name,
+                                         _sessionInfo.hostname,
+                                         peer,
+                                         _sessionInfo.num_cores,
+                                         _sessionInfo.description);
 
                                 _ttyQueue.access(
                                         [&](string& str) {
@@ -281,9 +291,11 @@ void BasicPerfkitNetClient::tickHeartbeat()
 
 void BasicPerfkitNetClient::CloseSession()
 {
-    ISession::CloseSession();
+    _sessionAnchor.reset();
 
     if (_hrpcHeartbeat) { _hrpcHeartbeat.abort(); }
+    if (_hrpcLogin) { _hrpcLogin.abort(); }
+    _authLevel = message::auth_level_t::unauthorized;
 }
 
 void BasicPerfkitNetClient::drawTTY()
@@ -369,5 +381,72 @@ void BasicPerfkitNetClient::drawTTY()
         }
 
         _.uiControlPadHeight = ImGui::GetCursorPosY() - beginCursorPos;
+    }
+}
+
+bool BasicPerfkitNetClient::ShouldRenderSessionListEntityContent() const
+{
+    return not IsSessionOpen() || _authLevel == message::auth_level_t::unauthorized;
+}
+
+void BasicPerfkitNetClient::RenderSessionListEntityContent()
+{
+    if (not IsSessionOpen())
+    {
+        RenderSessionOpenPrompt();
+    }
+    else if (_authLevel == message::auth_level_t::unauthorized)
+    {
+        if (not _hrpcLogin)
+        {
+            // Draw login prompt
+            static char buf[256];
+            ImGui::InputText(usprintf("ID##%p", this), buf, sizeof buf);
+            ImGui::InputText(usprintf("Password##%p", this), buf, sizeof buf);
+
+            if (ImGui::Button(usprintf("LOGIN##%p", this), {-1, 0}))
+            {
+                auto fnOnLogin
+                        = [this] {
+
+                          };
+
+                auto fnOnRpcComplete
+                        = [this, fnOnLogin](auto&& ec) {
+                              if (ec)
+                              {
+                                  NotifyToast{"[{}]\nLogin Failed", _key}
+                                          .String(ec->what())
+                                          .Error();
+
+                                  PostEventMainThreadWeak(
+                                          weak_from_this(), [=] { _hrpcLogin.reset(); });
+                              }
+                              else
+                              {
+                                  NotifyToast{"[{}]\nLogin Successful", _key}
+                                          .String("You have {} access", _authLevel == message::auth_level_t::admin_access ? "admin" : "basic");
+                                  PostEventMainThreadWeak(
+                                          weak_from_this(), [=] { _hrpcLogin.reset(), fnOnLogin(); });
+                              }
+                          };
+
+                _hrpcLogin = service::login(*_rpc).async_rpc(
+                        &_authLevel,
+                        "serialized_content",
+                        bind_front_weak(_sessionAnchor, fnOnRpcComplete));
+
+                NotifyToast{"[{}]\nLogging in ...", _key}
+                        .Spinner()
+                        .Permanent()
+                        .Custom([this] { return _hrpcLogin; })
+                        .OnForceClose([this] { _hrpcLogin.abort(); });
+            }
+        }
+        else
+        {
+            // Draw logging in ... content
+            ImGui::Text("Logging in ...");
+        }
     }
 }

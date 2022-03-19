@@ -168,7 +168,7 @@ static class NotifyContext
                 // Render all decorations
                 for (auto& deco : toast->ContentDecos)
                 {
-                    bCloseToast |= deco();
+                    bCloseToast |= not deco();
                 }
 
                 // If given toast is erased ...
@@ -273,7 +273,7 @@ NotifyToast&& NotifyToast::String(string content) &&
     _body->ContentDecos.emplace_back(
             [content = std::move(content)] {
                 ImGui::TextUnformatted(content.c_str(), content.c_str() + content.size());
-                return false;
+                return true;
             });
 
     return _self();
@@ -286,11 +286,11 @@ NotifyToast&& NotifyToast::Button(function<void()> handler, string label) &&
                 if (ImGui::Button(label.c_str()))
                 {
                     handler();
-                    return true;
+                    return false;
                 }
                 else
                 {
-                    return false;
+                    return true;
                 }
             });
 
@@ -331,7 +331,7 @@ NotifyToast&& NotifyToast::Title(string content) &&
                 ImGui::Separator();
 
                 ImGui::PopStyleColor();
-                return false;
+                return true;
             });
 
     return _self();
@@ -342,7 +342,7 @@ NotifyToast&& NotifyToast::Separate() &&
     _body->ContentDecos.emplace_back(
             [] {
                 ImGui::Separator();
-                return false;
+                return true;
             });
 
     return _self();
@@ -354,7 +354,7 @@ NotifyToast&& NotifyToast::Spinner(int color) &&
             [color] {
                 ImGui::Spinner("SpinnerCommon", color);
                 ImGui::SameLine();
-                return false;
+                return true;
             });
 
     return _self();

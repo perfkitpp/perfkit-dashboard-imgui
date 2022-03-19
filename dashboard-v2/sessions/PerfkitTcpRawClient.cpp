@@ -18,12 +18,7 @@ void PerfkitTcpRawClient::InitializeSession(const string& keyUri)
     _uri = keyUri;
 }
 
-bool PerfkitTcpRawClient::ShouldRenderSessionListEntityContent() const
-{
-    return _state != EConnectionState::OnlineAdmin;
-}
-
-void PerfkitTcpRawClient::RenderSessionListEntityContent()
+void PerfkitTcpRawClient::RenderSessionOpenPrompt()
 {
     switch (_state)
     {
@@ -40,7 +35,7 @@ void PerfkitTcpRawClient::RenderSessionListEntityContent()
                         .Permanent()
                         .Spinner()
                         .String("(TCP_RAW) {}", _uri)
-                        .Custom([this, self = weak_from_this()] { return self.expired() || _state != EConnectionState::Connecting; })
+                        .Custom([this, self = weak_from_this()] { return not self.expired() && _state == EConnectionState::Connecting; })
                         .OnForceClose([this] {
                             auto ptr = _sockPtrConnecting.exchange(nullptr);
                             if (not ptr) { return; }

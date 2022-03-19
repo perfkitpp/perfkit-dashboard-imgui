@@ -31,10 +31,11 @@ class PerfkitTcpRawClient : public BasicPerfkitNetClient
 
    public:
     void InitializeSession(const string& keyUri) override;
-    bool ShouldRenderSessionListEntityContent() const override;
-    void RenderSessionListEntityContent() override;
     bool IsSessionOpen() const override;
     void CloseSession() override;
+
+   private:
+    void RenderSessionOpenPrompt() override;
 
    private:
     void startConnection();
