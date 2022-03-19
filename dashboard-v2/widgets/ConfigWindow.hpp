@@ -7,6 +7,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include "TextEditor.h"
 #include "interfaces/RpcSessionOwner.hpp"
 #include "perfkit/extension/net/protocol.hpp"
 
@@ -42,10 +43,19 @@ class ConfigWindow
         //! [transient]
         bool _bIsDirty = false;
         bool _bHasReceivedUpdate = false;
+
+        bool _bEditInRaw = false;
+        bool _bUpdateOnEdit = false;
     };
 
     struct ConfigCategoryContext
     {
+        //! Open status from user input. Can be overridden by filtering status
+        bool bBaseOpen = false;
+
+        //! [transient]
+        bool bFilterHitSelf = false;
+        bool bFilterHitChild = false;
     };
 
     struct ConfigRegistryContext
@@ -76,6 +86,9 @@ class ConfigWindow
     {
         //! Weak reference to edit target
         weak_ptr<ConfigEntityContext> entityRef;
+
+        //! Text editor for various context
+        TextEditor editor;
     };
 
    private:
@@ -96,7 +109,7 @@ class ConfigWindow
    public:
     void Tick() {}
     void RenderMainWnd();
-    void ClearContexts() {}
+    void ClearContexts();
 
    public:
     void HandleNewConfigClass(string const& key, notify::config_category_t const& root)

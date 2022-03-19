@@ -201,7 +201,7 @@ void BasicPerfkitNetClient::TickSession()
     if (_uiState.bConfigOpen)
     {
         ImGui::SetNextWindowSize({240, 320}, ImGuiCond_Once);
-        auto wndName = usprintf("[config] %s###%s.CFGWND", _displayKey.c_str(), _key.c_str());
+        auto wndName = usprintf("config> %s###%s.CFGWND", _displayKey.c_str(), _key.c_str());
 
         if (CPPH_CALL_ON_EXIT(ImGui::End()); ImGui::Begin(wndName, &_uiState.bConfigOpen))
         {

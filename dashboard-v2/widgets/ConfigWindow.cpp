@@ -6,6 +6,17 @@
 
 void widgets::ConfigWindow::RenderMainWnd()
 {
+    /// Render tools -> expand all, collapse all, filter, etc ...
+
+    /// If editor context is current, render it as child window, which takes upper half area
+    ///  of configuration window.
+
+    /// Render config tree recursively
+
+    /// Check for keyboard input, and perform text search on text change.
+    /// ESCAPE clears filter buffer.
+
+    /// Render text filter layer if filtering text exists. Its position is fixed-top-right
 }
 
 void widgets::ConfigWindow::_handleNewConfigClassMainThread(
@@ -48,7 +59,8 @@ void widgets::ConfigWindow::_recursiveConstructCategories(
         data->name = entity.name;
         data->description = entity.description;
 
-        data->value = json::from_msgpack(entity.initial_value);
+        if (not entity.initial_value.empty())
+            data->value = json::from_msgpack(entity.initial_value);
 
         if (not entity.opt_max.empty())
             data->optMax = json::from_msgpack(entity.opt_max);
@@ -70,4 +82,12 @@ void widgets::ConfigWindow::_cleanupRegistryContext(ConfigRegistryContext& rg)
 
     // 2. Cleanup registry contents
     rg = {};
+}
+
+void widgets::ConfigWindow::ClearContexts()
+{
+    for (auto& [name, ctx] : _ctxs)
+        _cleanupRegistryContext(ctx);
+
+    _ctxs.clear();
 }
