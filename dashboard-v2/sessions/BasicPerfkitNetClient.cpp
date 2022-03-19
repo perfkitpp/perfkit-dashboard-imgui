@@ -11,6 +11,7 @@
 #include <perfkit/common/refl/msgpack-rpc/context.hxx>
 #include <perfkit/configs.h>
 
+#include "Application.hpp"
 #include "imgui_extension.h"
 #include "utils/Misc.hpp"
 
@@ -70,6 +71,21 @@ BasicPerfkitNetClient::BasicPerfkitNetClient()
 
     // Tty config
     _tty.SetReadOnly(true);
+
+    // Config Load/Store
+    gApp->OnLoadWorkspace +=
+            [this] {
+                _uiState.bTraceOpen    = RefPersistentNumber("%s.WndTrace", _key.c_str());
+                _uiState.bConfigOpen   = RefPersistentNumber("%s.WndConfig", _key.c_str());
+                _uiState.bGraphicsOpen = RefPersistentNumber("%s.WndGraphics", _key.c_str());
+            };
+
+    gApp->OnDumpWorkspace +=
+            [this] {
+                RefPersistentNumber("%s.WndTrace", _key.c_str())    = _uiState.bTraceOpen;
+                RefPersistentNumber("%s.WndConfig", _key.c_str())   = _uiState.bConfigOpen;
+                RefPersistentNumber("%s.WndGraphics", _key.c_str()) = _uiState.bGraphicsOpen;
+            };
 }
 
 void BasicPerfkitNetClient::InitializeSession(const string& keyUri)
@@ -96,7 +112,8 @@ void BasicPerfkitNetClient::RenderTickSession()
     bool bKeepConnection        = true;
     auto bOpenSessionInfoHeader = ImGui::CollapsingHeader(
             usprintf("%s##SessInfo", _key.c_str()),
-            IsSessionOpen() ? &bKeepConnection : nullptr);
+            IsSessionOpen() ? &bKeepConnection : nullptr,
+            ImGuiTreeNodeFlags_AllowItemOverlap);
     ImGui::PopStyleColor(1);
 
     // Draw subwidget checkboxes
@@ -116,9 +133,7 @@ void BasicPerfkitNetClient::RenderTickSession()
                     }
 
                     ImGui::SameLine();
-                    ImGui::BeginDisabled(not IsSessionOpen());
                     if (ImGui::SmallButton(label)) { *ptr = !*ptr; }
-                    ImGui::EndDisabled();
                 };
 
         ImGui::SameLine(0, 10), ImGui::Text("");
@@ -179,14 +194,10 @@ void BasicPerfkitNetClient::RenderTickSession()
 void BasicPerfkitNetClient::TickSession()
 {
     bool const bIsSessionOpenCache = IsSessionOpen();
+    if (bIsSessionOpenCache) { tickHeartbeat(); }
 
-    if (bIsSessionOpenCache)
-    {
-        tickHeartbeat();
-    }
-    else
-    {
-    }
+    _wndConfig.TickWindow();
+    if (_uiState.bConfigOpen) { _wndConfig.RenderTickWindow(&_uiState.bConfigOpen); }
 }
 
 void BasicPerfkitNetClient::_onSessionCreate_(const msgpack::rpc::session_profile& profile)
@@ -285,16 +296,13 @@ void BasicPerfkitNetClient::tickHeartbeat()
         return;
     }
 
-    auto onHeartbeat =
-            [this](auto&& exception) {
+    _hrpcHeartbeat = service::heartbeat(*_rpc).async_rpc(
+            [](auto&& exception) {
                 if (exception)
                     NotifyToast{"Heartbeat returned error"}
                             .Error()
                             .String(exception->what());
-            };
-
-    _hrpcHeartbeat = service::heartbeat(*_rpc).async_rpc(
-            bind_front_weak(weak_from_this(), std::move(onHeartbeat)));
+            });
 }
 
 void BasicPerfkitNetClient::CloseSession()
@@ -303,7 +311,8 @@ void BasicPerfkitNetClient::CloseSession()
 
     if (_hrpcHeartbeat) { _hrpcHeartbeat.abort(); }
     if (_hrpcLogin) { _hrpcLogin.abort(); }
-    _authLevel = message::auth_level_t::unauthorized;
+    _authLevel    = message::auth_level_t::unauthorized;
+    _sessionStats = {};
 }
 
 void BasicPerfkitNetClient::drawTTY()
@@ -465,14 +474,13 @@ void BasicPerfkitNetClient::RenderSessionListEntityContent()
 
 void BasicPerfkitNetClient::drawSessionStateBox()
 {
-    if (not IsSessionOpen())
+    if (_authLevel < perfkit::net::message::auth_level_t::basic_access)
     {
-        ImGui::TextDisabled("-- OFFLINE --");
+        ImGui::TextDisabled("-- DISABLED --");
         return;
     }
 
     auto& stat = _sessionStats;
-
     ImGui::PushStyleColor(ImGuiCol_TextDisabled, 0xff777777);
 
     ImGui::TextDisabled("Rx:"), ImGui::SameLine();
@@ -491,10 +499,10 @@ void BasicPerfkitNetClient::drawSessionStateBox()
     ImGui::Text("%d", stat.num_threads);
     ImGui::SameLine(0, 0), ImGui::TextDisabled(" threads active");
 
-    ImGui::TextDisabled("CPU[SYSTEM]:"), ImGui::SameLine();
+    ImGui::TextDisabled("CPU[SYS]:"), ImGui::SameLine();
     ImGui::Text("%.2f", (stat.cpu_usage_total_system + stat.cpu_usage_total_user) * 100.);
     ImGui::SameLine(0, 0), ImGui::TextDisabled(" / 100 %%");
-
+    ImGui::SameLine();
     ImGui::TextDisabled("CPU[SELF]:"), ImGui::SameLine();
     ImGui::Text("%.2f", (stat.cpu_usage_self_system + stat.cpu_usage_self_user) * 100.);
     ImGui::SameLine(0, 0), ImGui::TextDisabled(" / %.0f %%", 100. * _sessionInfo.num_cores);
