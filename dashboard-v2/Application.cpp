@@ -144,7 +144,7 @@ Application::Application()
                 _sessions.clear();
                 for (auto& desc : *GConfig::Application::ArchivedSessions)
                 {
-                    auto sess   = RegisterSessionMainThread(desc.key, ESessionType(desc.type), desc.displayName);
+                    auto sess = RegisterSessionMainThread(desc.key, ESessionType(desc.type), desc.displayName);
                     sess->bShow = desc.bShow;
                 }
 
@@ -166,11 +166,11 @@ Application::Application()
 
                 for (auto& sess : _sessions)
                 {
-                    auto arch         = &archive.emplace_back();
-                    arch->key         = sess.Key;
+                    auto arch = &archive.emplace_back();
+                    arch->key = sess.Key;
                     arch->displayName = sess.CachedDisplayName;
-                    arch->type        = int(sess.Type);
-                    arch->bShow       = sess.bShow;
+                    arch->type = int(sess.Type);
+                    arch->bShow = sess.bShow;
                 }
 
                 GConfig::Application::ArchivedSessions.commit(std::move(archive));
@@ -234,13 +234,13 @@ void Application::drawSessionList(bool* bKeepOpen)
         sess.Ref->FetchSessionDisplayName(&sess.CachedDisplayName);
 
         bool const bIsSessionOpen = sess.Ref->IsSessionOpen();
-        bool       bOpenStatus    = true;
-        auto       headerFlag     = 0;
+        bool       bOpenStatus = true;
+        auto       headerFlag = 0;
         CPPH_CALL_ON_EXIT(ImGui::PopStatefulColors());
 
-        auto baseColor       = bIsSessionOpen ? 0xff'113d16 : 0xff'080808;
-        baseColor            = sess.bPendingClose ? 0xff'37b8db : baseColor;
-        sess.bPendingClose   = sess.bPendingClose && bIsSessionOpen;
+        auto baseColor = bIsSessionOpen ? 0xff'113d16 : 0xff'080808;
+        baseColor = sess.bPendingClose ? 0xff'37b8db : baseColor;
+        sess.bPendingClose = sess.bPendingClose && bIsSessionOpen;
         bool bRenderContents = sess.Ref->ShouldRenderSessionListEntityContent();
 
         if (not bRenderContents)
@@ -316,7 +316,7 @@ void Application::drawSessionList(bool* bKeepOpen)
             {
                 auto name = iter->Key;
 
-                iter      = _sessions.erase(iter);
+                iter = _sessions.erase(iter);
                 ImGui::CloseCurrentPopup();
                 ImGui::MarkIniSettingsDirty();
 
@@ -338,7 +338,7 @@ void Application::drawSessionList(bool* bKeepOpen)
 void Application::drawAddSessionMenu()
 {
     constexpr char const* ItemNames[] = {"-- NONE --", "Tcp Raw Client", "WebSocket Client"};
-    auto                  state       = &_addSessionModalState;
+    auto                  state = &_addSessionModalState;
 
     static_assert(std::size(ItemNames) == int(ESessionType::ENUM_MAX_VALUE));
 
@@ -349,8 +349,8 @@ void Application::drawAddSessionMenu()
             bool bIsSelected = (i == int(state->Selected));
             if (ImGui::Selectable(ItemNames[i], bIsSelected))
             {
-                state->Selected             = ESessionType(i);
-                state->bActivateButton      = 0 < strlen(state->UriBuffer);
+                state->Selected = ESessionType(i);
+                state->bActivateButton = 0 < strlen(state->UriBuffer);
                 state->bSetNextFocusToInput = true;
             }
 
@@ -391,7 +391,7 @@ void Application::drawAddSessionMenu()
     {
         RegisterSessionMainThread(state->UriBuffer, state->Selected);
         ImGui::MarkIniSettingsDirty();
-        state->bActivateButton      = false;
+        state->bActivateButton = false;
         state->bSetNextFocusToInput = true;
     }
 }
@@ -436,12 +436,12 @@ auto Application::RegisterSessionMainThread(
         return nullptr;
     }
 
-    auto elem               = &_sessions.emplace_back();
-    elem->Key               = std::move(keyString);
+    auto elem = &_sessions.emplace_back();
+    elem->Key = std::move(keyString);
     elem->CachedDisplayName = optionalDefaultDisplayName;
-    elem->Type              = type;
-    elem->Ref               = std::move(session);
-    elem->bShow             = false;
+    elem->Type = type;
+    elem->Ref = std::move(session);
+    elem->bShow = false;
 
     elem->Ref->InitializeSession(elem->Key);
     elem->Ref->FetchSessionDisplayName(&elem->CachedDisplayName);
@@ -484,11 +484,11 @@ void Application::tickSessions()
         sess.Ref->TickSession();
         if (not sess.bShow) { continue; }
 
-        auto       nameStr          = usprintf("%s [%s]###%s.%d.SSNWND",
-                                               sess.CachedDisplayName.c_str(),
-                                               sess.Key.c_str(),
-                                               sess.Key.c_str(),
-                                               sess.Type);
+        auto       nameStr = usprintf("%s [%s]###%s.%d.SSNWND",
+                                      sess.CachedDisplayName.c_str(),
+                                      sess.Key.c_str(),
+                                      sess.Key.c_str(),
+                                      sess.Type);
 
         bool const bDrawGreenHeader = sess.Ref->IsSessionOpen();
         if (bDrawGreenHeader)
@@ -518,7 +518,7 @@ Application* Application::Get()
 double* detail::RefPersistentNumber(string_view name)
 {
     auto& _storage = *PersistentNumberStorage();
-    auto  iter     = _storage.find(name);
+    auto  iter = _storage.find(name);
 
     if (iter == _storage.end())
         iter = _storage.try_emplace(std::string{name}, 0).first;

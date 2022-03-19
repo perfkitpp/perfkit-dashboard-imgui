@@ -113,12 +113,12 @@ Type_& RefVar(Fmt_&& format, Args_&&... args)
 template <typename Type_, typename... Args_>
 Type_& RefAny(char const* format, Args_&&... args)
 {
-    auto& any    = detail::GetAny(detail::MkStrView(format, std::forward<Args_>(args)...));
+    auto& any = detail::GetAny(detail::MkStrView(format, std::forward<Args_>(args)...));
     auto  result = std::any_cast<Type_>(&any);
 
     if (not result)
     {
-        any    = Type_{};
+        any = Type_{};
         result = std::any_cast<Type_>(&any);
     }
 

@@ -27,8 +27,8 @@ class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNe
 {
     using RpcRequestHandle = perfkit::msgpack::rpc::request_handle;
 
-    using service          = perfkit::net::message::service;
-    using notify           = perfkit::net::message::notify;
+    using service = perfkit::net::message::service;
+    using notify = perfkit::net::message::notify;
 
    private:
     string _key;
@@ -65,8 +65,8 @@ class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNe
     // Flags
     struct
     {
-        bool bConfigOpen   = false;
-        bool bTraceOpen    = false;
+        bool bConfigOpen = false;
+        bool bTraceOpen = false;
         bool bGraphicsOpen = false;
     } _uiState;
 

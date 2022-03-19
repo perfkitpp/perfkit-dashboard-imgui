@@ -103,8 +103,8 @@ void PerfkitTcpRawClient::startConnection()
     }
     else
     {
-        address         = string{uri.substr(0, pos)};
-        auto portStr    = uri.substr(pos + 1);
+        address = string{uri.substr(0, pos)};
+        auto portStr = uri.substr(pos + 1);
         auto convResult = std::from_chars(portStr.data(), portStr.data() + portStr.size(), port);
         if (convResult.ec != std::errc{} || port > 65535)
         {

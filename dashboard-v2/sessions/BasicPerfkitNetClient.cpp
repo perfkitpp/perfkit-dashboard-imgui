@@ -56,7 +56,7 @@ BasicPerfkitNetClient::BasicPerfkitNetClient()
 
     // Create monitor
     auto monitor = std::make_shared<PerfkitNetClientRpcMonitor>();
-    _monitor     = monitor;
+    _monitor = monitor;
 
     // Create RPC context
     _rpc = std::make_unique<msgpack::rpc::context>(
@@ -75,22 +75,22 @@ BasicPerfkitNetClient::BasicPerfkitNetClient()
     // Config Load/Store
     gApp->OnLoadWorkspace +=
             [this] {
-                _uiState.bTraceOpen    = RefPersistentNumber("%s.WndTrace", _key.c_str());
-                _uiState.bConfigOpen   = RefPersistentNumber("%s.WndConfig", _key.c_str());
+                _uiState.bTraceOpen = RefPersistentNumber("%s.WndTrace", _key.c_str());
+                _uiState.bConfigOpen = RefPersistentNumber("%s.WndConfig", _key.c_str());
                 _uiState.bGraphicsOpen = RefPersistentNumber("%s.WndGraphics", _key.c_str());
             };
 
     gApp->OnDumpWorkspace +=
             [this] {
-                RefPersistentNumber("%s.WndTrace", _key.c_str())    = _uiState.bTraceOpen;
-                RefPersistentNumber("%s.WndConfig", _key.c_str())   = _uiState.bConfigOpen;
+                RefPersistentNumber("%s.WndTrace", _key.c_str()) = _uiState.bTraceOpen;
+                RefPersistentNumber("%s.WndConfig", _key.c_str()) = _uiState.bConfigOpen;
                 RefPersistentNumber("%s.WndGraphics", _key.c_str()) = _uiState.bGraphicsOpen;
             };
 }
 
 void BasicPerfkitNetClient::InitializeSession(const string& keyUri)
 {
-    _key                                              = keyUri;
+    _key = keyUri;
     ((PerfkitNetClientRpcMonitor*)&*_monitor)->_owner = weak_from_this();
 }
 
@@ -109,7 +109,7 @@ void BasicPerfkitNetClient::RenderTickSession()
 {
     // State summary (bandwidth, memory usage, etc ...)
     ImGui::PushStyleColor(ImGuiCol_Text, IsSessionOpen() ? 0xff'00ff00 : ImGui::GetColorU32(ImGuiCol_TextDisabled));
-    bool bKeepConnection        = true;
+    bool bKeepConnection = true;
     auto bOpenSessionInfoHeader = ImGui::CollapsingHeader(
             usprintf("%s##SessInfo", _key.c_str()),
             IsSessionOpen() ? &bKeepConnection : nullptr,
@@ -146,7 +146,7 @@ void BasicPerfkitNetClient::RenderTickSession()
         if (CPPH_TMPVAR{ImGui::ScopedChildWindow{"SummaryGroup"}})
         {
             auto bRenderEntityContent = ShouldRenderSessionListEntityContent();
-            auto width                = ImGui::GetContentRegionAvail().x * 3 / 5 * (bRenderEntityContent);
+            auto width = ImGui::GetContentRegionAvail().x * 3 / 5 * (bRenderEntityContent);
             if (CPPH_TMPVAR{ImGui::ScopedChildWindow{"SessionState", width, false}})
             {
                 ImGui::BulletText("Stats");
@@ -197,7 +197,13 @@ void BasicPerfkitNetClient::TickSession()
     if (bIsSessionOpenCache) { tickHeartbeat(); }
 
     _wndConfig.TickWindow();
-    if (_uiState.bConfigOpen) { _wndConfig.RenderTickWindow(&_uiState.bConfigOpen); }
+    if (_uiState.bConfigOpen)
+    {
+        if (CPPH_CALL_ON_EXIT(ImGui::End()); ImGui::Begin(usprintf("[config] %s", _key.c_str())))
+        {
+            _wndConfig.RenderTickWindow();
+        }
+    }
 }
 
 void BasicPerfkitNetClient::_onSessionCreate_(const msgpack::rpc::session_profile& profile)
@@ -206,7 +212,7 @@ void BasicPerfkitNetClient::_onSessionCreate_(const msgpack::rpc::session_profil
     NotifyToast("Rpc Session Created").String(profile.peer_name);
 
     auto sesionInfo = decltype(service::session_info)::return_type{};
-    auto result     = service::session_info(*_rpc).rpc(&sesionInfo, 1s);
+    auto result = service::session_info(*_rpc).rpc(&sesionInfo, 1s);
 
     if (result != msgpack::rpc::rpc_status::okay)
     {
@@ -219,32 +225,32 @@ void BasicPerfkitNetClient::_onSessionCreate_(const msgpack::rpc::session_profil
 
     PostEventMainThreadWeak(weak_from_this(),
                             [this,
-                             info       = std::move(sesionInfo),
-                             peer       = profile.peer_name,
+                             info = std::move(sesionInfo),
+                             peer = profile.peer_name,
                              ttyContent = std::move(ttyContent),
-                             anchor     = anchor]() mutable {
+                             anchor = anchor]() mutable {
                                 assert(not _sessionAnchor);
                                 _sessionAnchor = anchor;
-                                _sessionInfo   = std::move(info);
+                                _sessionInfo = std::move(info);
 
-                                auto introStr  = fmt::format(
-                                         "\n\n"
-                                          "+---------------------------------------- NEW SESSION -----------------------------------------\n"
-                                          "| \n"
-                                          "| \n"
-                                          "| Name               : {}\n"
-                                          "| Host               : {}\n"
-                                          "| Peer               : {}\n"
-                                          "| Number of cores    : {}\n"
-                                          "| \n"
-                                          "| {}\n"
-                                          "+----------------------------------------------------------------------------------------------\n"
-                                          "\n\n",
-                                         _sessionInfo.name,
-                                         _sessionInfo.hostname,
-                                         peer,
-                                         _sessionInfo.num_cores,
-                                         _sessionInfo.description);
+                                auto introStr = fmt::format(
+                                        "\n\n"
+                                        "+---------------------------------------- NEW SESSION -----------------------------------------\n"
+                                        "| \n"
+                                        "| \n"
+                                        "| Name               : {}\n"
+                                        "| Host               : {}\n"
+                                        "| Peer               : {}\n"
+                                        "| Number of cores    : {}\n"
+                                        "| \n"
+                                        "| {}\n"
+                                        "+----------------------------------------------------------------------------------------------\n"
+                                        "\n\n",
+                                        _sessionInfo.name,
+                                        _sessionInfo.hostname,
+                                        peer,
+                                        _sessionInfo.num_cores,
+                                        _sessionInfo.description);
 
                                 _ttyQueue.access(
                                         [&](string& str) {
@@ -311,7 +317,7 @@ void BasicPerfkitNetClient::CloseSession()
 
     if (_hrpcHeartbeat) { _hrpcHeartbeat.abort(); }
     if (_hrpcLogin) { _hrpcLogin.abort(); }
-    _authLevel    = message::auth_level_t::unauthorized;
+    _authLevel = message::auth_level_t::unauthorized;
     _sessionStats = {};
 }
 
@@ -320,14 +326,14 @@ void BasicPerfkitNetClient::drawTTY()
     struct TtyContext
     {
         perfkit::poll_timer timColorize{250ms};
-        bool                bScrollLock   = false;
+        bool                bScrollLock = false;
         int                 colorizeFence = 0;
 
         char                cmdBuf[512];
 
         float               uiControlPadHeight = 0;
     };
-    auto& _              = RefAny<TtyContext>("TTY");
+    auto& _ = RefAny<TtyContext>("TTY");
     bool  bFrameHasInput = false;
 
     // Retrieve buffer content

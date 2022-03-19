@@ -24,7 +24,7 @@ class Application
         ESessionType               Type;
         shared_ptr<class ISession> Ref;
 
-        bool                       bShow         = false;
+        bool                       bShow = false;
         bool                       bPendingClose = false;
 
         string                     CachedDisplayName;
@@ -45,16 +45,16 @@ class Application
 
     // UI Flags - Debug
     bool _bShowMetrics = false;
-    bool _bShowDemo    = false;
-    bool _bShowStyles  = false;
+    bool _bShowDemo = false;
+    bool _bShowStyles = false;
 
     // UI State - Add New Session
     struct
     {
-        bool         bActivateButton      = false;
+        bool         bActivateButton = false;
         bool         bSetNextFocusToInput = false;
-        ESessionType Selected             = {};
-        char         UriBuffer[1024]      = {};
+        ESessionType Selected = {};
+        char         UriBuffer[1024] = {};
     } _addSessionModalState;
 
    public:

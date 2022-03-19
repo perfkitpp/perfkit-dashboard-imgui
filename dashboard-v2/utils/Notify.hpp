@@ -28,13 +28,13 @@ class NotifyToast
         steady_clock::time_point Lifespan = steady_clock::now() + 5s;
         steady_clock::time_point Birth;
 
-        function<void()>         OnForceClose      = perfkit::default_function;
+        function<void()>         OnForceClose = perfkit::default_function;
 
-        bool                     bInfinity         = false;
-        int                      stateIdAlloc      = -1;
+        bool                     bInfinity = false;
+        int                      stateIdAlloc = -1;
         float                    stateHeightOffset = 0.f;
-        float                    toastHeightCache  = 0.f;
-        bool                     stateHovering     = false;
+        float                    toastHeightCache = 0.f;
+        bool                     stateHovering = false;
     };
 
    private:
@@ -58,7 +58,7 @@ class NotifyToast
 
     NotifyToast(NotifyToast&&) noexcept = default;
     NotifyToast& operator=(NotifyToast&&) noexcept = default;
-    NotifyToast(NotifyToast const&) noexcept       = delete;
+    NotifyToast(NotifyToast const&) noexcept = delete;
     NotifyToast& operator=(NotifyToast const&) noexcept = delete;
 
     ~NotifyToast();

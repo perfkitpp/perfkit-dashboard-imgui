@@ -48,8 +48,8 @@ static class NotifyContext
         // Make all pending toasts current
         while (not newToasts.empty())
         {
-            auto  iter                = newToasts.begin();
-            auto& ptoast              = *iter;
+            auto  iter = newToasts.begin();
+            auto& ptoast = *iter;
             ptoast->stateHeightOffset = 44;
 
             if (not _toasts.empty())
@@ -73,7 +73,7 @@ static class NotifyContext
         {
             using namespace ImGui;
             auto sizeVp = GetMainViewport()->Size;
-            auto posVp  = GetMainViewport()->Pos;
+            auto posVp = GetMainViewport()->Pos;
             posVp.x += sizeVp.x;
             posVp.y += sizeVp.y;
 
@@ -88,24 +88,24 @@ static class NotifyContext
                                       | ImGuiWindowFlags_NoSavedSettings
                                       | ImGuiWindowFlags_NoDocking;
 
-            constexpr auto PaddingX        = 20.f;
-            constexpr auto PaddingY        = 20.f;
+            constexpr auto PaddingX = 20.f;
+            constexpr auto PaddingY = 20.f;
             constexpr auto PaddingMessageY = 10.f;
-            constexpr auto Transition      = 0.4f;
+            constexpr auto Transition = 0.4f;
 
-            using Seconds                  = std::chrono::duration<double>;
-            float      height              = 0.f;
-            auto       timeNow             = steady_clock::now();
-            auto const deltaTime           = ImGui::GetIO().DeltaTime;
-            auto const heightDecVal        = 80.f * deltaTime;
+            using Seconds = std::chrono::duration<double>;
+            float      height = 0.f;
+            auto       timeNow = steady_clock::now();
+            auto const deltaTime = ImGui::GetIO().DeltaTime;
+            auto const heightDecVal = 80.f * deltaTime;
 
             for (auto iter = _toasts.begin(); iter != _toasts.end();)
             {
                 auto& toast = *iter;
 
                 {
-                    auto fixedDecr           = toast->stateHeightOffset - heightDecVal;
-                    auto rationalDescr       = toast->stateHeightOffset * (1.f - 6.f * deltaTime);
+                    auto fixedDecr = toast->stateHeightOffset - heightDecVal;
+                    auto rationalDescr = toast->stateHeightOffset * (1.f - 6.f * deltaTime);
                     toast->stateHeightOffset = std::max(0.f, std::min(fixedDecr, rationalDescr));
                 }
 
@@ -130,18 +130,18 @@ static class NotifyContext
                 }
                 CPPH_CALL_ON_EXIT(PopStyleColor());
 
-                float timeFromSpawn    = Seconds(timeNow - toast->Birth).count();
+                float timeFromSpawn = Seconds(timeNow - toast->Birth).count();
                 float timeUntilDispose = toast->bInfinity ? Transition : Seconds(toast->Lifespan - timeNow).count();
 
-                float opacity          = std::min(1.f, std::min(timeFromSpawn / Transition, timeUntilDispose / Transition));
+                float opacity = std::min(1.f, std::min(timeFromSpawn / Transition, timeUntilDispose / Transition));
                 ImGui::PushStyleVar(ImGuiStyleVar_Alpha, opacity * (toast->stateHovering ? 1.f : 0.75f));
                 SetNextWindowBgAlpha(opacity * 0.8f);
 
                 CPPH_CALL_ON_EXIT(ImGui::PopStyleVar());
                 toast->stateHovering = false;
 
-                auto wndFlags        = ToastFlags;
-                bool bKeepOpen       = true;
+                auto wndFlags = ToastFlags;
+                bool bKeepOpen = true;
                 SetNextWindowSizeConstraints({150, -1}, sizeVp);
 
                 Begin(perfkit::futils::usprintf("###PDASH_TOAST%d", toast->stateIdAlloc), &bKeepOpen, wndFlags);

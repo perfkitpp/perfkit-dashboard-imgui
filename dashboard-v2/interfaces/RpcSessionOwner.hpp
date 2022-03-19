@@ -11,5 +11,5 @@ class IRpcSessionOwner
 
    public:
     virtual auto RpcContext() -> perfkit::msgpack::rpc::context* = 0;
-    virtual auto SessionAnchor() -> weak_ptr<void>               = 0;
+    virtual auto SessionAnchor() -> weak_ptr<void> = 0;
 };

@@ -20,10 +20,11 @@ class ConfigWindow
 
    public:
     void TickWindow() {}
-    void RenderTickWindow(bool* bKeepOpen) {}
+    void RenderTickWindow() {}
     void ClearContexts() {}
 
    public:
-    void HandleNewConfigClass(string const&) {}
+    void HandleNewConfigClass(string const& key, notify::config_category_t const& root) {}
+    void HandleConfigUpdate(string const& key, config_entity_update_t const& entity) {}
 };
 }  // namespace widgets
