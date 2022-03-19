@@ -30,6 +30,7 @@ struct ConditionalFinalInvoke
     bool      cond;
     Callable_ callable;
 
+    ConditionalFinalInvoke(bool cond, Callable_ callable) : cond(cond), callable(std::move(callable)) {}
     ~ConditionalFinalInvoke() noexcept(std::is_nothrow_invocable_v<Callable_>)
     {
         if (cond) { callable(); }
@@ -38,16 +39,17 @@ struct ConditionalFinalInvoke
     operator bool() const noexcept { return cond; }
 };
 
-template <typename Callable>
-auto CondInvoke(bool condition, Callable&& callable)
+template <typename Callable, typename... Args_>
+auto CondInvokeImpl(bool condition, Callable callable, Args_&&... args)
 {
-    return detail::ConditionalFinalInvoke<Callable>{condition, std::forward<Callable>(callable)};
+    return detail::ConditionalFinalInvoke{condition, perfkit::bind_front(std::forward<Callable>(callable), std::forward<Args_>(args)...)};
 }
 }  // namespace detail
 
 #define INTERNAL_PDASH_CONCAT_0(a, b) a##b
 #define INTERNAL_PDASH_CONCAT(a, b)   INTERNAL_PDASH_CONCAT_0(a, b)
-#define CondInvoke(CondExpr, ...)     auto INTERNAL_PDASH_CONCAT(_pdash_intennal_, __LINE__) = detail::CondInvoke(CondExpr, __VA_ARGS__)
+#define CondInvokeBody(CondExpr, ...) ::detail::CondInvokeImpl(CondExpr, __VA_ARGS__)
+#define CondInvoke(CondExpr, ...)     auto INTERNAL_PDASH_CONCAT(_pdash_intennal_, __LINE__) = CondInvokeBody(CondExpr, __VA_ARGS__)
 
 void DispatchEventMainThread(function<void()>);
 void PostEventMainThread(function<void()>);

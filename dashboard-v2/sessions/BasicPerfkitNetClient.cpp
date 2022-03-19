@@ -83,11 +83,11 @@ void BasicPerfkitNetClient::FetchSessionDisplayName(std::string* outName)
 void BasicPerfkitNetClient::RenderTickSession()
 {
     // State summary (bandwidth, memory usage, etc ...)
-    ImGui::PushStyleColor(ImGuiCol_Header, IsSessionOpen() ? 0xff'257d47 : ImGui::GetColorU32(ImGuiCol_Header));
+    ImGui::PushStyleColor(ImGuiCol_Text, IsSessionOpen() ? 0xff'00ff00 : ImGui::GetColorU32(ImGuiCol_TextDisabled));
     bool bKeepConnection        = true;
     auto bOpenSessionInfoHeader = ImGui::CollapsingHeader(
             usprintf("%s##SessInfo", _key.c_str()),
-            &bKeepConnection);
+            IsSessionOpen() ? &bKeepConnection : nullptr);
     ImGui::PopStyleColor(1);
 
     // Draw subwidget checkboxes
@@ -153,8 +153,19 @@ void BasicPerfkitNetClient::RenderTickSession()
         CloseSession();
     }
 
-    if (CPPH_CALL_ON_EXIT(ImGui::EndChild()); ImGui::BeginChild("TerminalGroup", {}, true))
-        drawTTY();
+    {
+        auto bDrawBorder = CondInvokeBody(
+                IsSessionOpen() && ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows),
+                &ImGui::PopStyleColor, 1);
+
+        if (bDrawBorder)
+        {
+            ImGui::PushStyleColor(ImGuiCol_Border, 0xff'117712);
+        }
+
+        if (CPPH_CALL_ON_EXIT(ImGui::EndChild()); ImGui::BeginChild("TerminalGroup", {}, true))
+            drawTTY();
+    }
 }
 
 void BasicPerfkitNetClient::TickSession()
