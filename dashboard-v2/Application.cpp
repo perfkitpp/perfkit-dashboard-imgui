@@ -466,17 +466,33 @@ void Application::tickSessions()
         sess.Ref->TickSession();
         if (not sess.bShow) { continue; }
 
-        auto nameStr = usprintf("%s [%s]###%s.%d.SSNWND",
-                                sess.CachedDisplayName.c_str(),
-                                sess.Key.c_str(),
-                                sess.Key.c_str(),
-                                sess.Type);
+        auto       nameStr          = usprintf("%s [%s]###%s.%d.SSNWND",
+                                               sess.CachedDisplayName.c_str(),
+                                               sess.Key.c_str(),
+                                               sess.Key.c_str(),
+                                               sess.Type);
+
+        bool const bDrawGreenHeader = sess.Ref->IsSessionOpen();
+        if (bDrawGreenHeader)
+        {
+            ImGui::PushStyleColor(ImGuiCol_TabActive, 0xff'257d47);
+            ImGui::PushStyleColor(ImGuiCol_Tab, 0xff'257d47 - 0x00'111111);
+            ImGui::PushStyleColor(ImGuiCol_TabUnfocusedActive, 0xff'257d47 - 0x00'253333);
+            ImGui::PushStyleColor(ImGuiCol_TabUnfocused, 0xff'257d47 - 0x00'254444);
+        }
 
         ImGui::SetNextWindowSize({640, 480}, ImGuiCond_Once);
         if (CPPH_CALL_ON_EXIT(ImGui::End()); ImGui::Begin(nameStr, &sess.bShow))
         {
+            auto bDrawGreenBorder = bDrawGreenHeader && ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
+            if (bDrawGreenBorder)
+                ImGui::PushStyleColor(ImGuiCol_Border, 0xff'257d47);
             sess.Ref->RenderTickSession();
+
+            ImGui::PopStyleColor(bDrawGreenBorder);
         }
+
+        ImGui::PopStyleColor(bDrawGreenHeader * 4);
     }
 }
 
