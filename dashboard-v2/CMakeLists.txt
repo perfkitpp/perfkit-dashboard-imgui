@@ -93,12 +93,12 @@ set_target_properties(
 
 configure_file(
         ${CMAKE_SOURCE_DIR}/misc/CascadiaMono.ttf
-        ${CMAKE_BINARY_DIR}/${PROJECT_NAME}/fonts/font-0.ttf
+        ${CMAKE_BINARY_DIR}/${PROJECT_NAME}/rsrc/fonts/font-0.ttf
         COPYONLY
 )
 
 configure_file(
         ${CMAKE_SOURCE_DIR}/misc/NanumGothic.ttf
-        ${CMAKE_BINARY_DIR}/${PROJECT_NAME}/fonts/font-1.ttf
+        ${CMAKE_BINARY_DIR}/${PROJECT_NAME}/rsrc/fonts/font-1.ttf
         COPYONLY
 )

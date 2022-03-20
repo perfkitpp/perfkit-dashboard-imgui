@@ -119,10 +119,10 @@ void widgets::ConfigWindow::tryRenderEditorContext()
     /// Render editor window
     CPPH_CALL_ON_EXIT(ImGui::End());
     bool bWndKeepOpen = true;
-    bool bContinue = ImGui::Begin(usprintf("edit> %s###CONFEDIT", entity->name.c_str()), &bWndKeepOpen, ImGuiWindowFlags_MenuBar);
+    bool bContinue = ImGui::Begin(usprintf("edit: %s###CONFEDIT", entity->name.c_str()), &bWndKeepOpen, ImGuiWindowFlags_MenuBar);
 
     if (not bWndKeepOpen) { _ctx.ownerRef = {}, _ctx._editingRef = {}; }
-    if (not bContinue) { return; }
+    if (not bWndKeepOpen || not bContinue) { return; }
 
     if (exchange(_ctx._editingRef, entity) != entity)
     {
@@ -384,14 +384,20 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
             // Draw update highlight for short time after receiving update
             if (auto alphaValue = std::max<float>(0., .8 - 5. * entity->_timeSinceUpdate.elapsed().count()))
                 ImGui::GetWindowDrawList()->AddRectFilled(
-                        ImGui::GetCursorScreenPos(),
+                        {ImGui::GetCursorScreenPos().x - ImGui::GetCursorPosX(), ImGui::GetCursorScreenPos().y},
                         ImGui::GetCursorScreenPos() + ImVec2{ImGui::GetContentRegionMax().x, ImGui::GetFrameHeight()},
                         ImGui::GetColorU32(ImVec4{.1, .3, .1, alphaValue}));
 
             auto labelColor
-                    = entity->_bIsDirty                       ? ColorRefs::FrontWarn
-                    : globalEditContext._editingRef == entity ? ColorRefs::FrontOkay
-                                                              : ImGui::GetColorU32(ImGuiCol_Text) - 0x55000000;
+                    = entity->_bIsDirty                       ? ColorRefs::FrontWarn - 0xee000000
+                    : globalEditContext._editingRef == entity ? 0x11ffffff
+                                                              : 0;
+
+            if (labelColor & 0xff000000)
+                ImGui::GetWindowDrawList()->AddRectFilled(
+                        {ImGui::GetCursorScreenPos().x - ImGui::GetCursorPosX(), ImGui::GetCursorScreenPos().y},
+                        ImGui::GetCursorScreenPos() + ImVec2{ImGui::GetContentRegionMax().x, ImGui::GetFrameHeight()},
+                        labelColor);
 
             ImGui::TreeNodeEx(
                     usprintf("##%p.TreeNode", entity),
@@ -407,9 +413,7 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
                 globalEditContext.entityRef = rg.WrapPtr(entity);
             }
 
-            ImGui::PushStyleColor(ImGuiCol_Text, labelColor);
             ImGui::SameLine(0, 0), fnRenderFilteredLabel(entity->name, *entity);
-            ImGui::PopStyleColor();
 
             if (exchange(entity->_bHasUpdate, false))
             {
@@ -418,11 +422,8 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
                 entity->_bIsDirty = false;
             }
 
-            if (entity->_bIsDirty)
-            {
-                ImGui::SameLine();
-                ImGui::TextColored({1, 1, 0, .7}, "*");
-            }
+            ImGui::SameLine(0, 0);
+            ImGui::TextColored({1, 1, 0, .7}, entity->_bIsDirty ? "*" : " ");
 
             if (entity->value.is_boolean() || entity->value.is_number())
             {

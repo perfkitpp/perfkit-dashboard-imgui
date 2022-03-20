@@ -185,12 +185,12 @@ int main(int, char**)
         ImFontConfig cfg = {};
         // io.Fonts->AddFontDefault();
 
-        cfg.RasterizerMultiply = 1.2;
-        io.Fonts->AddFontFromFileTTF("fonts/font-0.ttf", 15.f, &cfg);
+        cfg.RasterizerMultiply = 1.1;
+        io.Fonts->AddFontFromFileTTF("rsrc/fonts/font-0.ttf", 15.5f, &cfg);
 
         cfg.MergeMode = true;
         cfg.RasterizerMultiply = 2.1;
-        io.Fonts->AddFontFromFileTTF("fonts/font-1.ttf", 15.f, &cfg, io.Fonts->GetGlyphRangesKorean());
+        io.Fonts->AddFontFromFileTTF("rsrc/fonts/font-1.ttf", 15.5f, &cfg, io.Fonts->GetGlyphRangesKorean());
     }
 
     // Assure application initialization before drawing first frame.
