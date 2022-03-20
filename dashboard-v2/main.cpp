@@ -242,7 +242,7 @@ int main(int, char**)
         glfwSwapBuffers(window);
     }
 
-    ImGui::MarkIniSettingsDirty();
+    gApp->SaveWorkspaceMainThread();
 
     // Cleanup
     ImGui_ImplOpenGL3_Shutdown();

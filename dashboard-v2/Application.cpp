@@ -225,8 +225,7 @@ void Application::drawSessionList(bool* bKeepOpen)
     CPPH_CALL_ON_EXIT(ImGui::EndChild());
     ImGui::BeginChild("Session-List", {0, 0}, true);
 
-    char       textBuf[256];
-    auto const colorBase = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyleColorVec4(ImGuiCol_Header));
+    char textBuf[256];
 
     for (auto iter = _sessions.begin(); iter != _sessions.end();)
     {
@@ -337,7 +336,7 @@ void Application::drawSessionList(bool* bKeepOpen)
 
 void Application::drawAddSessionMenu()
 {
-    constexpr char const* ItemNames[] = {"-- NONE --", "Tcp Raw Client", "WebSocket Client"};
+    constexpr char const* ItemNames[] = {"-- NONE --", "Tcp [unsafe]", "Tcp [ssl]", "Relay Server", "websocket"};
     auto                  state = &_addSessionModalState;
 
     static_assert(std::size(ItemNames) == int(ESessionType::ENUM_MAX_VALUE));
@@ -415,12 +414,8 @@ auto Application::RegisterSessionMainThread(
 
     switch (type)
     {
-        case ESessionType::TcpRawClient:
+        case ESessionType::TcpUnsafe:
             session = CreatePerfkitTcpRawClient();
-            break;
-
-        case ESessionType::WebSocketClient:
-            // TODO: create web socket client
             break;
 
         default:

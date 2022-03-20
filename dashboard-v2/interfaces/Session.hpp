@@ -8,8 +8,10 @@
 enum class ESessionType
 {
     None = 0,
-    TcpRawClient = 1,
-    WebSocketClient = 2,
+    TcpUnsafe = 1,
+    TcpSsl = 2,
+    RelayServer = 3,
+    WebSocketUri = 4,
 
     ENUM_MAX_VALUE,
 };

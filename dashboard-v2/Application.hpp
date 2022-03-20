@@ -74,6 +74,9 @@ class Application
             ESessionType type,
             string_view  optionalDefaultDisplayName = {});
 
+    //! Save workspace
+    void SaveWorkspaceMainThread() { saveWorkspace(); }
+
    private:
     void tickGraphicsMainThread();
 
