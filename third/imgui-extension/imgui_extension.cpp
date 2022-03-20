@@ -163,12 +163,13 @@ bool BeginChildAutoHeight(const char* key, float width, bool bBorder, ImGuiWindo
     return ImGui::BeginChild(key, {width, height}, bBorder, flags);
 }
 
-void EndChildAutoHeight(const char* key)
+void EndChildAutoHeight(const char* key, bool bWasDrawn)
 {
     float height = GetCursorPosY();
 
     ImGui::EndChild();
-    *findStorage(key) = height;
+
+    if(bWasDrawn) { *findStorage(key) = height; }
 }
 
 void PushStatefulColors(ImGuiCol idx, ImVec4 const& color)

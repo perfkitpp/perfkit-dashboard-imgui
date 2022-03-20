@@ -74,7 +74,7 @@ void        InputTextLeft(const char*            label,
                           void*                  userData = nullptr);
 
 bool        BeginChildAutoHeight(char const* key, float width = 0., bool bBorder = true, ImGuiWindowFlags flags = 0);
-void        EndChildAutoHeight(const char* key);
+void        EndChildAutoHeight(const char* key, bool bWasDrawn=true);
 
 char const* RetrieveCurrentWindowName();
 
@@ -93,7 +93,7 @@ class ScopedChildWindow
 
     ~ScopedChildWindow() noexcept
     {
-        EndChildAutoHeight(_buf);
+        EndChildAutoHeight(_buf, _draw);
     }
 
     operator bool() const noexcept { return _draw; }

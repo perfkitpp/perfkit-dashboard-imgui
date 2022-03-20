@@ -11,12 +11,12 @@
 #include "imgui_extension.h"
 
 widgets::ConfigWindow::EditContext widgets::ConfigWindow::globalEditContext;
+static bool                        bFilterTargetDirty = false;
 
 static struct
 {
     bool        bShouldApplyFilter = false;
     bool        bHasFilterUpdate = false;
-    bool        bFilterTargetDirty = false;
 
     string_view filterContent = {};
 
@@ -45,7 +45,7 @@ void widgets::ConfigWindow::RenderConfigWindow(bool* bKeepOpen)
             /// ESCAPE clears filter buffer.
             ImGui::SetNextItemWidth(-60);
             if (ImGui::InputTextWithHint("##FilterLabel", "Filter", _filterContentBuf, sizeof _filterContentBuf)
-                || exchange(gEvtThisFrame.bFilterTargetDirty, false))
+                || exchange(bFilterTargetDirty, false))
             {
                 gEvtThisFrame.bHasFilterUpdate = true;
                 gEvtThisFrame.filterContent = _filterContentBuf;
@@ -80,7 +80,7 @@ void widgets::ConfigWindow::RenderConfigWindow(bool* bKeepOpen)
 
     bool bRenderComponents = ImGui::CollapsingHeader(wndName, bKeepOpen);
     if (ImGui::IsItemToggledOpen())
-        gEvtThisFrame.bFilterTargetDirty = true;
+        bFilterTargetDirty = true;
 
     ImGui::PopStyleVar(not bSessionAlive);
 
@@ -88,10 +88,10 @@ void widgets::ConfigWindow::RenderConfigWindow(bool* bKeepOpen)
     {
         if (bRenderComponents)
         {
-            if (CPPH_TMPVAR = ImGui::ScopedChildWindow(usprintf("%s.REGION", _host->KeyString().c_str())))
-                for (auto& [key, ctx] : _ctxs)
-                    recursiveTickSubcategory(ctx, &ctx.rootCategoryDesc, not bRenderComponents);
+            CPPH_TMPVAR = ImGui::ScopedChildWindow(usprintf("%s.REGION", _host->KeyString().c_str()));
 
+            for (auto& [key, ctx] : _ctxs)
+                recursiveTickSubcategory(ctx, &ctx.rootCategoryDesc, not bRenderComponents);
         }
         else
         {
@@ -178,7 +178,7 @@ void widgets::ConfigWindow::_handleNewConfigClassMainThread(
     }
 
     // Refresh filter if being applied
-    gEvtThisFrame.bFilterTargetDirty = true;
+    bFilterTargetDirty = true;
 }
 
 void widgets::ConfigWindow::_handleConfigsUpdate(config_entity_update_t const& entityDesc)
