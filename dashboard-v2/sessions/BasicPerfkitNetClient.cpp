@@ -486,17 +486,17 @@ void BasicPerfkitNetClient::RenderSessionListEntityContent()
     else
     {
         ImGui::AlignTextToFramePadding();
-        ImGui::Text("Configs"), ImGui::SameLine();
+        ImGui::Text("Config"), ImGui::SameLine();
         ImGui::ToggleButton("ToggleConfig", &_uiState.bConfigOpen);
 
         ImGui::SameLine();
         ImGui::AlignTextToFramePadding();
-        ImGui::Text("   Traces"), ImGui::SameLine();
+        ImGui::Text("Trace"), ImGui::SameLine();
         ImGui::ToggleButton("ToggleTrace", &_uiState.bTraceOpen);
 
         ImGui::SameLine();
         ImGui::AlignTextToFramePadding();
-        ImGui::Text("   Graphics"), ImGui::SameLine();
+        ImGui::Text("Graphic"), ImGui::SameLine();
         ImGui::ToggleButton("ToggleGraphics", &_uiState.bGraphicsOpen);
     }
 }

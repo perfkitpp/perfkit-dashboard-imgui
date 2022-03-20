@@ -85,7 +85,7 @@ bool ImGui::SingleLineJsonEdit(char const* str_id, nlohmann::json& value, const 
 
             case nlohmann::detail::value_t::number_float:
                 ptr = value.get_ptr<double*>();
-                dataType = ImGuiDataType_U64;
+                dataType = ImGuiDataType_Double;
                 format = "%f";
                 break;
 
@@ -99,12 +99,13 @@ bool ImGui::SingleLineJsonEdit(char const* str_id, nlohmann::json& value, const 
         ImVec2 pos_after = window->DC.CursorPos;
         window->DC.CursorPos = pos_before;
         ret = ImGui::TempInputScalar(ImRect(GetItemRectMin(), GetItemRectMax()), id, "##Input", dataType, ptr, format);
-        ret = ret && (not bConfirmEnter || ImGui::IsKeyPressed(ImGuiKey_Enter));
+        ret = (ret && not bConfirmEnter) || (bConfirmEnter && ImGui::IsKeyPressed(ImGuiKey_Enter, false));
 
         window->DC.CursorPos = pos_after;
     }
     else
     {
+        ret = false;
         ImGui::SameLine(0, 0);
         ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted(cacheStr.c_str());

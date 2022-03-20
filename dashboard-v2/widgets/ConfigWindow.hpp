@@ -164,7 +164,7 @@ class ConfigWindow
 
    private:
     void _handleNewConfigClassMainThread(uint64_t, string, CategoryDesc);
-    void _handleConfigsUpdate(config_entity_update_t entity) {}
+    void _handleConfigsUpdate(config_entity_update_t const& entity);
 
     void _cleanupRegistryContext(ConfigRegistryContext& rg);
     void _recursiveConstructCategories(ConfigRegistryContext* rg, CategoryDesc const& ref, ConfigCategoryContext* parent);

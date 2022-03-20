@@ -147,6 +147,30 @@ void widgets::ConfigWindow::_handleNewConfigClassMainThread(
     }
 }
 
+void widgets::ConfigWindow::_handleConfigsUpdate(config_entity_update_t const& entityDesc)
+{
+    if (auto* pair = perfkit::find_ptr(_allEntities, entityDesc.config_key))
+    {
+        auto elem = &pair->second;
+        auto parsed = Json::from_msgpack(entityDesc.content_next, true, false);
+        if (not parsed.is_discarded())
+        {
+            elem->value = move(parsed);
+            elem->_bHasReceivedUpdate = true;
+            elem->_timeSinceUpdate.reset();
+        }
+        else
+        {
+            NotifyToast{"System Error"}.Error().String("Unkown config key!");
+        }
+    }
+    else
+    {
+        NotifyToast{"System Error"}.Error().String("Unkown config key!");
+        return;
+    }
+}
+
 void widgets::ConfigWindow::_recursiveConstructCategories(
         ConfigRegistryContext* rg,
         CategoryDesc const&    desc,
@@ -167,7 +191,7 @@ void widgets::ConfigWindow::_recursiveConstructCategories(
         data->configKey = entity.config_key;
         data->name = entity.name;
         data->description = entity.description;
-        data->_bIsDirty = true;
+        data->_bHasReceivedUpdate = true;
 
         if (not entity.initial_value.empty())
             data->value = Json::from_msgpack(entity.initial_value);
@@ -243,7 +267,7 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
             ImGui::GetWindowDrawList()->AddRectFilled(
                     ImGui::GetCursorScreenPos(),
                     ImGui::GetCursorScreenPos() + ImVec2{ImGui::GetContentRegionMax().x, ImGui::GetFrameHeight()},
-                    ImGui::GetColorU32(ImVec4{.5, .5, .5, std::max<float>(0., 1. - 5. * entity->_timeSinceUpdate.elapsed().count())}));
+                    ImGui::GetColorU32(ImVec4{.1, .3, .1, std::max<float>(0., .8 - 5. * entity->_timeSinceUpdate.elapsed().count())}));
 
             ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetColorU32(ImGuiCol_Text) - 0x55000000);
             ImGui::TreeNodeEx(
@@ -256,7 +280,7 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
             ImGui::PopStyleColor();
             bool bOpenEditor = ImGui::IsItemClicked();
 
-            if (exchange(entity->_bIsDirty, false))
+            if (exchange(entity->_bHasReceivedUpdate, false))
             {
                 entity->_cachedStringify = entity->value.dump();
             }
@@ -266,6 +290,8 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
                 ImGui::SameLine();
                 if (ImGui::SingleLineJsonEdit(usprintf("##%p", entity), entity->value, entity->_cachedStringify))
                 {
+                    NotifyToast{"Update"}.String("Value: {}", entity->value.dump());
+
                     config_entity_update_t update;
                     update.config_key = entity->configKey;
                     Json::to_msgpack(entity->value, nlohmann::detail::output_adapter<char>(update.content_next));
