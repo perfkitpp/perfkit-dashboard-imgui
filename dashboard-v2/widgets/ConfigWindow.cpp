@@ -389,15 +389,15 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
                             | ImGuiTreeNodeFlags_SpanAvailWidth
                             | ImGuiTreeNodeFlags_AllowItemOverlap);
 
-            ImGui::PushStyleColor(ImGuiCol_Text, labelColor);
-            ImGui::SameLine(0, 0), fnRenderFilteredLabel(entity->name, *entity);
-            ImGui::PopStyleColor();
-
             if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
             {
                 globalEditContext.ownerRef = rg.WrapPtr(this);
                 globalEditContext.entityRef = rg.WrapPtr(entity);
             }
+
+            ImGui::PushStyleColor(ImGuiCol_Text, labelColor);
+            ImGui::SameLine(0, 0), fnRenderFilteredLabel(entity->name, *entity);
+            ImGui::PopStyleColor();
 
             if (exchange(entity->_bHasUpdate, false))
             {
