@@ -226,6 +226,7 @@ void Application::drawSessionList(bool* bKeepOpen)
     ImGui::BeginChild("Session-List", {0, 0}, true);
 
     char textBuf[256];
+    auto dragDropSwap{optional<pair<int64_t, int64_t>>{}};
 
     for (auto iter = _sessions.begin(); iter != _sessions.end();)
     {
@@ -261,6 +262,24 @@ void Application::drawSessionList(bool* bKeepOpen)
 
         if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) { sess.bShow = not sess.bShow; }
 
+        if (CondInvoke(ImGui::BeginDragDropSource(ImGuiDragDropFlags_None), ImGui::EndDragDropSource))
+        {
+            auto index = iter - _sessions.begin();
+            ImGui::SetDragDropPayload("DND_PAYLOAD_SESSION_LIST_SWAP", &index, sizeof index);
+            ImGui::Text("%s [%s]", sess.CachedDisplayName.c_str(), sess.Key.c_str());
+        }
+
+        if (CondInvoke(ImGui::BeginDragDropTarget(), ImGui::EndDragDropTarget))
+        {
+            if (auto payload = ImGui::AcceptDragDropPayload("DND_PAYLOAD_SESSION_LIST_SWAP"))
+            {
+                auto index = iter - _sessions.begin();
+                auto source = *(decltype(index)*)payload->Data;
+
+                if (index != source) { dragDropSwap = make_pair(source, index); }
+            }
+        }
+
         if (bIsSessionOpen)
         {
             ImGui::SameLine();
@@ -281,6 +300,7 @@ void Application::drawSessionList(bool* bKeepOpen)
             sprintf(textBuf, "%s##CHLD-%s-%d", sess.CachedDisplayName.c_str(), sess.Key.c_str(), sess.Type);
             ImGui::PushStyleColor(ImGuiCol_ChildBg, ImGui::GetStyleColorVec4(ImGuiCol_ChildBg) - ImVec4{.1, .1, .1, .0});
             CPPH_CALL_ON_EXIT(ImGui::PopStyleColor());
+            ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 5);
 
             if (CPPH_TMPVAR = ImGui::ScopedChildWindow(textBuf))
             {
@@ -331,6 +351,12 @@ void Application::drawSessionList(bool* bKeepOpen)
         }
 
         ++iter;
+    }
+
+    if (dragDropSwap && (dragDropSwap->first < _sessions.size() && dragDropSwap->second < _sessions.size()))
+    {
+        auto [n1, n2] = *dragDropSwap;
+        swap(_sessions[n1], _sessions[n2]);
     }
 }
 

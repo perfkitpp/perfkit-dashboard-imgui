@@ -20,6 +20,8 @@ using perfkit::function;
 using perfkit::futils::usprintf;
 
 using std::exchange;
+using std::swap;
+
 using std::make_pair;
 using std::make_shared;
 using std::make_tuple;
