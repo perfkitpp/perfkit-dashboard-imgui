@@ -16,6 +16,8 @@ static struct
 {
     bool        bShouldApplyFilter = false;
     bool        bHasFilterUpdate = false;
+    bool        bFilterTargetDirty = false;
+
     string_view filterContent = {};
 
     bool        bExpandAll = false;
@@ -42,7 +44,8 @@ void widgets::ConfigWindow::RenderConfigWindow(bool* bKeepOpen)
             /// Check for keyboard input, and perform text search on text change.
             /// ESCAPE clears filter buffer.
             ImGui::SetNextItemWidth(-60);
-            if (ImGui::InputTextWithHint("##FilterLabel", "Filter", _filterContentBuf, sizeof _filterContentBuf))
+            if (ImGui::InputTextWithHint("##FilterLabel", "Filter", _filterContentBuf, sizeof _filterContentBuf)
+                || exchange(gEvtThisFrame.bFilterTargetDirty, false))
             {
                 gEvtThisFrame.bHasFilterUpdate = true;
                 gEvtThisFrame.filterContent = _filterContentBuf;
@@ -66,8 +69,6 @@ void widgets::ConfigWindow::RenderConfigWindow(bool* bKeepOpen)
         }
     }
 
-    // Handle events of this frame using event context.
-
     /// Render config tree recursively
     // This window is rendered as single category of global config window, managed as header.
     bool bSessionAlive = not _host->SessionAnchor().expired();
@@ -76,7 +77,11 @@ void widgets::ConfigWindow::RenderConfigWindow(bool* bKeepOpen)
     if (not bSessionAlive) { ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().DisabledAlpha); }
     if (gEvtThisFrame.bCollapseAll) { ImGui::SetNextItemOpen(false); }
     if (gEvtThisFrame.bExpandAll) { ImGui::SetNextItemOpen(true); }
+
     bool bRenderComponents = ImGui::CollapsingHeader(wndName, bKeepOpen);
+    if (ImGui::IsItemToggledOpen())
+        gEvtThisFrame.bFilterTargetDirty = true;
+
     ImGui::PopStyleVar(not bSessionAlive);
 
     if (bSessionAlive)
@@ -86,6 +91,7 @@ void widgets::ConfigWindow::RenderConfigWindow(bool* bKeepOpen)
             if (CPPH_TMPVAR = ImGui::ScopedChildWindow(usprintf("%s.REGION", _host->KeyString().c_str())))
                 for (auto& [key, ctx] : _ctxs)
                     recursiveTickSubcategory(ctx, &ctx.rootCategoryDesc, not bRenderComponents);
+
         }
         else
         {
@@ -127,16 +133,19 @@ void widgets::ConfigWindow::tryRenderEditorContext()
 
     if (CondInvoke(ImGui::BeginMenuBar(), ImGui::EndMenuBar))
     {
-        if (ImGui::Button("Reload"))
-        {
-        }
+        ImGui::Checkbox("Update on edit", &entity->_bUpdateOnEdit);
+        ImGui::Checkbox("Edit in raw", &entity->_bEditInRaw);
 
-        if (entity->_bHasUpdateForEditor)
+        ImGui::PushStyleColor(ImGuiCol_Text, ColorRefs::FrontWarn);
+        if (entity->_bHasUpdateForEditor && ImGui::SmallButton("Reload!"))
         {
+            _ctx.editor.Reset(Json{entity->value});
+            entity->_bHasUpdateForEditor = false;
         }
+        ImGui::PopStyleColor();
     }
 
-    // Start editing
+    // Edit json content
 }
 
 void widgets::ConfigWindow::_handleNewConfigClassMainThread(
@@ -167,6 +176,9 @@ void widgets::ConfigWindow::_handleNewConfigClassMainThread(
 
         _ctxs.erase(iter);
     }
+
+    // Refresh filter if being applied
+    gEvtThisFrame.bFilterTargetDirty = true;
 }
 
 void widgets::ConfigWindow::_handleConfigsUpdate(config_entity_update_t const& entityDesc)

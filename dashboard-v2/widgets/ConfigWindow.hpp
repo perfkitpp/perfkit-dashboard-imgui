@@ -58,11 +58,12 @@ class ConfigWindow
 
         bool               _bIsDirty = false;
         bool               _bHasUpdate = false;
+        bool               _bHasUpdateForEditor = false;
         perfkit::stopwatch _timeSinceUpdate;
 
-        bool               _bHasUpdateForEditor = false;
-        bool               _bEditInRaw = false;
-        bool               _bUpdateOnEdit = false;
+        //! [configs]
+        bool _bEditInRaw = false;
+        bool _bUpdateOnEdit = false;
     };
 
     struct ConfigCategoryContext : FilterEntity
