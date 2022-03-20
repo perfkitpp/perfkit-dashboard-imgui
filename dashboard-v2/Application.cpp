@@ -300,7 +300,6 @@ void Application::drawSessionList(bool* bKeepOpen)
             sprintf(textBuf, "%s##CHLD-%s-%d", sess.CachedDisplayName.c_str(), sess.Key.c_str(), sess.Type);
             ImGui::PushStyleColor(ImGuiCol_ChildBg, ImGui::GetStyleColorVec4(ImGuiCol_ChildBg) - ImVec4{.1, .1, .1, .0});
             CPPH_CALL_ON_EXIT(ImGui::PopStyleColor());
-            ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 5);
 
             if (CPPH_TMPVAR = ImGui::ScopedChildWindow(textBuf))
             {
@@ -355,8 +354,10 @@ void Application::drawSessionList(bool* bKeepOpen)
 
     if (dragDropSwap && (dragDropSwap->first < _sessions.size() && dragDropSwap->second < _sessions.size()))
     {
-        auto [n1, n2] = *dragDropSwap;
-        swap(_sessions[n1], _sessions[n2]);
+        auto [from, to] = *dragDropSwap;
+        auto temp = move(_sessions[from]);
+        _sessions.erase(_sessions.begin() + from);
+        _sessions.insert(_sessions.begin() + to, move(temp));
     }
 }
 

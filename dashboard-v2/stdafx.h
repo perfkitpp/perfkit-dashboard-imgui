@@ -21,6 +21,8 @@ using perfkit::futils::usprintf;
 
 using std::exchange;
 using std::swap;
+using std::move;
+using std::forward;
 
 using std::make_pair;
 using std::make_shared;
