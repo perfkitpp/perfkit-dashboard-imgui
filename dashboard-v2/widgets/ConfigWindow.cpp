@@ -269,7 +269,7 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
                     ImGui::GetCursorScreenPos() + ImVec2{ImGui::GetContentRegionMax().x, ImGui::GetFrameHeight()},
                     ImGui::GetColorU32(ImVec4{.1, .3, .1, std::max<float>(0., .8 - 5. * entity->_timeSinceUpdate.elapsed().count())}));
 
-            ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetColorU32(ImGuiCol_Text) - 0x55000000);
+            ImGui::PushStyleColor(ImGuiCol_Text, entity->_bIsDirty ? ColorRefs::FrontWarn : ImGui::GetColorU32(ImGuiCol_Text) - 0x55000000);
             ImGui::TreeNodeEx(
                     usprintf("%s##%p", entity->name.c_str(), entity),
                     ImGuiTreeNodeFlags_Leaf
@@ -278,11 +278,22 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
                             | ImGuiTreeNodeFlags_SpanAvailWidth
                             | ImGuiTreeNodeFlags_AllowItemOverlap);
             ImGui::PopStyleColor();
-            bool bOpenEditor = ImGui::IsItemClicked();
+            if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+            {
+                globalEditContext.ownerRef = rg.WrapPtr(this);
+                globalEditContext.entityRef = rg.WrapPtr(entity);
+            }
 
             if (exchange(entity->_bHasReceivedUpdate, false))
             {
                 entity->_cachedStringify = entity->value.dump();
+                entity->_bIsDirty = false;
+            }
+
+            if (entity->_bIsDirty)
+            {
+                ImGui::SameLine();
+                ImGui::TextColored({1, 1, 0, .7}, "*");
             }
 
             if (entity->value.is_boolean() || entity->value.is_number())
@@ -290,6 +301,7 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
                 ImGui::SameLine();
                 if (ImGui::SingleLineJsonEdit(usprintf("##%p", entity), entity->value, entity->_cachedStringify))
                 {
+                    entity->_bIsDirty = true;
                     NotifyToast{"Update"}.String("Value: {}", entity->value.dump());
 
                     config_entity_update_t update;
@@ -301,9 +313,8 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
             }
             else
             {
-                ImGui::SameLine();
-                ImGui::AlignTextToFramePadding();
                 ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ContentColorByJsonType(entity->value));
+                ImGui::SameLine(), ImGui::AlignTextToFramePadding();
                 ImGui::TextUnformatted(entity->_cachedStringify.c_str());
                 ImGui::PopStyleColor();
             }

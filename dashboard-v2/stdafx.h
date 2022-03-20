@@ -14,8 +14,8 @@ using perfkit::bind_front_weak;
 using perfkit::function;
 using perfkit::futils::usprintf;
 
-using std::make_pair;
 using std::exchange;
+using std::make_pair;
 using std::make_shared;
 using std::make_tuple;
 using std::make_unique;
@@ -34,7 +34,7 @@ namespace ColorRefs {
 enum : uint32_t
 {
     FrontError = 0xff0000ff,
-    FrontWarn = 0xff00ff00,
+    FrontWarn = 0xff00ffff,
 
     GlyphKeyword = 0xffd69c56,
     GlyphUserType = 0xffb0c94e,
