@@ -5,9 +5,11 @@
 #include "ConfigWindow.hpp"
 
 #include <perfkit/common/macros.hxx>
+#include <perfkit/common/refl/msgpack-rpc/context.hxx>
 #include <perfkit/common/utility/cleanup.hxx>
 
 #include "imgui_extension.h"
+
 widgets::ConfigWindow::EditContext widgets::ConfigWindow::globalEditContext;
 
 static struct
@@ -79,12 +81,20 @@ void widgets::ConfigWindow::RenderConfigWindow(bool* bKeepOpen)
     bool bRenderComponents = ImGui::CollapsingHeader(wndName, bKeepOpen);
     ImGui::PopStyleVar(not bSessionAlive);
 
-    if (bRenderComponents && bSessionAlive)
-        if (CPPH_TMPVAR = ImGui::ScopedChildWindow(usprintf("%s.REGION", _host->KeyString().c_str())))
+    if (bSessionAlive)
+    {
+        if (bRenderComponents)
+        {
+            if (CPPH_TMPVAR = ImGui::ScopedChildWindow(usprintf("%s.REGION", _host->KeyString().c_str())))
+                for (auto& [key, ctx] : _ctxs)
+                    recursiveTickSubcategory(ctx, &ctx.rootCategoryDesc, not bRenderComponents);
+        }
+        else
+        {
             for (auto& [key, ctx] : _ctxs)
-            {
-                recursiveTickSubcategory(ctx, &ctx.rootCategoryDesc);
-            }
+                recursiveTickSubcategory(ctx, &ctx.rootCategoryDesc, not bRenderComponents);
+        }
+    }
 }
 
 void widgets::ConfigWindow::Tick()
@@ -157,6 +167,7 @@ void widgets::ConfigWindow::_recursiveConstructCategories(
         data->configKey = entity.config_key;
         data->name = entity.name;
         data->description = entity.description;
+        data->_bIsDirty = true;
 
         if (not entity.initial_value.empty())
             data->value = Json::from_msgpack(entity.initial_value);
@@ -213,9 +224,8 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
     if (not bCollapsed)
     {
         ImGui::SetNextItemOpen(bShouldOpen);
-        if (not self->parentContext) { ImGui::AlignTextToFramePadding(); }
+        bTreeIsOpen = ImGui::TreeNodeEx(category->name.c_str(), ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_SpanAvailWidth);
 
-        bTreeIsOpen = ImGui::TreeNodeEx(category->name.c_str(), ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_SpanAvailWidth);
         if (ImGui::IsItemToggledOpen()) { self->bBaseOpen = not self->bBaseOpen; }
     }
 
@@ -226,6 +236,53 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
 
     if (bTreeIsOpen)
     {
+        for (auto& entityDesc : category->entities)
+        {
+            auto entity = &_allEntities.at(entityDesc.config_key);
+
+            ImGui::GetWindowDrawList()->AddRectFilled(
+                    ImGui::GetCursorScreenPos(),
+                    ImGui::GetCursorScreenPos() + ImVec2{ImGui::GetContentRegionMax().x, ImGui::GetFrameHeight()},
+                    ImGui::GetColorU32(ImVec4{.5, .5, .5, std::max<float>(0., 1. - 5. * entity->_timeSinceUpdate.elapsed().count())}));
+
+            ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetColorU32(ImGuiCol_Text) - 0x55000000);
+            ImGui::TreeNodeEx(
+                    usprintf("%s##%p", entity->name.c_str(), entity),
+                    ImGuiTreeNodeFlags_Leaf
+                            | ImGuiTreeNodeFlags_FramePadding
+                            | ImGuiTreeNodeFlags_NoTreePushOnOpen
+                            | ImGuiTreeNodeFlags_SpanAvailWidth
+                            | ImGuiTreeNodeFlags_AllowItemOverlap);
+            ImGui::PopStyleColor();
+            bool bOpenEditor = ImGui::IsItemClicked();
+
+            if (exchange(entity->_bIsDirty, false))
+            {
+                entity->_cachedStringify = entity->value.dump();
+            }
+
+            if (entity->value.is_boolean() || entity->value.is_number())
+            {
+                ImGui::SameLine();
+                if (ImGui::SingleLineJsonEdit(usprintf("##%p", entity), entity->value, entity->_cachedStringify))
+                {
+                    config_entity_update_t update;
+                    update.config_key = entity->configKey;
+                    Json::to_msgpack(entity->value, nlohmann::detail::output_adapter<char>(update.content_next));
+
+                    service::update_config_entity(*_host->RpcContext()).notify_one(update);
+                }
+            }
+            else
+            {
+                ImGui::SameLine();
+                ImGui::AlignTextToFramePadding();
+                ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ContentColorByJsonType(entity->value));
+                ImGui::TextUnformatted(entity->_cachedStringify.c_str());
+                ImGui::PopStyleColor();
+            }
+        }
+
         ImGui::TreePop();
     }
 }

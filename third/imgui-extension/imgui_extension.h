@@ -107,4 +107,5 @@ inline void PushStatefulColors(ImGuiCol idx, ImU32 color) { PushStatefulColors(i
 inline void PushStatefulColorsUni(ImGuiCol idx, ImU32 color) { PushStatefulColorsUni(idx, ImGui::ColorConvertU32ToFloat4(color)); }
 
 void        ToggleButton(const char* str_id, bool* v);
+bool        SelectableInput(const char* str_id, bool selected, ImGuiSelectableFlags flags, char* buf, size_t buf_size);
 }  // namespace ImGui

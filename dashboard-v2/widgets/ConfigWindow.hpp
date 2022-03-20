@@ -9,7 +9,9 @@
 
 #include "TextEditor.h"
 #include "interfaces/RpcSessionOwner.hpp"
+#include "perfkit/common/timer.hxx"
 #include "perfkit/extension/net/protocol.hpp"
+#include "utils/JsonEdit.hpp"
 
 namespace widgets {
 using namespace perfkit;
@@ -43,11 +45,14 @@ class ConfigWindow
         Json     optOneOf;
 
         //! [transient]
-        bool _bIsDirty = false;
-        bool _bHasReceivedUpdate = false;
+        string             _cachedStringify;
 
-        bool _bEditInRaw = false;
-        bool _bUpdateOnEdit = false;
+        bool               _bIsDirty = false;
+        bool               _bHasReceivedUpdate = false;
+        perfkit::stopwatch _timeSinceUpdate;
+
+        bool               _bEditInRaw = false;
+        bool               _bUpdateOnEdit = false;
     };
 
     struct ConfigCategoryContext

@@ -12,6 +12,8 @@ set(
 
         utils/Notify.cpp
         utils/Misc.cpp
+        utils/TimePlot.cpp
+        utils/JsonEdit.cpp
 
         sessions/BasicPerfkitNetClient.cpp
         sessions/PerfkitTcpRawClient.cpp

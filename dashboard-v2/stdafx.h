@@ -15,6 +15,7 @@ using perfkit::function;
 using perfkit::futils::usprintf;
 
 using std::make_pair;
+using std::exchange;
 using std::make_shared;
 using std::make_tuple;
 using std::make_unique;
@@ -28,6 +29,19 @@ using std::weak_ptr;
 using std::chrono::steady_clock;
 
 extern size_t const& gFrameIndex;
+
+namespace ColorRefs {
+enum : uint32_t
+{
+    FrontError = 0xff0000ff,
+    FrontWarn = 0xff00ff00,
+
+    GlyphKeyword = 0xffd69c56,
+    GlyphUserType = 0xffb0c94e,
+    GlyphString = 0xff94bbff,
+    GlpyhNumber = 0xff56bf6f
+};
+}
 
 using namespace std::literals;
 
