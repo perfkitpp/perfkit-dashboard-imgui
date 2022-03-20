@@ -21,7 +21,9 @@ using std::unordered_map;
 class ConfigWindow
 {
     using Self = ConfigWindow;
-    using json = nlohmann::json;
+    using Json = nlohmann::json;
+    using CategoryDescPtr = notify::config_category_t const*;
+    using CategoryDesc = notify::config_category_t;
 
    public:
     //
@@ -31,14 +33,14 @@ class ConfigWindow
     struct ConfigEntityContext
     {
         uint64_t configKey;
-        json     value;
+        Json     value;
 
         string   name;
         string   description;
 
-        json     optMin;
-        json     optMax;
-        json     optOneOf;
+        Json     optMin;
+        Json     optMax;
+        Json     optOneOf;
 
         //! [transient]
         bool _bIsDirty = false;
@@ -50,12 +52,19 @@ class ConfigWindow
 
     struct ConfigCategoryContext
     {
+        //! Self reference
+        CategoryDescPtr selfRef = nullptr;
+
+        //! Reference to parent
+        ConfigCategoryContext* parentContext = nullptr;
+
         //! Open status from user input. Can be overridden by filtering status
         bool bBaseOpen = false;
 
         //! [transient]
         bool bFilterHitSelf = false;
         bool bFilterHitChild = false;
+        int  FilterCharsRange[2] = {};
     };
 
     struct ConfigRegistryContext
@@ -65,14 +74,17 @@ class ConfigWindow
         shared_ptr<void> _anchor = make_shared<nullptr_t>();
 
        public:
+        //! Id of this entity. Used for identifying republish/actual dispose.
+        uint64_t id;
+
         //! Entity list is constant after initial build
         vector<uint64_t> entityKeys;
 
         //! Config category descriptor
-        notify::config_category_t rootCategoryDesc;
+        CategoryDesc rootCategoryDesc;
 
         //! Config contexts
-        unordered_map<notify::config_category_t const*, ConfigCategoryContext> categoryContexts;
+        unordered_map<CategoryDescPtr, ConfigCategoryContext> categoryContexts;
 
        public:
         template <typename Ty_>
@@ -108,7 +120,7 @@ class ConfigWindow
     static EditContext globalEditContext;
 
     //! All config entities
-    map<uint64_t, ConfigEntityContext> _allEntities;
+    unordered_map<uint64_t, ConfigEntityContext> _allEntities;
 
    public:
     explicit ConfigWindow(IRpcSessionOwner* host) noexcept : _host(host) {}
@@ -125,16 +137,17 @@ class ConfigWindow
     // Try to render editor context of this frame.
     //
     void tryRenderEditorContext();
+    void recursiveTickSubcategory(ConfigRegistryContext& rg, CategoryDescPtr category, bool bCollapsed = false);
 
    public:
     //
     //              Event Handling
     //
-    void HandleNewConfigClass(string const& key, notify::config_category_t const& root)
+    void HandleNewConfigClass(uint64_t id, string const& key, CategoryDesc const& root)
     {
         PostEventMainThreadWeak(
                 _host->SessionAnchor(),
-                bind_front(&Self::_handleNewConfigClassMainThread, this, key, root));
+                bind_front(&Self::_handleNewConfigClassMainThread, this, id, key, root));
     }
 
     void HandleConfigUpdate(config_entity_update_t const& entity)
@@ -145,10 +158,10 @@ class ConfigWindow
     }
 
    private:
-    void _handleNewConfigClassMainThread(string, notify::config_category_t);
+    void _handleNewConfigClassMainThread(uint64_t, string, CategoryDesc);
     void _handleConfigsUpdate(config_entity_update_t entity) {}
 
     void _cleanupRegistryContext(ConfigRegistryContext& rg);
-    void _recursiveConstructCategories(ConfigRegistryContext* rg, notify::config_category_t const&);
+    void _recursiveConstructCategories(ConfigRegistryContext* rg, CategoryDesc const& ref, ConfigCategoryContext* parent);
 };
 }  // namespace widgets

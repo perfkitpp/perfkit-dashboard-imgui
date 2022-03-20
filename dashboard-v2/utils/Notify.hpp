@@ -77,7 +77,7 @@ class NotifyToast
     NotifyToast&& Separate() &&;
     NotifyToast&& String(string content) &&;
 
-    NotifyToast&& Spinner(int color = 0xffffffff) &&;
+    NotifyToast&& Spinner() &&;
 
     template <typename Fmt_, typename... Args_>
     NotifyToast&& String(Fmt_&& fmtstr, Args_&&... args) &&

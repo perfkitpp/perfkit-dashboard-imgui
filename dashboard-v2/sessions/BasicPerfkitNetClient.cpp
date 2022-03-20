@@ -201,7 +201,7 @@ void BasicPerfkitNetClient::TickSession()
     if (_uiState.bConfigOpen)
     {
         ImGui::SetNextWindowSize({240, 320}, ImGuiCond_Once);
-        if (CPPH_CALL_ON_EXIT(ImGui::End()); ImGui::Begin("configs"))
+        if (CPPH_CALL_ON_EXIT(ImGui::End()); ImGui::Begin("configs", nullptr, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_AlwaysVerticalScrollbar))
         {
             _wndConfig.RenderConfigWindow(&_uiState.bConfigOpen);
         }
@@ -416,7 +416,7 @@ void BasicPerfkitNetClient::drawTTY()
 
 bool BasicPerfkitNetClient::ShouldRenderSessionListEntityContent() const
 {
-    return not IsSessionOpen() || _authLevel == message::auth_level_t::unauthorized;
+    return true;
 }
 
 void BasicPerfkitNetClient::RenderSessionListEntityContent()
@@ -482,6 +482,22 @@ void BasicPerfkitNetClient::RenderSessionListEntityContent()
             // Draw logging in ... content
             ImGui::Text("Logging in ...");
         }
+    }
+    else
+    {
+        ImGui::AlignTextToFramePadding();
+        ImGui::Text("Configs"), ImGui::SameLine();
+        ImGui::ToggleButton("ToggleConfig", &_uiState.bConfigOpen);
+
+        ImGui::SameLine();
+        ImGui::AlignTextToFramePadding();
+        ImGui::Text("   Traces"), ImGui::SameLine();
+        ImGui::ToggleButton("ToggleTrace", &_uiState.bTraceOpen);
+
+        ImGui::SameLine();
+        ImGui::AlignTextToFramePadding();
+        ImGui::Text("   Graphics"), ImGui::SameLine();
+        ImGui::ToggleButton("ToggleGraphics", &_uiState.bGraphicsOpen);
     }
 }
 

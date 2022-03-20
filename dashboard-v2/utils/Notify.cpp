@@ -348,11 +348,11 @@ NotifyToast&& NotifyToast::Separate() &&
     return _self();
 }
 
-NotifyToast&& NotifyToast::Spinner(int color) &&
+NotifyToast&& NotifyToast::Spinner() &&
 {
     _body->ContentDecos.emplace_back(
-            [color] {
-                ImGui::Spinner("SpinnerCommon", color);
+            [] {
+                ImGui::Spinner("SpinnerCommon", ImGui::GetColorU32(ImGuiCol_ButtonActive));
                 ImGui::SameLine();
                 return true;
             });
