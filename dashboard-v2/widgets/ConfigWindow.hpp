@@ -23,9 +23,9 @@ class ConfigWindow
     using Self = ConfigWindow;
     using json = nlohmann::json;
 
-   private:
+   public:
     //
-    // CONFIGS
+    //              Config Type Definitions
     //
 
     struct ConfigEntityContext
@@ -84,11 +84,18 @@ class ConfigWindow
 
     struct EditContext
     {
+        //! Reference to owner. Uses control block of registry context, which releases
+        //!  ownership automatically on registry context cleanup.
+        weak_ptr<ConfigWindow> ownerRef;
+
         //! Weak reference to edit target
         weak_ptr<ConfigEntityContext> entityRef;
 
         //! Text editor for various context
         TextEditor editor;
+
+        //! [transient]
+        size_t _frameCountFence = 0;
     };
 
    private:
@@ -98,7 +105,7 @@ class ConfigWindow
     map<string, ConfigRegistryContext> _ctxs;
 
     //!
-    EditContext _edit;
+    static EditContext globalEditContext;
 
     //! All config entities
     map<uint64_t, ConfigEntityContext> _allEntities;
@@ -107,11 +114,22 @@ class ConfigWindow
     explicit ConfigWindow(IRpcSessionOwner* host) noexcept : _host(host) {}
 
    public:
-    void Tick() {}
-    void RenderMainWnd();
+    //
+    //               Rendering
+    //
+    void Tick();
+    void RenderConfigWindow(bool* bKeepOpen);
     void ClearContexts();
 
+   private:
+    // Try to render editor context of this frame.
+    //
+    void tryRenderEditorContext();
+
    public:
+    //
+    //              Event Handling
+    //
     void HandleNewConfigClass(string const& key, notify::config_category_t const& root)
     {
         PostEventMainThreadWeak(

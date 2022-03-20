@@ -85,6 +85,8 @@ class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNe
 
     auto RpcContext() -> perfkit::msgpack::rpc::context* override { return &*_rpc; }
     auto SessionAnchor() -> weak_ptr<void> override { return _sessionAnchor; }
+    auto KeyString() const -> string const& override { return _key; }
+    auto DisplayString() const -> string const& override { return _displayKey; }
 
    private:
     virtual void RenderSessionOpenPrompt() = 0;

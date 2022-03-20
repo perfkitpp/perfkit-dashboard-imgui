@@ -4,19 +4,82 @@
 
 #include "ConfigWindow.hpp"
 
-void widgets::ConfigWindow::RenderMainWnd()
+#include <perfkit/common/macros.hxx>
+#include <perfkit/common/utility/cleanup.hxx>
+
+#include "imgui_extension.h"
+widgets::ConfigWindow::EditContext widgets::ConfigWindow::globalEditContext;
+
+//
+void widgets::ConfigWindow::RenderConfigWindow(bool* bKeepOpen)
 {
+    /// Since
+    static struct
+    {
+        bool bHasFilterUpdate = false;
+
+    } eventContext;
+
     /// Render tools -> expand all, collapse all, filter, etc ...
+    static size_t _latestFrameCount = 0;
+    bool const    bShouldRenderStaticComponents = std::exchange(_latestFrameCount, gFrameIndex) != gFrameIndex;
+
+    if (bShouldRenderStaticComponents)
+    {
+        // 1. Render toolbars
+
+        // 2.
+    }
+
+    // Handle events of this frame using event context.
 
     /// If editor context is current, render it as child window, which takes upper half area
     ///  of configuration window.
 
     /// Render config tree recursively
+    // This window is rendered as single category of global config window, managed as header.
+    bool bSessionAlive = not _host->SessionAnchor().expired();
+    auto wndName = usprintf("%s###%s.CFGWND", _host->DisplayString().c_str(), _host->KeyString().c_str());
 
-    /// Check for keyboard input, and perform text search on text change.
-    /// ESCAPE clears filter buffer.
+    if (not bSessionAlive) { ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().DisabledAlpha); }
+    bool bRenderComponents = ImGui::CollapsingHeader(wndName, bKeepOpen);
+    ImGui::PopStyleVar(not bSessionAlive);
 
-    /// Render text filter layer if filtering text exists. Its position is fixed-top-right
+    if (bRenderComponents && bSessionAlive)
+    {
+        if (CPPH_TMPVAR = ImGui::ScopedChildWindow(usprintf("%s.REGION", _host->KeyString().c_str())))
+        {
+        }
+    }
+
+    if (bShouldRenderStaticComponents)
+    {
+        /// Check for keyboard input, and perform text search on text change.
+        /// ESCAPE clears filter buffer.
+
+        /// Render text filter layer if filtering text exists. Its position is fixed-top-right
+    }
+}
+
+void widgets::ConfigWindow::Tick()
+{
+    tryRenderEditorContext();
+}
+
+void widgets::ConfigWindow::tryRenderEditorContext()
+{
+    auto& _ctx = globalEditContext;
+
+    if (_ctx.ownerRef.lock().get() != this) { return; }
+    if (std::exchange(_ctx._frameCountFence, gFrameIndex) == gFrameIndex) { return; }
+
+    /// Render editor window
+    CPPH_CALL_ON_EXIT(ImGui::End());
+    bool bWndKeepOpen = true;
+    bool bContinue = ImGui::Begin("config editor", &bWndKeepOpen);
+
+    if (not bWndKeepOpen) { _ctx.ownerRef = {}; }
+    if (not bContinue) { return; }
 }
 
 void widgets::ConfigWindow::_handleNewConfigClassMainThread(

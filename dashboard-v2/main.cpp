@@ -21,7 +21,8 @@
 #    pragma comment(lib, "legacy_stdio_definitions")
 #endif
 
-size_t gFrameIndex;
+static size_t gFrameIndexImpl = 0;
+size_t const& gFrameIndex = gFrameIndexImpl;
 
 #include "Application.hpp"
 #include "utils/Notify.hpp"
@@ -195,7 +196,7 @@ int main(int, char**)
     // Main loop
     while (!glfwWindowShouldClose(window))
     {
-        ++gFrameIndex;
+        ++gFrameIndexImpl;
 
         // Poll and handle events (inputs, window resize, etc.)
         // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.

@@ -27,7 +27,7 @@ using std::vector;
 using std::weak_ptr;
 using std::chrono::steady_clock;
 
-extern size_t gFrameIndex;
+extern size_t const& gFrameIndex;
 
 using namespace std::literals;
 
