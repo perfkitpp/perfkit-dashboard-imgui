@@ -271,6 +271,7 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
                   else
                       return make_pair(int(pos), int(pos + evt.filterContent.size()));
               });
+
     auto const fnPropagateFilterHit
             = perfkit::y_combinator{[this](auto This, ConfigCategoryContext* selfPtr) -> void {
                   if (not selfPtr) { return; }
@@ -282,6 +283,28 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
                   // Recursively set flag
                   This(selfPtr->parentContext);
               }};
+
+    auto const fnRenderFilteredLabel
+            = [](string_view text, FilterEntity const& entity) {
+                  if (not gEvtThisFrame.bShouldApplyFilter || not entity.bFilterHitSelf)
+                  {
+                      ImGui::TextUnformatted(text.data(), text.data() + text.size());
+                  }
+                  else
+                  {
+                      auto strBeg = text.data();
+                      auto strFltBeg = text.data() + entity.FilterCharsRange.first;
+                      auto strFltEnd = text.data() + entity.FilterCharsRange.second;
+                      auto strEnd = text.data() + text.size();
+                      IM_ASSERT(strFltEnd <= strEnd);
+
+                      ImGui::TextUnformatted(strBeg, strFltBeg);
+                      ImGui::SameLine(0, 0), ImGui::PushStyleColor(ImGuiCol_Text, 0xffffff00);
+                      ImGui::TextUnformatted(strFltBeg, strFltEnd);
+                      ImGui::SameLine(0, 0), ImGui::PopStyleColor();
+                      ImGui::TextUnformatted(strFltEnd, strEnd);
+                  }
+              };
 
     if (evt.bHasFilterUpdate)
     {
@@ -327,9 +350,11 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
     if (not bCollapsed)
     {
         ImGui::SetNextItemOpen(bShouldOpen);
-        bTreeIsOpen = ImGui::TreeNodeEx(category->name.c_str(), ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_SpanAvailWidth);
-
+        bTreeIsOpen = ImGui::TreeNodeEx(usprintf("##%p", category), ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_SpanAvailWidth);
         if (ImGui::IsItemToggledOpen()) { self->bBaseOpen = not self->bBaseOpen; }
+
+        ImGui::SameLine(0, 0);
+        fnRenderFilteredLabel(category->name, *self);
     }
 
     for (auto& subCategory : category->subcategories)
@@ -365,7 +390,7 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
                             | ImGuiTreeNodeFlags_AllowItemOverlap);
 
             ImGui::PushStyleColor(ImGuiCol_Text, labelColor);
-            ImGui::SameLine(0, 0), ImGui::TextUnformatted(entity->name.c_str());
+            ImGui::SameLine(0, 0), fnRenderFilteredLabel(entity->name, *entity);
             ImGui::PopStyleColor();
 
             if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
