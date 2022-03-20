@@ -32,7 +32,16 @@ class ConfigWindow
     //              Config Type Definitions
     //
 
-    struct ConfigEntityContext
+    struct FilterEntity
+    {
+        //! Indicates this entity contains filter string
+        bool bFilterHitSelf = false;
+
+        //! Matching range if filter was hit on this entity.
+        pair<int, int> FilterCharsRange = {};
+    };
+
+    struct ConfigEntityContext : FilterEntity
     {
         uint64_t configKey;
         Json     value;
@@ -48,14 +57,15 @@ class ConfigWindow
         string             _cachedStringify;
 
         bool               _bIsDirty = false;
-        bool               _bHasReceivedUpdate = false;
+        bool               _bHasUpdate = false;
         perfkit::stopwatch _timeSinceUpdate;
 
+        bool               _bHasUpdateForEditor = false;
         bool               _bEditInRaw = false;
         bool               _bUpdateOnEdit = false;
     };
 
-    struct ConfigCategoryContext
+    struct ConfigCategoryContext : FilterEntity
     {
         //! Self reference
         CategoryDescPtr selfRef = nullptr;
@@ -66,10 +76,8 @@ class ConfigWindow
         //! Open status from user input. Can be overridden by filtering status
         bool bBaseOpen = false;
 
-        //! [transient]
-        bool bFilterHitSelf = false;
+        //! Indicates any of child window contains filter string
         bool bFilterHitChild = false;
-        int  FilterCharsRange[2] = {};
     };
 
     struct ConfigRegistryContext
@@ -108,8 +116,11 @@ class ConfigWindow
         //! Weak reference to edit target
         weak_ptr<ConfigEntityContext> entityRef;
 
-        //! Text editor for various context
-        TextEditor editor;
+        //! Cached editor instance
+        JsonEditor editor;
+
+        //! Editing entity context ... cached for fast comparison
+        ConfigEntityContext* _editingRef = {};
 
         //! [transient]
         size_t _frameCountFence = 0;

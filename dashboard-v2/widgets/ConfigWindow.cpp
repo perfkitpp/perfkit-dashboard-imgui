@@ -25,9 +25,6 @@ static struct
 //
 void widgets::ConfigWindow::RenderConfigWindow(bool* bKeepOpen)
 {
-    /// Render editor context
-    tryRenderEditorContext();
-
     /// Render tools -> expand all, collapse all, filter, etc ...
     static size_t _latestFrameCount = 0;
     bool const    bShouldRenderStaticComponents = std::exchange(_latestFrameCount, gFrameIndex) != gFrameIndex;
@@ -49,6 +46,7 @@ void widgets::ConfigWindow::RenderConfigWindow(bool* bKeepOpen)
             {
                 gEvtThisFrame.bHasFilterUpdate = true;
                 gEvtThisFrame.filterContent = _filterContentBuf;
+                for (auto i = 0; i < gEvtThisFrame.filterContent.size(); ++i) { _filterContentBuf[i] = tolower(_filterContentBuf[i]); }
             }
 
             if (ImGui::IsItemDeactivated() && ImGui::IsKeyPressed(ImGuiKey_Escape, false))
@@ -99,22 +97,46 @@ void widgets::ConfigWindow::RenderConfigWindow(bool* bKeepOpen)
 
 void widgets::ConfigWindow::Tick()
 {
+    /// Render editor context
+    tryRenderEditorContext();
 }
 
 void widgets::ConfigWindow::tryRenderEditorContext()
 {
     auto& _ctx = globalEditContext;
 
-    if (std::exchange(_ctx._frameCountFence, gFrameIndex) == gFrameIndex) { return; }
     if (_ctx.ownerRef.lock().get() != this) { return; }
+    if (std::exchange(_ctx._frameCountFence, gFrameIndex) == gFrameIndex) { return; }
+
+    auto entity = &*_ctx.entityRef.lock();
 
     /// Render editor window
     CPPH_CALL_ON_EXIT(ImGui::End());
     bool bWndKeepOpen = true;
-    bool bContinue = ImGui::Begin("config editor", &bWndKeepOpen);
+    bool bContinue = ImGui::Begin(usprintf("edit> %s###CONFEDIT", entity->name.c_str()), &bWndKeepOpen, ImGuiWindowFlags_MenuBar);
 
-    if (not bWndKeepOpen) { _ctx.ownerRef = {}; }
+    if (not bWndKeepOpen) { _ctx.ownerRef = {}, _ctx._editingRef = {}; }
     if (not bContinue) { return; }
+
+    if (exchange(_ctx._editingRef, entity) != entity)
+    {
+        // Editing target has changed ...
+        _ctx.editor.Reset(Json{entity->value});
+        entity->_bHasUpdateForEditor = false;
+    }
+
+    if (CondInvoke(ImGui::BeginMenuBar(), ImGui::EndMenuBar))
+    {
+        if (ImGui::Button("Reload"))
+        {
+        }
+
+        if (entity->_bHasUpdateForEditor)
+        {
+        }
+    }
+
+    // Start editing
 }
 
 void widgets::ConfigWindow::_handleNewConfigClassMainThread(
@@ -156,7 +178,7 @@ void widgets::ConfigWindow::_handleConfigsUpdate(config_entity_update_t const& e
         if (not parsed.is_discarded())
         {
             elem->value = move(parsed);
-            elem->_bHasReceivedUpdate = true;
+            elem->_bHasUpdate = true;
             elem->_timeSinceUpdate.reset();
         }
         else
@@ -191,7 +213,7 @@ void widgets::ConfigWindow::_recursiveConstructCategories(
         data->configKey = entity.config_key;
         data->name = entity.name;
         data->description = entity.description;
-        data->_bHasReceivedUpdate = true;
+        data->_bHasUpdate = true;
 
         if (not entity.initial_value.empty())
             data->value = Json::from_msgpack(entity.initial_value);
@@ -231,18 +253,75 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
         CategoryDescPtr        category,
         bool                   bCollapsed)
 {
-    auto self = &rg.categoryContexts.at(category);
+    auto        self = &rg.categoryContexts.at(category);
+    auto const& evt = gEvtThisFrame;
 
-    if (gEvtThisFrame.bHasFilterUpdate)
+    auto const  fnCheckFilter
+            = ([](string_view key) -> optional<pair<int, int>> {
+                  static string buf1;
+
+                  buf1.resize(key.size());
+                  transform(key, buf1.begin(), tolower);
+
+                  auto const& evt = gEvtThisFrame;
+
+                  auto        pos = buf1.find(evt.filterContent);
+                  if (pos == key.npos)
+                      return {};
+                  else
+                      return make_pair(int(pos), int(pos + evt.filterContent.size()));
+              });
+    auto const fnPropagateFilterHit
+            = perfkit::y_combinator{[this](auto This, ConfigCategoryContext* selfPtr) -> void {
+                  if (not selfPtr) { return; }
+
+                  // If bFilterHitChild is already true, it indicates there is another
+                  //  filter hit already.
+                  if (exchange(selfPtr->bFilterHitChild, true)) { return; }
+
+                  // Recursively set flag
+                  This(selfPtr->parentContext);
+              }};
+
+    if (evt.bHasFilterUpdate)
     {
         // TODO: Calculate filtering chars, and update bFilterSelf
         //  If this node hits filter, propagate result to its parent by parent recursion
+        self->bFilterHitChild = false;
+        self->bFilterHitSelf = false;
+
+        auto hitResult = fnCheckFilter(category->name);
+        if (hitResult)
+        {
+            self->bFilterHitSelf = true;
+            self->FilterCharsRange = *hitResult;
+            fnPropagateFilterHit(self);
+            self->bFilterHitChild = false;
+        }
+
+        for (auto& entityDesc : category->entities)
+        {
+            auto entity = &_allEntities.at(entityDesc.config_key);
+
+            // Check for filter
+            if (auto hitRes = fnCheckFilter(entity->name))
+            {
+                entity->bFilterHitSelf = true;
+                entity->FilterCharsRange = *hitRes;
+                fnPropagateFilterHit(self);
+            }
+            else
+            {
+                entity->bFilterHitSelf = false;
+            }
+        }
     }
 
-    if (gEvtThisFrame.bExpandAll) { self->bBaseOpen = true; }
-    if (gEvtThisFrame.bCollapseAll) { self->bBaseOpen = false; }
+    if (evt.bExpandAll) { self->bBaseOpen = true; }
+    if (evt.bCollapseAll) { self->bBaseOpen = false; }
 
-    bool const bShouldOpen = (self->bBaseOpen || self->bFilterHitChild);
+    bCollapsed = bCollapsed || evt.bShouldApplyFilter && not self->bFilterHitChild;
+    bool const bShouldOpen = (self->bBaseOpen || evt.bShouldApplyFilter && self->bFilterHitChild) && not bCollapsed;
     bool       bTreeIsOpen = false;
 
     if (not bCollapsed)
@@ -263,29 +342,41 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
         for (auto& entityDesc : category->entities)
         {
             auto entity = &_allEntities.at(entityDesc.config_key);
+            if (evt.bShouldApplyFilter && not entity->bFilterHitSelf) { continue; }
 
-            ImGui::GetWindowDrawList()->AddRectFilled(
-                    ImGui::GetCursorScreenPos(),
-                    ImGui::GetCursorScreenPos() + ImVec2{ImGui::GetContentRegionMax().x, ImGui::GetFrameHeight()},
-                    ImGui::GetColorU32(ImVec4{.1, .3, .1, std::max<float>(0., .8 - 5. * entity->_timeSinceUpdate.elapsed().count())}));
+            // Draw update highlight for short time after receiving update
+            if (auto alphaValue = std::max<float>(0., .8 - 5. * entity->_timeSinceUpdate.elapsed().count()))
+                ImGui::GetWindowDrawList()->AddRectFilled(
+                        ImGui::GetCursorScreenPos(),
+                        ImGui::GetCursorScreenPos() + ImVec2{ImGui::GetContentRegionMax().x, ImGui::GetFrameHeight()},
+                        ImGui::GetColorU32(ImVec4{.1, .3, .1, alphaValue}));
 
-            ImGui::PushStyleColor(ImGuiCol_Text, entity->_bIsDirty ? ColorRefs::FrontWarn : ImGui::GetColorU32(ImGuiCol_Text) - 0x55000000);
+            auto labelColor
+                    = entity->_bIsDirty                       ? ColorRefs::FrontWarn
+                    : globalEditContext._editingRef == entity ? ColorRefs::FrontOkay
+                                                              : ImGui::GetColorU32(ImGuiCol_Text) - 0x55000000;
+
             ImGui::TreeNodeEx(
-                    usprintf("%s##%p", entity->name.c_str(), entity),
+                    usprintf("##%p.TreeNode", entity),
                     ImGuiTreeNodeFlags_Leaf
                             | ImGuiTreeNodeFlags_FramePadding
                             | ImGuiTreeNodeFlags_NoTreePushOnOpen
                             | ImGuiTreeNodeFlags_SpanAvailWidth
                             | ImGuiTreeNodeFlags_AllowItemOverlap);
+
+            ImGui::PushStyleColor(ImGuiCol_Text, labelColor);
+            ImGui::SameLine(0, 0), ImGui::TextUnformatted(entity->name.c_str());
             ImGui::PopStyleColor();
+
             if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
             {
                 globalEditContext.ownerRef = rg.WrapPtr(this);
                 globalEditContext.entityRef = rg.WrapPtr(entity);
             }
 
-            if (exchange(entity->_bHasReceivedUpdate, false))
+            if (exchange(entity->_bHasUpdate, false))
             {
+                entity->_bHasUpdateForEditor = true;
                 entity->_cachedStringify = entity->value.dump();
                 entity->_bIsDirty = false;
             }

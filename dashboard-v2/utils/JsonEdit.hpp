@@ -7,8 +7,15 @@
 
 #include "imgui.h"
 
-class JsonEdit
+class JsonEditor
 {
+    using Json = nlohmann::json;
+
+   private:
+    unique_ptr<Json> _editing;
+
+   public:
+    void Reset(Json&& object) {}
 };
 
 namespace nlohmann::detail {
