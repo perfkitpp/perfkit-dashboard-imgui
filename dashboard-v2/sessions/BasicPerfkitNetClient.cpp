@@ -60,7 +60,7 @@ BasicPerfkitNetClient::BasicPerfkitNetClient()
     _rpc = std::make_unique<msgpack::rpc::context>(
             std::move(service_info),
             [guard = weak_ptr{_rpcFlushGuard}](auto&& fn) {
-                asio::dispatch(
+                asio::post(
                         [guard = guard.lock(), fn = std::forward<decltype(fn)>(fn)] {
                             fn();
                         });
