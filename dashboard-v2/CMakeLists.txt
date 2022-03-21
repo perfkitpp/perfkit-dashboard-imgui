@@ -92,7 +92,7 @@ set_target_properties(
 )
 
 configure_file(
-        ${CMAKE_SOURCE_DIR}/misc/CascadiaMono.ttf
+        ${CMAKE_SOURCE_DIR}/misc/JetBrainsMono-Regular.ttf
         ${CMAKE_BINARY_DIR}/${PROJECT_NAME}/rsrc/fonts/font-0.ttf
         COPYONLY
 )

@@ -183,14 +183,22 @@ int main(int, char**)
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
     {
         ImFontConfig cfg = {};
-        // io.Fonts->AddFontDefault();
+        /*/
+        io.Fonts->AddFontDefault(&cfg);
+        /*/
+        cfg.RasterizerMultiply = 1.2;
+        cfg.OversampleV = 4;
+        cfg.OversampleH = 4;
+        io.Fonts->AddFontFromFileTTF("rsrc/fonts/font-0.ttf", 15.5, &cfg);
+        //*/
+    }
 
-        cfg.RasterizerMultiply = 1.1;
-        io.Fonts->AddFontFromFileTTF("rsrc/fonts/font-0.ttf", 15.5f, &cfg);
-
+    {
+        ImFontConfig cfg = {};
         cfg.MergeMode = true;
-        cfg.RasterizerMultiply = 2.1;
-        io.Fonts->AddFontFromFileTTF("rsrc/fonts/font-1.ttf", 15.5f, &cfg, io.Fonts->GetGlyphRangesKorean());
+        cfg.RasterizerMultiply = 1.6;
+        cfg.OversampleV = 2;
+        io.Fonts->AddFontFromFileTTF("rsrc/fonts/font-1.ttf", 15., &cfg, io.Fonts->GetGlyphRangesKorean());
     }
 
     // Assure application initialization before drawing first frame.
