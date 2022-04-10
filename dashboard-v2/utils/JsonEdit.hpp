@@ -16,23 +16,33 @@ class JsonEditor
         bool bIsFocused    : 1;
 
         bool bEvtLostFocus : 1;
+        bool bEvtCtrlS     : 1;
     };
 
    private:
     using Json = nlohmann::json;
 
    private:
-    unique_ptr<Json> _editing;
-    unique_ptr<Json> _opt_min;
-    unique_ptr<Json> _opt_max;
+    struct Impl;
+
+    unique_ptr<Impl> _self;
     EditorStateFlag  _flags = {};
 
    public:
-    void Reset(Json&& object, Json const* min = {}, Json const* max = {}) {}
-    void Render(char const* id) {}
+    JsonEditor();
+    ~JsonEditor();
+
+    void Reset(Json&& object, Json const* min = {}, Json const* max = {});
+    void Render(void* id);
 
     auto FlagsThisFrame() const -> EditorStateFlag { return _flags; }
-    void ClearDirtyFlag() {}
+    void ClearDirtyFlag() { _flags = {}; }
+
+    void RetrieveEditing(Json*);
+    bool RawEditMode(bool const* bEnable = nullptr);
+
+   private:
+    void renderRecurse(Json* ptr, Json const* min, Json const* max);
 };
 
 namespace nlohmann::detail {

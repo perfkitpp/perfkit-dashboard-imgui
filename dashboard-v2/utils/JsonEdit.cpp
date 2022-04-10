@@ -5,7 +5,10 @@
 #include "JsonEdit.hpp"
 
 #include <nlohmann/json.hpp>
+#include <perfkit/common/macros.hxx>
+#include <perfkit/common/utility/cleanup.hxx>
 
+#include "TextEditor.h"
 #include "imgui.h"
 #include "imgui_internal.h"
 
@@ -116,3 +119,182 @@ bool ImGui::SingleLineJsonEdit(char const* str_id, nlohmann::json& value, const 
     PopID();
     return ret;
 }
+
+struct JsonEditor::Impl
+{
+    Json           editing;
+    optional<Json> min;
+    optional<Json> max;
+
+    bool           bRawEditMode = false;
+    TextEditor     rawEditor;
+};
+
+void JsonEditor::Render(void* id)
+{
+    ImGui::PushID(id);
+    CPPH_CALL_ON_EXIT(ImGui::PopID());
+
+    if (_self->bRawEditMode)
+    {
+        _self->rawEditor.Render("##EditJson", {}, false);
+        _flags.bIsDirty |= _self->rawEditor.IsTextChanged();
+    }
+    else
+    {
+        if (ImGui::BeginChild("ChildWindow", {}))
+        {
+            renderRecurse(
+                    &_self->editing,
+                    _self->min ? &*_self->min : nullptr,
+                    _self->max ? &*_self->max : nullptr);
+        }
+
+        ImGui::EndChild();
+    }
+}
+
+void JsonEditor::Reset(JsonEditor::Json&& object, const JsonEditor::Json* min, const JsonEditor::Json* max)
+{
+    auto& s = *_self;
+    s.editing = std::move(object);
+    if (_self->bRawEditMode) { _self->rawEditor.SetText(s.editing.dump(2)); }
+
+    s.min.reset();
+    s.max.reset();
+
+    if (min) { s.min.emplace(*min); }
+    if (max) { s.min.emplace(*max); }
+
+    _flags = {};
+}
+
+JsonEditor::JsonEditor()
+        : _self(make_unique<Impl>())
+{
+}
+
+static void DynamicStringBox(nlohmann::json* json)
+{
+}
+
+void JsonEditor::renderRecurse(JsonEditor::Json* ptr, Json const* min, Json const* max)
+{
+    auto type = ptr->type();
+    auto typeColor = ImGui::ContentColorByJsonType(type);
+
+    ImGui::PushID(ptr);
+    CPPH_CALL_ON_EXIT(ImGui::PopID());
+
+    switch (type)
+    {
+        case nlohmann::detail::value_t::null:
+        {
+            ImGui::TextColored(
+                    ImGui::ColorConvertU32ToFloat4(typeColor),
+                    "null");
+            break;
+        }
+
+        case nlohmann::detail::value_t::object:
+        {
+            break;
+        }
+
+        case nlohmann::detail::value_t::array:
+        {
+            break;
+        }
+
+        case nlohmann::detail::value_t::string:
+        {
+            ImGui::PushStyleColor(ImGuiCol_Text, typeColor);
+            DynamicStringBox(ptr);
+            ImGui::PopStyleColor();
+            break;
+        }
+
+        case nlohmann::detail::value_t::boolean:
+        {
+            if (ImGui::Checkbox("##Check", ptr->get_ptr<bool*>()))
+            {
+                _flags.bIsDirty = true;
+            }
+            break;
+        }
+
+        case nlohmann::detail::value_t::number_integer: break;
+        case nlohmann::detail::value_t::number_unsigned: break;
+        case nlohmann::detail::value_t::number_float: break;
+
+        case nlohmann::detail::value_t::binary:
+        {
+            ImGui::TextDisabled("--binary--");
+            break;
+        }
+
+        case nlohmann::detail::value_t::discarded:
+        {
+            ImGui::TextDisabled("--error--");
+            break;
+        }
+    }
+}
+
+void JsonEditor::RetrieveEditing(Json* out)
+{
+    if (_self->bRawEditMode)
+    {
+        *out = Json::parse(_self->rawEditor.GetText(), nullptr, false);
+
+        // Successfully parsed editing content.
+        if (not out->is_discarded())
+        {
+            _self->editing = *out;
+            return;
+        }
+        else
+        {
+            NotifyToast{"JSON: Raw editor content parsing failed"}
+                    .Error()
+                    .String("Cached json content will be used.");
+        }
+    }
+
+    // Copy currently editing content.
+    *out = _self->editing;
+}
+
+bool JsonEditor::RawEditMode(bool const* bEnable)
+{
+    if (bEnable)
+    {
+        auto bPrev = exchange(_self->bRawEditMode, *bEnable);
+        if (bPrev != _self->bRawEditMode)
+        {
+            if (_self->bRawEditMode)
+            {
+                // Switched to raw editing mode
+                _self->rawEditor.SetText(_self->editing.dump(2));
+            }
+            else
+            {
+                // Switched to normal editing mode
+                auto json = Json::parse(_self->rawEditor.GetText(), nullptr, false);
+                if (not json.is_discarded())
+                {
+                    _self->editing = json;
+                }
+                else
+                {
+                    NotifyToast{"JSON: Raw editor content parsing failed"}
+                            .Error()
+                            .String("Cached json content will be used.");
+                }
+            }
+        }
+    }
+    return _self->bRawEditMode;
+}
+
+JsonEditor::~JsonEditor() = default;

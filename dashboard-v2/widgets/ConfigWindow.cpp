@@ -113,6 +113,7 @@ void widgets::ConfigWindow::tryRenderEditorContext()
     auto& _ctx = globalEditContext;
 
     if (_ctx.ownerRef.lock().get() != this) { return; }
+    if (std::exchange(_ctx._bReloadFrame, false)) { return; }
     if (std::exchange(_ctx._frameCountFence, gFrameIndex) == gFrameIndex) { return; }
 
     auto entity = &*_ctx.entityRef.lock();
@@ -120,33 +121,99 @@ void widgets::ConfigWindow::tryRenderEditorContext()
     /// Render editor window
     CPPH_CALL_ON_EXIT(ImGui::End());
     bool bWndKeepOpen = true;
-    bool bContinue = ImGui::Begin(usprintf("edit: %s###CONFEDIT", entity->name.c_str()), &bWndKeepOpen, ImGuiWindowFlags_MenuBar);
+    bool bContinue = ImGui::Begin(
+            usprintf("edit: %s%c###CONFEDIT", entity->name.c_str(), entity->_bIsDirty ? '*' : ' '),
+            &bWndKeepOpen, ImGuiWindowFlags_MenuBar);
 
     if (not bWndKeepOpen) { _ctx.ownerRef = {}, _ctx._editingRef = {}; }
     if (not bWndKeepOpen || not bContinue) { return; }
 
     if (exchange(_ctx._editingRef, entity) != entity)
     {
+        _ctx._bReloadFrame = true;
+
         // Editing target has changed ...
         _ctx.editor.Reset(Json{entity->value});
+        _ctx.bDirty = false;
         entity->_bHasUpdateForEditor = false;
+
+        _ctx.editor.RawEditMode(&entity->_bEditInRaw);
     }
 
     if (CondInvoke(ImGui::BeginMenuBar(), ImGui::EndMenuBar))
     {
         ImGui::Checkbox("Update on edit", &entity->_bUpdateOnEdit);
-        ImGui::Checkbox("Edit in raw", &entity->_bEditInRaw);
+
+        if (entity->optOneOf.empty())
+        {
+            auto const bToggleEditInRaw
+                    = ImGui::IsKeyDown(ImGuiKey_LeftCtrl)
+                   && ImGui::IsKeyPressed(ImGuiKey_E);
+
+            if (ImGui::Checkbox("Edit in raw (^E)", &entity->_bEditInRaw) || bToggleEditInRaw)
+            {
+                if (bToggleEditInRaw) { entity->_bEditInRaw = !entity->_bEditInRaw; }
+                _ctx.editor.RawEditMode(&entity->_bEditInRaw);
+            }
+        }
+
+        auto const bRefreshShortcut
+                = ImGui::IsKeyDown(ImGuiKey_LeftCtrl)
+               && ImGui::IsKeyPressed(ImGuiKey_R);
 
         ImGui::PushStyleColor(ImGuiCol_Text, ColorRefs::FrontWarn);
-        if (entity->_bHasUpdateForEditor && ImGui::SmallButton("Reload!"))
+        if (entity->_bHasUpdateForEditor && (bRefreshShortcut || ImGui::SmallButton("Reload! (^R)")))
         {
-            _ctx.editor.Reset(Json{entity->value});
+            Json *minPtr = {}, *maxPtr = {};
+            if (not entity->optMin.empty()) { minPtr = &entity->optMin; }
+            if (not entity->optMax.empty()) { maxPtr = &entity->optMax; }
+
+            _ctx.editor.Reset(Json{entity->value}, minPtr, maxPtr);
+            _ctx.bDirty = false;
             entity->_bHasUpdateForEditor = false;
         }
         ImGui::PopStyleColor();
     }
 
-    // TODO: Edit json content
+    bool bCommitValue = _ctx.bDirty && entity->_bUpdateOnEdit;
+
+    ImGui::BeginChild("##Editor", {0, _ctx._editAreaMinusOffset}, true);
+
+    if (not entity->optOneOf.empty())
+    {
+        // TODO: Render 'oneof' selector
+    }
+    else
+    {
+        // TODO: Edit json content
+        _ctx.editor.Render(&_ctx);
+        _ctx.bDirty |= (bool)_ctx.editor.FlagsThisFrame().bIsDirty;
+        _ctx.editor.ClearDirtyFlag();
+    }
+
+    ImGui::EndChild();
+
+    if (not bCommitValue && _ctx.bDirty)
+    {
+        auto ptStart = ImGui::GetCursorPosY();
+        ImGui::PushStatefulColors(ImGuiCol_Button, ColorRefs::BackOkay);
+        CPPH_CALL_ON_EXIT(ImGui::PopStatefulColors());
+
+        bCommitValue |= ImGui::IsKeyDown(ImGuiKey_LeftCtrl) && ImGui::IsKeyPressed(ImGuiKey_S);
+        bCommitValue |= ImGui::Button("Commit (^S)", {-1, 0});
+        _ctx._editAreaMinusOffset = ptStart - ImGui::GetCursorPosY();
+    }
+    else
+    {
+        _ctx._editAreaMinusOffset = 0;
+    }
+
+    if (bCommitValue)
+    {
+        _ctx.bDirty = false;
+        _ctx.editor.RetrieveEditing(&entity->value);
+        commitEntity(entity);
+    }
 }
 
 void widgets::ConfigWindow::_handleNewConfigClassMainThread(
@@ -503,16 +570,21 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
 
             if (bHasUpdate)
             {
-                entity->_bIsDirty = true;
-
-                config_entity_update_t update;
-                update.config_key = entity->configKey;
-                Json::to_msgpack(entity->value, nlohmann::detail::output_adapter<char>(update.content_next));
-
-                service::update_config_entity(_host->RpcSession()).notify(update);
+                commitEntity(entity);
             }
         }
 
         ImGui::TreePop();
     }
+}
+
+void widgets::ConfigWindow::commitEntity(widgets::ConfigWindow::ConfigEntityContext* entity)
+{
+    entity->_bIsDirty = true;
+
+    config_entity_update_t update;
+    update.config_key = entity->configKey;
+    Json::to_msgpack(entity->value, nlohmann::detail::output_adapter<char>(update.content_next));
+
+    service::update_config_entity(_host->RpcSession()).notify(update);
 }

@@ -57,6 +57,10 @@ enum : uint32_t
     FrontWarn = 0xff00ffff,
     FrontOkay = 0xff00ff00,
 
+    BackError = 0xff000088,
+    BackWarn = 0xff008888,
+    BackOkay = 0xff008800,
+
     GlyphKeyword = 0xffd69c56,
     GlyphUserType = 0xffb0c94e,
     GlyphString = 0xff94bbff,

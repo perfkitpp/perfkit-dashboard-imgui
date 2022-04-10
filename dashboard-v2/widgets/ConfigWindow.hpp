@@ -120,11 +120,16 @@ class ConfigWindow
         //! Cached editor instance
         JsonEditor editor;
 
+        //! Check if editing entity is dirty
+        bool bDirty = false;
+
         //! Editing entity context ... cached for fast comparison
         ConfigEntityContext* _editingRef = {};
 
         //! [transient]
         size_t _frameCountFence = 0;
+        float  _editAreaMinusOffset = 0;
+        bool   _bReloadFrame = false;
     };
 
    private:
@@ -155,6 +160,7 @@ class ConfigWindow
     //
     void tryRenderEditorContext();
     void recursiveTickSubcategory(ConfigRegistryContext& rg, CategoryDescPtr category, bool bCollapsed = false);
+    void commitEntity(ConfigEntityContext*);
 
    public:
     //
