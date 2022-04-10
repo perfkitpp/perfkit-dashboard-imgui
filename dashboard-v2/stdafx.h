@@ -20,9 +20,9 @@ using perfkit::function;
 using perfkit::futils::usprintf;
 
 using std::exchange;
-using std::swap;
-using std::move;
 using std::forward;
+using std::move;
+using std::swap;
 
 using std::make_pair;
 using std::make_shared;
@@ -96,6 +96,7 @@ auto CondInvokeImpl(bool condition, Callable callable, Args_&&... args)
 
 void DispatchEventMainThread(function<void()>);
 void PostEventMainThread(function<void()>);
+void PostAsyncEvent(function<void()>);
 
 template <class Owner_, typename Callable_>
 void PostEventMainThreadWeak(Owner_&& weakPtr, Callable_&& callable)

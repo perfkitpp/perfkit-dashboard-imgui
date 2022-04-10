@@ -16,6 +16,7 @@ set(
         utils/JsonEdit.cpp
 
         sessions/BasicPerfkitNetClient.cpp
+        sessions/BasicPerfkitNetClient-SessionBuilder.cpp
         sessions/PerfkitTcpRawClient.cpp
 
         widgets/ConfigWindow.cpp

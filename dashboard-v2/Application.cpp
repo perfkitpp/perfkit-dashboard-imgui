@@ -27,6 +27,11 @@ static auto PersistentNumberStorage()
     return &_storage;
 }
 
+void PostAsyncEvent(function<void()> evt)
+{
+    asio::post(std::move(evt));
+}
+
 PERFKIT_CATEGORY(GConfig)
 {
     PERFKIT_SUBCATEGORY(Application)

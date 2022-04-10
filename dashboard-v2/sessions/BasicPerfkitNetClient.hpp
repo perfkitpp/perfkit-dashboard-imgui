@@ -4,7 +4,8 @@
 
 #pragma once
 #include <TextEditor.h>
-#include <perfkit/common/refl/msgpack-rpc/request_handle.hxx>
+#include <perfkit/common/refl/rpc/core.hxx>
+#include <perfkit/common/refl/rpc/detail/service.hxx>
 #include <perfkit/common/thread/locked.hxx>
 #include <perfkit/common/timer.hxx>
 #include <perfkit/extension/net/protocol.hpp>
@@ -13,19 +14,13 @@
 #include "interfaces/Session.hpp"
 #include "widgets/ConfigWindow.hpp"
 
-namespace perfkit::msgpack::rpc {
-class context;
-class if_context_monitor;
-struct session_profile;
-}  // namespace perfkit::msgpack::rpc
-
 namespace message = perfkit::net::message;
 
 class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNetClient>,
                               public ISession,
                               public IRpcSessionOwner
 {
-    using RpcRequestHandle = perfkit::msgpack::rpc::request_handle;
+    using RpcRequestHandle = perfkit::rpc::request_handle;
 
     using service = perfkit::net::message::service;
     using notify = perfkit::net::message::notify;
@@ -35,9 +30,11 @@ class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNe
     string _displayKey;
 
     //
-    unique_ptr<perfkit::msgpack::rpc::context>            _rpc;
-    shared_ptr<perfkit::msgpack::rpc::if_context_monitor> _monitor;
-    shared_ptr<void>                                      _rpcFlushGuard = std::make_shared<nullptr_t>();
+    shared_ptr<perfkit::rpc::session>            _rpc;
+    shared_ptr<perfkit::rpc::if_session_monitor> _monitor;
+    shared_ptr<void>                             _rpcFlushGuard = std::make_shared<nullptr_t>();
+
+    perfkit::rpc::service                        _notify_handler = perfkit::rpc::service::empty_service();
 
     // Lifetime anchor of single session.
     shared_ptr<void> _sessionAnchor;
@@ -83,7 +80,7 @@ class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNe
     bool ShouldRenderSessionListEntityContent() const final;
     void RenderSessionListEntityContent() final;
 
-    auto RpcContext() -> perfkit::msgpack::rpc::context* override { return &*_rpc; }
+    auto RpcContext() -> perfkit::rpc::session* override { return &*_rpc; }
     auto SessionAnchor() -> weak_ptr<void> override { return _sessionAnchor; }
     auto KeyString() const -> string const& override { return _key; }
     auto DisplayString() const -> string const& override { return _displayKey; }
@@ -99,9 +96,13 @@ class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNe
 
    protected:
     //! @note Connection to server must be unique!
-    perfkit::msgpack::rpc::context* GetRpc() { return &*_rpc; }
+    auto GetRpc() { return _rpc.get(); }
+
+    //! Call on new connection created.
+    //! It's better to be invoked from other than main thread.
+    void NotifyNewConnection(unique_ptr<perfkit::rpc::if_connection> newConn);
 
    public:
-    void _onSessionCreate_(perfkit::msgpack::rpc::session_profile const&);
-    void _onSessionDispose_(perfkit::msgpack::rpc::session_profile const&);
+    void _onSessionCreate_(perfkit::rpc::session_profile_view);
+    void _onSessionDispose_(perfkit::rpc::session_profile_view);
 };

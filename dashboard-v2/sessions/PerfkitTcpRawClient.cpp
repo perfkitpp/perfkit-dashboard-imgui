@@ -7,10 +7,12 @@
 #include <charconv>
 
 #include <asio/post.hpp>
-#include <perfkit/common/refl/msgpack-rpc/asio.hxx>
-#include <perfkit/common/refl/msgpack-rpc/context.hxx>
+#include <perfkit/common/refl/rpc/connection/asio.hxx>
+#include <perfkit/common/refl/rpc/rpc.hxx>
 
 #include "imgui_extension.h"
+
+using namespace perfkit;
 
 void PerfkitTcpRawClient::InitializeSession(const string& keyUri)
 {
@@ -26,7 +28,6 @@ void PerfkitTcpRawClient::RenderSessionOpenPrompt()
             if (ImGui::Button(usprintf("Connect##%s", _uri.c_str()), {-1, 0}))
             {
                 _sockPtrConnecting.store(nullptr);
-                GetRpc()->disconnect_all();
 
                 _state = EConnectionState::Connecting;
                 asio::post(bind_front_weak(weak_from_this(), &PerfkitTcpRawClient::startConnection, this));
@@ -73,8 +74,6 @@ bool PerfkitTcpRawClient::IsSessionOpen() const
 void PerfkitTcpRawClient::CloseSession()
 {
     BasicPerfkitNetClient::CloseSession();
-
-    GetRpc()->disconnect_all();
     _state = EConnectionState::Offline;
 }
 
@@ -147,7 +146,8 @@ void PerfkitTcpRawClient::startConnection()
         NotifyToast{"Connected"}.String("Connection to session [{}] successfully established.", _uri);
         fnTransitTo(EConnectionState::OnlineReadOnly);
 
-        perfkit::msgpack::rpc::asio_ex::create_session(*GetRpc(), std::move(sock));
+        auto conn = make_unique<rpc::asio_stream<tcp>>(std::move(sock));
+        this->NotifyNewConnection(std::move(conn));
     }
     catch (asio::system_error& ec)
     {

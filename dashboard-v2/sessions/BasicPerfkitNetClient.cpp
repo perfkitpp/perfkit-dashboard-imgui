@@ -7,8 +7,9 @@
 #include <asio/dispatch.hpp>
 #include <asio/post.hpp>
 #include <perfkit/common/macros.hxx>
-#include <perfkit/common/refl/archive/json.hpp>
-#include <perfkit/common/refl/msgpack-rpc/context.hxx>
+#include <perfkit/common/refl/object.hxx>
+#include <perfkit/common/refl/rpc/rpc.hxx>
+#include <perfkit/common/refl/rpc/service.hxx>
 #include <perfkit/configs.h>
 
 #include "Application.hpp"
@@ -18,18 +19,12 @@
 using namespace perfkit;
 using namespace net::message;
 
-class PerfkitNetClientRpcMonitor : public msgpack::rpc::if_context_monitor
+class PerfkitNetClientRpcMonitor : public rpc::if_session_monitor
 {
    public:
     std::weak_ptr<BasicPerfkitNetClient> _owner;
-
-   public:
-    void on_new_session(const msgpack::rpc::session_profile& profile) noexcept override
-    {
-        if (auto lc = _owner.lock())
-            lc->_onSessionCreate_(profile);
-    }
-    void on_dispose_session(const msgpack::rpc::session_profile& profile) noexcept override
+    
+    void on_session_expired(rpc::session_profile_view profile) noexcept override
     {
         if (auto lc = _owner.lock())
             lc->_onSessionDispose_(profile);
@@ -39,7 +34,7 @@ class PerfkitNetClientRpcMonitor : public msgpack::rpc::if_context_monitor
 BasicPerfkitNetClient::BasicPerfkitNetClient()
 {
     // Create service
-    auto service_info = msgpack::rpc::service_info{};
+    auto service_info = rpc::service_builder{};
     service_info
             .route(notify::tty,
                    [this](tty_output_t& h) { _ttyQueue.lock()->append(h.content); })
@@ -52,20 +47,11 @@ BasicPerfkitNetClient::BasicPerfkitNetClient()
                        PostEventMainThreadWeak(weak_from_this(), [this, arg] { _sessionStats = arg; });
                    });
 
+    _notify_handler = service_info.build();
+
     // Create monitor
     auto monitor = std::make_shared<PerfkitNetClientRpcMonitor>();
     _monitor = monitor;
-
-    // Create RPC context
-    _rpc = std::make_unique<msgpack::rpc::context>(
-            std::move(service_info),
-            [guard = weak_ptr{_rpcFlushGuard}](auto&& fn) {
-                asio::post(
-                        [guard = guard.lock(), fn = std::forward<decltype(fn)>(fn)] {
-                            fn();
-                        });
-            },
-            _monitor);
 
     // Tty config
     _tty.SetReadOnly(true);
@@ -208,66 +194,74 @@ void BasicPerfkitNetClient::TickSession()
     }
 }
 
-void BasicPerfkitNetClient::_onSessionCreate_(const msgpack::rpc::session_profile& profile)
+void BasicPerfkitNetClient::_onSessionCreate_(rpc::session_profile_view profile)
 {
     auto anchor = make_shared<nullptr_t>();
-    NotifyToast("Rpc Session Created").String(profile.peer_name);
+    NotifyToast("Rpc Session Created").String(profile->peer_name);
 
-    auto sesionInfo = decltype(service::session_info)::return_type{};
-    auto result = service::session_info(*_rpc).rpc(&sesionInfo, 1s);
-
-    if (result != msgpack::rpc::rpc_status::okay)
+    try
     {
-        NotifyToast{"Rpc invocation failed"}.Error().String(to_string(result));
+        auto rpc = profile->w_self.lock();
+
+        auto sesionInfo = decltype(service::session_info)::return_type{};
+        service::session_info(rpc).request_with(&sesionInfo, 1s);
+
+        auto ttyContent = decltype(service::fetch_tty)::return_type{};
+        service::fetch_tty(rpc).request_with(&ttyContent, 0);
+
+        PostEventMainThreadWeak(
+                weak_from_this(),
+                [this,
+                 rpc = move(rpc),
+                 info = std::move(sesionInfo),
+                 peer = profile->peer_name,
+                 ttyContent = std::move(ttyContent),
+                 anchor = anchor]() mutable {
+                    assert(not _sessionAnchor);
+                    _rpc.reset();
+                    _rpc = move(rpc);
+
+                    _sessionAnchor = anchor;
+                    _sessionInfo = std::move(info);
+                    _displayKey = fmt::format(
+                            "{}@{} [{}]", _sessionInfo.name, _sessionInfo.hostname, _key);
+
+                    auto introStr = fmt::format(
+                            "\n\n"
+                            "+---------------------------------------- NEW SESSION -----------------------------------------\n"
+                            "| \n"
+                            "| \n"
+                            "| Name               : {}\n"
+                            "| Host               : {}\n"
+                            "| Peer               : {}\n"
+                            "| Number of cores    : {}\n"
+                            "| \n"
+                            "| {}\n"
+                            "+----------------------------------------------------------------------------------------------\n"
+                            "\n\n",
+                            _sessionInfo.name,
+                            _sessionInfo.hostname,
+                            peer,
+                            _sessionInfo.num_cores,
+                            _sessionInfo.description);
+
+                    _ttyQueue.access(
+                            [&](string& str) {
+                                str.append(introStr);
+                                str.append(ttyContent.content);
+                            });
+                });
+    }
+    catch (rpc::request_exception& ec)
+    {
+        NotifyToast{"Rpc invocation failed"}.Error().String(ec.what());
         return;
     }
-
-    auto ttyContent = decltype(service::fetch_tty)::return_type{};
-    service::fetch_tty(*_rpc).rpc(&ttyContent, 0);
-
-    PostEventMainThreadWeak(
-            weak_from_this(),
-            [this,
-             info = std::move(sesionInfo),
-             peer = profile.peer_name,
-             ttyContent = std::move(ttyContent),
-             anchor = anchor]() mutable {
-                assert(not _sessionAnchor);
-                _sessionAnchor = anchor;
-                _sessionInfo = std::move(info);
-                _displayKey = fmt::format(
-                        "{}@{} [{}]", _sessionInfo.name, _sessionInfo.hostname, _key);
-
-                auto introStr = fmt::format(
-                        "\n\n"
-                        "+---------------------------------------- NEW SESSION -----------------------------------------\n"
-                        "| \n"
-                        "| \n"
-                        "| Name               : {}\n"
-                        "| Host               : {}\n"
-                        "| Peer               : {}\n"
-                        "| Number of cores    : {}\n"
-                        "| \n"
-                        "| {}\n"
-                        "+----------------------------------------------------------------------------------------------\n"
-                        "\n\n",
-                        _sessionInfo.name,
-                        _sessionInfo.hostname,
-                        peer,
-                        _sessionInfo.num_cores,
-                        _sessionInfo.description);
-
-                _ttyQueue.access(
-                        [&](string& str) {
-                            str.append(introStr);
-                            str.append(ttyContent.content);
-                        });
-            });
 }
 
-void BasicPerfkitNetClient::_onSessionDispose_(const msgpack::rpc::session_profile& profile)
+void BasicPerfkitNetClient::_onSessionDispose_(rpc::session_profile_view profile)
 {
-    NotifyToast("Rpc Session Disposed").Wanrning().String(profile.peer_name);
+    NotifyToast("Rpc Session Disposed").Wanrning().String(profile->peer_name);
     _ttyQueue.access([&](auto&& str) {
         str.append(fmt::format(
                 std::locale("en_US.utf-8"),
@@ -279,9 +273,9 @@ void BasicPerfkitNetClient::_onSessionDispose_(const msgpack::rpc::session_profi
                 "    [Tx] {:<24L} bytes\n"
                 "</eof>\n"
                 "\n\n",
-                profile.peer_name,
-                profile.total_read,
-                profile.total_write));
+                profile->peer_name,
+                profile->total_read,
+                profile->total_write));
     });
 
     PostEventMainThread(bind_front_weak(weak_from_this(), [this] { CloseSession(); }));
@@ -297,6 +291,7 @@ BasicPerfkitNetClient::~BasicPerfkitNetClient()
 
 void BasicPerfkitNetClient::tickHeartbeat()
 {
+    if (not _rpc) { return; }
     if (not _timHeartbeat.check_sparse()) { return; }
 
     if (_hrpcHeartbeat && not _hrpcHeartbeat.wait(0ms))
@@ -307,12 +302,12 @@ void BasicPerfkitNetClient::tickHeartbeat()
         return;
     }
 
-    _hrpcHeartbeat = service::heartbeat(*_rpc).async_rpc(
-            [](auto&& exception) {
-                if (exception)
+    _hrpcHeartbeat = service::heartbeat(_rpc).async_request(
+            [](auto&& ec, auto content) {
+                if (ec)
                     NotifyToast{"Heartbeat returned error"}
                             .Error()
-                            .String(exception->what());
+                            .String(content);
             });
 }
 
@@ -326,6 +321,7 @@ void BasicPerfkitNetClient::CloseSession()
     _sessionStats = {};
 
     _wndConfig.ClearContexts();
+    _rpc.reset();
 }
 
 void BasicPerfkitNetClient::drawTTY()
@@ -442,15 +438,15 @@ void BasicPerfkitNetClient::RenderSessionListEntityContent()
             {
                 auto fnOnLogin
                         = [this] {
-                              service::request_republish_config_registries(*_rpc).notify_one();
+                              service::request_republish_config_registries(_rpc).notify();
                           };
 
                 auto fnOnRpcComplete
-                        = [this, fnOnLogin](auto&& ec) {
+                        = [this, fnOnLogin](auto&& ec, auto content) {
                               if (ec)
                               {
                                   NotifyToast{"[{}]\nLogin Failed", _key}
-                                          .String(ec->what())
+                                          .String(ec.message())
                                           .Error();
 
                                   PostEventMainThreadWeak(
@@ -465,7 +461,7 @@ void BasicPerfkitNetClient::RenderSessionListEntityContent()
                               }
                           };
 
-                _hrpcLogin = service::login(*_rpc).async_rpc(
+                _hrpcLogin = service::login(_rpc).async_request(
                         &_authLevel,
                         "serialized_content",
                         bind_front_weak(_sessionAnchor, fnOnRpcComplete));

@@ -24,6 +24,8 @@
 static size_t gFrameIndexImpl = 0;
 size_t const& gFrameIndex = gFrameIndexImpl;
 
+#include "stdafx.h"
+
 #include "Application.hpp"
 #include "utils/Notify.hpp"
 

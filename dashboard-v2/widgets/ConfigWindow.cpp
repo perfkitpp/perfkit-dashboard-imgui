@@ -5,7 +5,8 @@
 #include "ConfigWindow.hpp"
 
 #include <perfkit/common/macros.hxx>
-#include <perfkit/common/refl/msgpack-rpc/context.hxx>
+#include <perfkit/common/refl/object.hxx>
+#include <perfkit/common/refl/rpc/rpc.hxx>
 #include <perfkit/common/utility/cleanup.hxx>
 
 #include "imgui_extension.h"
@@ -437,7 +438,7 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
                     update.config_key = entity->configKey;
                     Json::to_msgpack(entity->value, nlohmann::detail::output_adapter<char>(update.content_next));
 
-                    service::update_config_entity(*_host->RpcContext()).notify_one(update);
+                    service::update_config_entity(_host->RpcContext()).notify(update);
                 }
             }
             else
