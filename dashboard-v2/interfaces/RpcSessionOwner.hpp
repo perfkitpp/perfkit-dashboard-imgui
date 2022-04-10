@@ -14,6 +14,6 @@ class IRpcSessionOwner
     virtual auto KeyString() const -> string const& = 0;
     virtual auto DisplayString() const -> string const& = 0;
 
-    virtual auto RpcContext() -> perfkit::rpc::session* = 0;
+    virtual auto RpcSession() -> perfkit::rpc::session* = 0;
     virtual auto SessionAnchor() -> weak_ptr<void> = 0;
 };

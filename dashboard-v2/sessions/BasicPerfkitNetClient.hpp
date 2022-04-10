@@ -80,7 +80,7 @@ class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNe
     bool ShouldRenderSessionListEntityContent() const final;
     void RenderSessionListEntityContent() final;
 
-    auto RpcContext() -> perfkit::rpc::session* override { return &*_rpc; }
+    auto RpcSession() -> perfkit::rpc::session* override { return &*_rpc; }
     auto SessionAnchor() -> weak_ptr<void> override { return _sessionAnchor; }
     auto KeyString() const -> string const& override { return _key; }
     auto DisplayString() const -> string const& override { return _displayKey; }

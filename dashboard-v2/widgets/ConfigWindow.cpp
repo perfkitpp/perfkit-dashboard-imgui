@@ -298,7 +298,13 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
               }};
 
     auto const fnRenderFilteredLabel
-            = [](string_view text, FilterEntity const& entity) {
+            = [](string_view text, FilterEntity const& entity, uint32_t baseColor = ImGui::GetColorU32(ImGuiCol_Text)) {
+                  ImGui::PushStyleColor(ImGuiCol_Text, baseColor);
+                  CPPH_CALL_ON_EXIT(ImGui::PopStyleColor());
+
+                  ImGui::Spacing();
+                  ImGui::SameLine();
+
                   if (not gEvtThisFrame.bShouldApplyFilter || not entity.bFilterHitSelf)
                   {
                       ImGui::TextUnformatted(text.data(), text.data() + text.size());
@@ -363,7 +369,7 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
     if (not bCollapsed)
     {
         ImGui::SetNextItemOpen(bShouldOpen);
-        bTreeIsOpen = ImGui::TreeNodeEx(usprintf("##%p", category), ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_SpanAvailWidth);
+        bTreeIsOpen = ImGui::TreeNodeEx(usprintf("##%p", category), ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_SpanFullWidth);
         if (ImGui::IsItemToggledOpen()) { self->bBaseOpen = not self->bBaseOpen; }
 
         ImGui::SameLine(0, 0);
@@ -405,16 +411,37 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
                     ImGuiTreeNodeFlags_Leaf
                             | ImGuiTreeNodeFlags_FramePadding
                             | ImGuiTreeNodeFlags_NoTreePushOnOpen
-                            | ImGuiTreeNodeFlags_SpanAvailWidth
+                            | ImGuiTreeNodeFlags_SpanFullWidth
                             | ImGuiTreeNodeFlags_AllowItemOverlap);
 
-            if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+            bool const bIsItemClicked = ImGui::IsItemClicked(ImGuiMouseButton_Right);
+            bool const bIsItemHovered = ImGui::IsItemHovered();
+
+            if (bIsItemClicked)
             {
                 globalEditContext.ownerRef = rg.WrapPtr(this);
                 globalEditContext.entityRef = rg.WrapPtr(entity);
             }
 
-            ImGui::SameLine(0, 0), fnRenderFilteredLabel(entity->name, *entity);
+            if (bIsItemHovered)
+            {
+                ImGui::PushTextWrapPos(0);
+                CPPH_CALL_ON_EXIT(ImGui::PopTextWrapPos());
+
+                ImGui::SetNextWindowSize({240, 0});
+                ImGui::BeginTooltip();
+                CPPH_CALL_ON_EXIT(ImGui::EndTooltip());
+
+                ImGui::TextUnformatted(entity->name.c_str());
+                ImGui::Separator();
+
+                ImGui::PushStyleColor(ImGuiCol_Text, 0xff888888);
+                ImGui::TextWrapped("%s", entity->description.empty() ? "--no description--" : entity->description.c_str());
+                ImGui::PopStyleColor();
+            }
+
+            ImGui::SameLine(0, 0);
+            fnRenderFilteredLabel(entity->name, *entity, 0xffbbbbbb);
 
             if (exchange(entity->_bHasUpdate, false))
             {
@@ -425,26 +452,31 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
 
             ImGui::SameLine(0, 0);
             ImGui::TextColored({1, 1, 0, .7}, entity->_bIsDirty ? "*" : " ");
+            ImGui::SameLine();
 
-            if (entity->value.is_boolean() || entity->value.is_number())
+            if (not entity->optOneOf.empty())
             {
-                ImGui::SameLine();
+                ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ContentColorByJsonType(entity->value));
+                ImGui::Text("TODO: Make 'OneOf selector'");
+                ImGui::PopStyleColor();
+            }
+            else if (entity->value.is_boolean() || entity->value.is_number())
+            {
                 if (ImGui::SingleLineJsonEdit(usprintf("##%p", entity), entity->value, entity->_cachedStringify))
                 {
                     entity->_bIsDirty = true;
-                    NotifyToast{"Update"}.String("Value: {}", entity->value.dump());
 
                     config_entity_update_t update;
                     update.config_key = entity->configKey;
                     Json::to_msgpack(entity->value, nlohmann::detail::output_adapter<char>(update.content_next));
 
-                    service::update_config_entity(_host->RpcContext()).notify(update);
+                    service::update_config_entity(_host->RpcSession()).notify(update);
                 }
             }
             else
             {
                 ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ContentColorByJsonType(entity->value));
-                ImGui::SameLine(), ImGui::AlignTextToFramePadding();
+                ImGui::AlignTextToFramePadding();
                 ImGui::TextUnformatted(entity->_cachedStringify.c_str());
                 ImGui::PopStyleColor();
             }
