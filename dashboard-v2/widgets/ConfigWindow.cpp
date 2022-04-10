@@ -146,7 +146,7 @@ void widgets::ConfigWindow::tryRenderEditorContext()
         ImGui::PopStyleColor();
     }
 
-    // Edit json content
+    // TODO: Edit json content
 }
 
 void widgets::ConfigWindow::_handleNewConfigClassMainThread(
@@ -327,7 +327,7 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
 
     if (evt.bHasFilterUpdate)
     {
-        // TODO: Calculate filtering chars, and update bFilterSelf
+        // Calculate filtering chars, and update bFilterSelf
         //  If this node hits filter, propagate result to its parent by parent recursion
         self->bFilterHitChild = false;
         self->bFilterHitSelf = false;
@@ -454,24 +454,44 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
             ImGui::TextColored({1, 1, 0, .7}, entity->_bIsDirty ? "*" : " ");
             ImGui::SameLine();
 
-            if (not entity->optOneOf.empty())
+            bool bHasUpdate = false;
+
+            if (not entity->optOneOf.empty() && entity->optOneOf.is_array())
             {
+                // TODO: Implement 'OneOf' selector
                 ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ContentColorByJsonType(entity->value));
-                ImGui::Text("TODO: Make 'OneOf selector'");
-                ImGui::PopStyleColor();
+                CPPH_CALL_ON_EXIT(ImGui::PopStyleColor());
+
+                ImGui::SetNextItemWidth(-1);
+                auto bOpenCombo = ImGui::BeginCombo(
+                        usprintf("##%pComboSelect", entity),
+                        entity->_cachedStringify.c_str());
+
+                if (bOpenCombo)
+                {
+                    CPPH_CALL_ON_EXIT(ImGui::EndCombo());
+
+                    for (auto& e : entity->optOneOf)
+                    {
+                        auto str = e.dump();
+                        auto bSelected = ImGui::Selectable(str.c_str());
+
+                        if (bSelected)
+                        {
+                            bHasUpdate = true;
+                            entity->value = e;
+
+                            break;
+                        }
+                    }
+                }
             }
             else if (entity->value.is_boolean() || entity->value.is_number())
             {
-                if (ImGui::SingleLineJsonEdit(usprintf("##%p", entity), entity->value, entity->_cachedStringify))
-                {
-                    entity->_bIsDirty = true;
-
-                    config_entity_update_t update;
-                    update.config_key = entity->configKey;
-                    Json::to_msgpack(entity->value, nlohmann::detail::output_adapter<char>(update.content_next));
-
-                    service::update_config_entity(_host->RpcSession()).notify(update);
-                }
+                bHasUpdate = ImGui::SingleLineJsonEdit(
+                        usprintf("##%p", entity),
+                        entity->value,
+                        entity->_cachedStringify);
             }
             else
             {
@@ -479,6 +499,17 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
                 ImGui::AlignTextToFramePadding();
                 ImGui::TextUnformatted(entity->_cachedStringify.c_str());
                 ImGui::PopStyleColor();
+            }
+
+            if (bHasUpdate)
+            {
+                entity->_bIsDirty = true;
+
+                config_entity_update_t update;
+                update.config_key = entity->configKey;
+                Json::to_msgpack(entity->value, nlohmann::detail::output_adapter<char>(update.content_next));
+
+                service::update_config_entity(_host->RpcSession()).notify(update);
             }
         }
 
