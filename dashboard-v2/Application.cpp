@@ -215,6 +215,9 @@ void Application::drawMenuContents()
     if (CondInvoke(ImGui::BeginMenu("Add"), &ImGui::EndMenu))
         if (CondInvoke(ImGui::BeginMenu("Session..."), &ImGui::EndMenu))
             drawAddSessionMenu();
+
+    ImGui::SetNextItemWidth(150 * ImGui::GetIO().FontGlobalScale);
+    ImGui::SliderFloat("##Scale", &ImGui::GetIO().FontGlobalScale, 1, 2, "Scale: %4.2f");
 }
 
 void Application::drawSessionList(bool* bKeepOpen)
