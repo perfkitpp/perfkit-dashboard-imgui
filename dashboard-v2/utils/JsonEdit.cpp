@@ -5,6 +5,8 @@
 #include "JsonEdit.hpp"
 
 #include <nlohmann/json.hpp>
+#include <perfkit/common/algorithm/std.hxx>
+#include <perfkit/common/counter.hxx>
 #include <perfkit/common/macros.hxx>
 #include <perfkit/common/utility/cleanup.hxx>
 
@@ -176,6 +178,7 @@ JsonEditor::JsonEditor()
 
 static void DynamicStringBox(nlohmann::json* json)
 {
+    ImGui::Text("String HERE");
 }
 
 void JsonEditor::renderRecurse(JsonEditor::Json* ptr, Json const* min, Json const* max)
@@ -190,6 +193,7 @@ void JsonEditor::renderRecurse(JsonEditor::Json* ptr, Json const* min, Json cons
     {
         case nlohmann::detail::value_t::null:
         {
+            ImGui::AlignTextToFramePadding();
             ImGui::TextColored(
                     ImGui::ColorConvertU32ToFloat4(typeColor),
                     "null");
@@ -198,17 +202,78 @@ void JsonEditor::renderRecurse(JsonEditor::Json* ptr, Json const* min, Json cons
 
         case nlohmann::detail::value_t::object:
         {
+            ImGui::Text("{");
+            ImGui::TreePush();
+
+            size_t n = 0;
+            for (auto& [k, v] : ptr->items())
+            {
+                // TODO: Make key configurable
+                // TODO: Add cloneable feature
+
+                ImGui::PushStyleColor(ImGuiCol_Text, ColorRefs::GlyphKeyword);
+                ImGui::AlignTextToFramePadding();
+                ImGui::TextUnformatted(k.c_str());
+                ImGui::PopStyleColor();
+                ImGui::SameLine(0, 0), ImGui::TextUnformatted(":");
+                ImGui::SameLine();
+
+                renderRecurse(
+                        &v,
+                        min ? perfkit::find_ptr(*min, k) : nullptr,
+                        max ? perfkit::find_ptr(*max, k) : nullptr);
+
+                if (++n < ptr->size())
+                {
+                    ImGui::SameLine(0, 0), ImGui::Text(",");
+                }
+            }
+            ImGui::TreePop();
+
+            if (ptr->empty()) { ImGui::SameLine(0, 0); }
+            ImGui::Text("}");
             break;
         }
 
         case nlohmann::detail::value_t::array:
         {
+            ImGui::Text("[");
+            ImGui::TreePush();
+
+            for (int n : perfkit::counter(ptr->size()))
+            {
+                // TODO: Make key configurable
+                // TODO: Add cloneable feature
+
+                ImGui::PushStyleColor(ImGuiCol_Text, ColorRefs::GlyphKeyword);
+                ImGui::AlignTextToFramePadding();
+                ImGui::TextUnformatted(usprintf("[%zu]", n));
+                ImGui::PopStyleColor();
+
+                ImGui::SameLine(0, 0), ImGui::TextUnformatted(":");
+                ImGui::SameLine();
+
+                renderRecurse(
+                        &(*ptr)[n],
+                        min && n < min->size() ? &(*min)[n] : nullptr,
+                        max && n < max->size() ? &(*max)[n] : nullptr);
+
+                if (n + 1 < ptr->size())
+                {
+                    ImGui::SameLine(0, 0), ImGui::Text(",");
+                }
+            }
+            ImGui::TreePop();
+
+            if (ptr->empty()) { ImGui::SameLine(0, 0); }
+            ImGui::Text("]");
             break;
         }
 
         case nlohmann::detail::value_t::string:
         {
             ImGui::PushStyleColor(ImGuiCol_Text, typeColor);
+            ImGui::AlignTextToFramePadding();
             DynamicStringBox(ptr);
             ImGui::PopStyleColor();
             break;
@@ -223,18 +288,28 @@ void JsonEditor::renderRecurse(JsonEditor::Json* ptr, Json const* min, Json cons
             break;
         }
 
-        case nlohmann::detail::value_t::number_integer: break;
-        case nlohmann::detail::value_t::number_unsigned: break;
-        case nlohmann::detail::value_t::number_float: break;
+        case nlohmann::detail::value_t::number_integer:
+        case nlohmann::detail::value_t::number_unsigned:
+        case nlohmann::detail::value_t::number_float:
+        {
+            ImGui::PushStyleColor(ImGuiCol_Text, typeColor);
+            ImGui::AlignTextToFramePadding();
+            ImGui::Text("TODO: INTEGER HERE");
+            ImGui::PopStyleColor();
+
+            break;
+        }
 
         case nlohmann::detail::value_t::binary:
         {
+            ImGui::AlignTextToFramePadding();
             ImGui::TextDisabled("--binary--");
             break;
         }
 
         case nlohmann::detail::value_t::discarded:
         {
+            ImGui::AlignTextToFramePadding();
             ImGui::TextDisabled("--error--");
             break;
         }

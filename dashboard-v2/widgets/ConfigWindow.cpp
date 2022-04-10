@@ -120,6 +120,7 @@ void widgets::ConfigWindow::tryRenderEditorContext()
 
     /// Render editor window
     CPPH_CALL_ON_EXIT(ImGui::End());
+
     bool bWndKeepOpen = true;
     bool bContinue = ImGui::Begin(
             usprintf("edit: %s%c###CONFEDIT", entity->name.c_str(), entity->_bIsDirty ? '*' : ' '),
@@ -495,7 +496,7 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
                 ImGui::PushTextWrapPos(0);
                 CPPH_CALL_ON_EXIT(ImGui::PopTextWrapPos());
 
-                ImGui::SetNextWindowSize({240, 0});
+                ImGui::SetNextWindowSize({240 * ImGui::GetWindowDpiScale(), 0});
                 ImGui::BeginTooltip();
                 CPPH_CALL_ON_EXIT(ImGui::EndTooltip());
 
