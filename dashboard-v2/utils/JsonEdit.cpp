@@ -176,13 +176,11 @@ JsonEditor::JsonEditor()
 {
 }
 
-static void DynamicStringBox(nlohmann::json* json)
-{
-    ImGui::Text("String HERE");
-}
-
 void JsonEditor::renderRecurse(JsonEditor::Json* ptr, Json const* min, Json const* max)
 {
+    if (min && ptr->type() != min->type()) { min = {}; }
+    if (max && ptr->type() != max->type()) { max = {}; }
+
     auto type = ptr->type();
     auto typeColor = ImGui::ContentColorByJsonType(type);
 
@@ -242,7 +240,6 @@ void JsonEditor::renderRecurse(JsonEditor::Json* ptr, Json const* min, Json cons
 
             for (int n : perfkit::counter(ptr->size()))
             {
-                // TODO: Make key configurable
                 // TODO: Add cloneable feature
 
                 ImGui::PushStyleColor(ImGuiCol_Text, ColorRefs::GlyphKeyword);
@@ -274,7 +271,7 @@ void JsonEditor::renderRecurse(JsonEditor::Json* ptr, Json const* min, Json cons
         {
             ImGui::PushStyleColor(ImGuiCol_Text, typeColor);
             ImGui::AlignTextToFramePadding();
-            DynamicStringBox(ptr);
+            // TODO: Edit string box
             ImGui::PopStyleColor();
             break;
         }
@@ -293,9 +290,10 @@ void JsonEditor::renderRecurse(JsonEditor::Json* ptr, Json const* min, Json cons
         case nlohmann::detail::value_t::number_float:
         {
             ImGui::PushStyleColor(ImGuiCol_Text, typeColor);
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, 0);
             ImGui::AlignTextToFramePadding();
-            ImGui::Text("TODO: INTEGER HERE");
-            ImGui::PopStyleColor();
+            // TODO: Edit number box
+            ImGui::PopStyleColor(2);
 
             break;
         }
