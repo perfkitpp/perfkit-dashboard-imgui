@@ -503,7 +503,7 @@ void BasicPerfkitNetClient::RenderSessionListEntityContent()
             {
                 auto fnOnLogin
                         = [this] {
-                              service::request_republish_config_registries(_rpc).notify();
+                              service::request_republish_registries(_rpc).notify();
                           };
 
                 auto fnOnRpcComplete
