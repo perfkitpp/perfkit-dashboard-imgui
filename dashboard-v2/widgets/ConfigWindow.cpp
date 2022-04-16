@@ -507,7 +507,7 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
                             | ImGuiTreeNodeFlags_SpanFullWidth
                             | ImGuiTreeNodeFlags_AllowItemOverlap);
 
-            bool const bIsItemClicked = ImGui::IsItemClicked();
+            bool const bIsItemClicked = ImGui::IsItemClicked(ImGuiMouseButton_Right);
             bool const bIsItemHovered = ImGui::IsItemHovered();
 
             if (bIsItemClicked)

@@ -245,10 +245,8 @@ void JsonEditor::renderRecurse(JsonEditor::Json* ptr, Json const* min, Json cons
             {
                 // TODO: Add cloneable feature
 
-                ImGui::PushStyleColor(ImGuiCol_Text, ColorRefs::GlyphKeyword);
                 ImGui::AlignTextToFramePadding();
-                ImGui::TextUnformatted(usprintf("[%zu]", n));
-                ImGui::PopStyleColor();
+                ImGui::TextUnformatted(usprintf("%zu", n));
 
                 ImGui::SameLine(0, 0), ImGui::TextUnformatted(":");
                 ImGui::SameLine();

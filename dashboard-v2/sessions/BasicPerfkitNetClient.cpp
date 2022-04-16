@@ -412,21 +412,38 @@ void BasicPerfkitNetClient::drawTTY()
                     = ImGuiInputTextFlags_EnterReturnsTrue
                     | ImGuiInputTextFlags_CallbackHistory;
 
-            static int historyCursorDelta = 0;
-            auto       fnTextCallback =
+            auto fnTextCallback =
                     [](ImGuiInputTextCallbackData* cbData) {
+                        auto& _ = *(TtyContext*)cbData->UserData;
+                        int   historyCursorDelta = 0;
+
                         switch (cbData->EventFlag)
                         {
                             case ImGuiInputTextFlags_CallbackHistory:
-                                switch (cbData->EventKey)
+                            {
+                                historyCursorDelta += (cbData->EventKey == ImGuiKey_UpArrow);
+                                historyCursorDelta -= (cbData->EventKey == ImGuiKey_DownArrow);
+
+                                if (historyCursorDelta != 0)
                                 {
-                                    case ImGuiKey_UpArrow: historyCursorDelta = 1; break;
-                                    case ImGuiKey_DownArrow: historyCursorDelta = -1; break;
+                                    _.cmdHistoryCursor = std::clamp<int>(
+                                            _.cmdHistoryCursor + historyCursorDelta,
+                                            0, _.cmdHistory.size());
+
+                                    if (auto iter = _.cmdHistory.end() - _.cmdHistoryCursor; iter != _.cmdHistory.end())
+                                    {
+                                        cbData->DeleteChars(0, cbData->BufTextLen);
+                                        cbData->InsertChars(0, iter->c_str());
+                                    }
                                 }
+
+                                break;
+                            }
 
                             default:
                                 break;
                         }
+
                         return 0;
                     };
 
@@ -435,25 +452,13 @@ void BasicPerfkitNetClient::drawTTY()
                     "Enter Command Here",
                     _.cmdBuf,
                     sizeof _.cmdBuf,
-                    inputFlags, fnTextCallback, this);
+                    inputFlags, fnTextCallback, &_);
 
             if (bEnterPressed)
             {
                 ImGui::SetKeyboardFocusHere(-1);
             }
-
-            if (historyCursorDelta != 0)
-            {
-                _.cmdHistoryCursor = std::clamp<int>(
-                        _.cmdHistoryCursor + historyCursorDelta,
-                        0, _.cmdHistory.size());
-
-                if (auto iter = _.cmdHistory.rbegin() + _.cmdHistoryCursor; iter != _.cmdHistory.rend())
-                {
-                    strcpy_s(_.cmdBuf, iter->c_str());
-                }
-            }
-            else if (_rpc && bEnterPressed)
+            if (_rpc && bEnterPressed)
             {
                 string cmd = _.cmdBuf;
                 _.cmdBuf[0] = 0;  // Clear command buffer.
@@ -462,11 +467,10 @@ void BasicPerfkitNetClient::drawTTY()
                 message::service::invoke_command(_rpc).notify(cmd);
 
                 // Push command content to history queue
-                if (_.cmdHistory.empty() || _.cmdHistory.back() != cmd)
+                if (not cmd.empty() && (_.cmdHistory.empty() || _.cmdHistory.back() != cmd))
                 {
                     _.cmdHistory.emplace_back(std::move(cmd));
                 }
-
                 _.cmdHistoryCursor = 0;
             }
         }
