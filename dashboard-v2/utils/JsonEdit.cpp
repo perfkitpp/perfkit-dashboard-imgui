@@ -342,17 +342,11 @@ void JsonEditor::renderRecurse(JsonEditor::Json* ptr, Json const* min, Json cons
             switch (ptr->type())
             {
                 case nlohmann::detail::value_t::number_integer:
+                case nlohmann::detail::value_t::number_unsigned:
                     vdata = ptr->get_ptr<int64_t*>();
                     if (min) { vmin = min->get_ptr<int64_t const*>(); }
                     if (max) { vmax = max->get_ptr<int64_t const*>(); }
                     dataType = ImGuiDataType_S64;
-                    break;
-
-                case nlohmann::detail::value_t::number_unsigned:
-                    vdata = ptr->get_ptr<uint64_t*>();
-                    if (min) { vmin = min->get_ptr<uint64_t const*>(); }
-                    if (max) { vmax = max->get_ptr<uint64_t const*>(); }
-                    dataType = ImGuiDataType_U64;
                     break;
 
                 case nlohmann::detail::value_t::number_float:

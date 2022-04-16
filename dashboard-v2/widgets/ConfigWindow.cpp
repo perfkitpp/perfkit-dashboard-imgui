@@ -178,7 +178,7 @@ void widgets::ConfigWindow::tryRenderEditorContext()
 
     if (bIsOneOf)
     {
-        // TODO: Render 'oneof' selector
+        // Render 'oneof' selector
         auto curValue = entity->value.dump();
 
         if (CondInvoke(ImGui::BeginListBox("##OneOfSelector", {-1, -1}), &ImGui::EndListBox))
@@ -507,7 +507,7 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
                             | ImGuiTreeNodeFlags_SpanFullWidth
                             | ImGuiTreeNodeFlags_AllowItemOverlap);
 
-            bool const bIsItemClicked = ImGui::IsItemClicked(ImGuiMouseButton_Right);
+            bool const bIsItemClicked = ImGui::IsItemClicked();
             bool const bIsItemHovered = ImGui::IsItemHovered();
 
             if (bIsItemClicked)
@@ -551,7 +551,7 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
 
             if (not entity->optOneOf.empty() && entity->optOneOf.is_array())
             {
-                // TODO: Implement 'OneOf' selector
+                // Implement 'OneOf' selector
                 ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ContentColorByJsonType(entity->value));
                 CPPH_CALL_ON_EXIT(ImGui::PopStyleColor());
 
