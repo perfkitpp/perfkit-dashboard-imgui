@@ -130,7 +130,9 @@ struct JsonEditor::Impl
 
     bool           bRawEditMode = false;
     TextEditor     rawEditor;
+
     TextEditor     stringEditor;
+    void*          editingID = nullptr;
 };
 
 void JsonEditor::Render(void* id)
@@ -274,9 +276,42 @@ void JsonEditor::renderRecurse(JsonEditor::Json* ptr, Json const* min, Json cons
             ImGui::AlignTextToFramePadding();
 
             // Edit string box
-            ImGui::Selectable("##Btn");
-            ImGui::SameLine();
-            ImGui::TextUnformatted(ptr->get_ref<string&>().c_str());
+            auto constexpr POPUP_ID = "##OpenTextEdit";
+
+            if (ImGui::IsPopupOpen(POPUP_ID))
+            {
+                ImGui::Text("-- editing --");
+
+                ImGui::SetNextWindowSize({480, 272});
+                if (CondInvoke(ImGui::BeginPopup(POPUP_ID), &ImGui::EndPopup))
+                {
+                    _self->stringEditor.Render("##Editor");
+                    if (_self->stringEditor.IsTextChanged()) { _flags.bIsDirty = true; }
+
+                    if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl) && ImGui::IsKeyPressed(ImGuiKey_S))
+                        ptr->get_ref<string&>() = _self->stringEditor.GetText();
+                }
+            }
+            else
+            {
+                if (ptr == _self->editingID)
+                {  // Editor popup has just been closed.
+                    _self->editingID = nullptr;
+                    ptr->get_ref<string&>() = _self->stringEditor.GetText();
+                }
+
+                auto editStr = ImGui::Selectable("##Btn");
+                auto strRef = &ptr->get_ref<string&>();
+                ImGui::SameLine();
+                ImGui::TextUnformatted(strRef->c_str());
+
+                if (editStr)
+                {
+                    ImGui::OpenPopup(POPUP_ID);
+                    _self->stringEditor.SetText(*strRef);
+                    _self->editingID = ptr;
+                }
+            }
 
             ImGui::PopStyleColor();
             break;
