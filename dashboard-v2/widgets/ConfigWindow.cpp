@@ -171,17 +171,43 @@ void widgets::ConfigWindow::tryRenderEditorContext()
         entity->_bHasUpdateForEditor = false;
     }
 
-    bool bCommitValue = _ctx.bDirty && entity->_bUpdateOnEdit;
+    bool       bCommitValue = _ctx.bDirty && entity->_bUpdateOnEdit;
+    bool const bIsOneOf = not entity->optOneOf.empty() && entity->optOneOf.is_array();
 
     ImGui::BeginChild("##Editor", {0, _ctx._editAreaMinusOffset}, true);
 
-    if (not entity->optOneOf.empty())
+    if (bIsOneOf)
     {
         // TODO: Render 'oneof' selector
+        auto curValue = entity->value.dump();
+
+        if (CondInvoke(ImGui::BeginListBox("##OneOfSelector", {-1, -1}), &ImGui::EndListBox))
+        {
+            for (auto& elem : entity->optOneOf)
+            {
+                auto       contentStr = elem.dump();
+                bool const bIsSelected = contentStr == curValue;
+
+                if (bIsSelected)
+                {
+                    ImGui::PushStyleColor(ImGuiCol_Text, ColorRefs::FrontWarn);
+                    ImGui::Text("*");
+                    ImGui::SameLine();
+                }
+                bool const bIsClicked = ImGui::Selectable(contentStr.c_str());
+                ImGui::PopStyleColor(bIsSelected);
+
+                if (bIsClicked)
+                {
+                    entity->value = elem;
+                    _ctx.bDirty = true;
+                }
+            }
+        }
     }
     else
     {
-        // TODO: Edit json content
+        // Edit json content
         _ctx.editor.Render(&_ctx);
         _ctx.bDirty |= (bool)_ctx.editor.FlagsThisFrame().bIsDirty;
         _ctx.editor.ClearDirtyFlag();
@@ -206,8 +232,12 @@ void widgets::ConfigWindow::tryRenderEditorContext()
 
     if (bCommitValue)
     {
+        if (not bIsOneOf)
+        {
+            _ctx.editor.RetrieveEditing(&entity->value);
+        }
+
         _ctx.bDirty = false;
-        _ctx.editor.RetrieveEditing(&entity->value);
         commitEntity(entity);
     }
 }
