@@ -23,8 +23,8 @@ class PerfkitNetClientRpcMonitor : public rpc::if_session_monitor
 {
    public:
     std::weak_ptr<BasicPerfkitNetClient> _owner;
-    
-    void on_session_expired(rpc::session_profile_view profile) noexcept override
+
+    void                                 on_session_expired(rpc::session_profile_view profile) noexcept override
     {
         if (auto lc = _owner.lock())
             lc->_onSessionDispose_(profile);
@@ -328,13 +328,17 @@ void BasicPerfkitNetClient::drawTTY()
 {
     struct TtyContext
     {
-        perfkit::poll_timer timColorize{250ms};
-        bool                bScrollLock = false;
-        int                 colorizeFence = 0;
+        poll_timer timColorize{250ms};
+        bool       bScrollLock = false;
+        int        colorizeFence = 0;
 
-        char                cmdBuf[512];
+        char       cmdBuf[512];
+        int        cmdHistoryCursor = 0;
 
-        float               uiControlPadHeight = 0;
+        float      uiControlPadHeight = 0;
+
+        //
+        circular_queue<string> cmdHistory{256};
     };
     auto& _ = RefAny<TtyContext>("TTY");
     bool  bFrameHasInput = false;
@@ -403,7 +407,68 @@ void BasicPerfkitNetClient::drawTTY()
 
             ImGui::SetNextItemWidth(-1);
             ImGui::SameLine();
-            ImGui::InputTextWithHint("##EnterCommand", "Enter Command Here", _.cmdBuf, sizeof _.cmdBuf);
+
+            auto const inputFlags
+                    = ImGuiInputTextFlags_EnterReturnsTrue
+                    | ImGuiInputTextFlags_CallbackHistory;
+
+            static int historyCursorDelta = 0;
+            auto       fnTextCallback =
+                    [](ImGuiInputTextCallbackData* cbData) {
+                        switch (cbData->EventFlag)
+                        {
+                            case ImGuiInputTextFlags_CallbackHistory:
+                                switch (cbData->EventKey)
+                                {
+                                    case ImGuiKey_UpArrow: historyCursorDelta = 1; break;
+                                    case ImGuiKey_DownArrow: historyCursorDelta = -1; break;
+                                }
+
+                            default:
+                                break;
+                        }
+                        return 0;
+                    };
+
+            auto bEnterPressed = ImGui::InputTextWithHint(
+                    "##EnterCommand",
+                    "Enter Command Here",
+                    _.cmdBuf,
+                    sizeof _.cmdBuf,
+                    inputFlags, fnTextCallback, this);
+
+            if (bEnterPressed)
+            {
+                ImGui::SetKeyboardFocusHere(-1);
+            }
+
+            if (historyCursorDelta != 0)
+            {
+                _.cmdHistoryCursor = std::clamp<int>(
+                        _.cmdHistoryCursor + historyCursorDelta,
+                        0, _.cmdHistory.size());
+
+                if (auto iter = _.cmdHistory.rbegin() + _.cmdHistoryCursor; iter != _.cmdHistory.rend())
+                {
+                    strcpy_s(_.cmdBuf, iter->c_str());
+                }
+            }
+            else if (_rpc && bEnterPressed)
+            {
+                string cmd = _.cmdBuf;
+                _.cmdBuf[0] = 0;  // Clear command buffer.
+
+                // Send command invocation request
+                message::service::invoke_command(_rpc).notify(cmd);
+
+                // Push command content to history queue
+                if (_.cmdHistory.empty() || _.cmdHistory.back() != cmd)
+                {
+                    _.cmdHistory.emplace_back(std::move(cmd));
+                }
+
+                _.cmdHistoryCursor = 0;
+            }
         }
 
         _.uiControlPadHeight = ImGui::GetCursorPosY() - beginCursorPos;
@@ -499,7 +564,7 @@ void BasicPerfkitNetClient::RenderSessionListEntityContent()
 
 void BasicPerfkitNetClient::drawSessionStateBox()
 {
-    if (_authLevel < perfkit::net::message::auth_level_t::basic_access)
+    if (_authLevel < net::message::auth_level_t::basic_access)
     {
         ImGui::TextDisabled("-- DISABLED --");
         return;

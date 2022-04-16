@@ -18,6 +18,7 @@ using perfkit::bind_front;
 using perfkit::bind_front_weak;
 using perfkit::function;
 using perfkit::futils::usprintf;
+using namespace perfkit;
 
 using std::exchange;
 using std::forward;
@@ -70,7 +71,7 @@ enum : uint32_t
 
 using namespace std::literals;
 
-namespace detail {
+namespace perfkit::detail {
 template <typename Callable_>
 struct ConditionalFinalInvoke
 {
@@ -108,7 +109,7 @@ void PostEventMainThreadWeak(Owner_&& weakPtr, Callable_&& callable)
     PostEventMainThread(bind_front_weak(weakPtr, std::forward<Callable_>(callable)));
 }
 
-namespace detail {
+namespace perfkit::detail {
 
 size_t RetrieveCurrentWindowName(char* buffer, int buflen);
 

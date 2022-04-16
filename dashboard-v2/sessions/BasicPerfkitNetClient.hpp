@@ -4,6 +4,7 @@
 
 #pragma once
 #include <TextEditor.h>
+#include <perfkit/common/circular_queue.hxx>
 #include <perfkit/common/refl/rpc/core.hxx>
 #include <perfkit/common/refl/rpc/detail/service.hxx>
 #include <perfkit/common/thread/locked.hxx>
@@ -14,48 +15,46 @@
 #include "interfaces/Session.hpp"
 #include "widgets/ConfigWindow.hpp"
 
-namespace message = perfkit::net::message;
+namespace message = net::message;
 
 class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNetClient>,
                               public ISession,
                               public IRpcSessionOwner
 {
-    using RpcRequestHandle = perfkit::rpc::request_handle;
-
-    using service = perfkit::net::message::service;
-    using notify = perfkit::net::message::notify;
+    using service = net::message::service;
+    using notify = net::message::notify;
 
    private:
     string _key;
     string _displayKey;
 
     //
-    shared_ptr<perfkit::rpc::session>            _rpc;
-    shared_ptr<perfkit::rpc::if_session_monitor> _monitor;
-    shared_ptr<void>                             _rpcFlushGuard = std::make_shared<nullptr_t>();
+    shared_ptr<rpc::session>            _rpc;
+    shared_ptr<rpc::if_session_monitor> _monitor;
+    shared_ptr<void>                    _rpcFlushGuard = std::make_shared<nullptr_t>();
 
-    perfkit::rpc::service                        _notify_handler = perfkit::rpc::service::empty_service();
+    rpc::service                        _notify_handler = rpc::service::empty_service();
 
     // Lifetime anchor of single session.
     shared_ptr<void> _sessionAnchor;
 
     //
-    RpcRequestHandle _hrpcHeartbeat;
+    rpc::request_handle _hrpcHeartbeat;
 
     // Login
-    RpcRequestHandle      _hrpcLogin;
+    rpc::request_handle   _hrpcLogin;
     message::auth_level_t _authLevel = message::auth_level_t::unauthorized;
 
     //
-    perfkit::poll_timer _timHeartbeat{1s};
+    poll_timer _timHeartbeat{1s};
 
     //
     service::session_info_t  _sessionInfo;
     notify::session_status_t _sessionStats{};
 
     // TTY
-    TextEditor              _tty;
-    perfkit::locked<string> _ttyQueue;
+    TextEditor             _tty;
+    locked<string>         _ttyQueue;
 
     // Widgets
     widgets::ConfigWindow _wndConfig{this};
@@ -80,7 +79,7 @@ class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNe
     bool ShouldRenderSessionListEntityContent() const final;
     void RenderSessionListEntityContent() final;
 
-    auto RpcSession() -> perfkit::rpc::session* override { return &*_rpc; }
+    auto RpcSession() -> rpc::session* override { return &*_rpc; }
     auto SessionAnchor() -> weak_ptr<void> override { return _sessionAnchor; }
     auto KeyString() const -> string const& override { return _key; }
     auto DisplayString() const -> string const& override { return _displayKey; }
@@ -100,9 +99,9 @@ class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNe
 
     //! Call on new connection created.
     //! It's better to be invoked from other than main thread.
-    void NotifyNewConnection(unique_ptr<perfkit::rpc::if_connection> newConn);
+    void NotifyNewConnection(unique_ptr<rpc::if_connection> newConn);
 
    public:
-    void _onSessionCreate_(perfkit::rpc::session_profile_view);
-    void _onSessionDispose_(perfkit::rpc::session_profile_view);
+    void _onSessionCreate_(rpc::session_profile_view);
+    void _onSessionDispose_(rpc::session_profile_view);
 };
