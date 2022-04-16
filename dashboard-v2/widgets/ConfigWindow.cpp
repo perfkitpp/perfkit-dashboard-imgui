@@ -129,16 +129,11 @@ void widgets::ConfigWindow::tryRenderEditorContext()
     if (not bWndKeepOpen) { _ctx.ownerRef = {}, _ctx._editingRef = {}; }
     if (not bWndKeepOpen || not bContinue) { return; }
 
+    bool bDoReload = false;
     if (exchange(_ctx._editingRef, entity) != entity)
     {
         _ctx._bReloadFrame = true;
-
-        // Editing target has changed ...
-        _ctx.editor.Reset(Json{entity->value});
-        _ctx.bDirty = false;
-        entity->_bHasUpdateForEditor = false;
-
-        _ctx.editor.RawEditMode(&entity->_bEditInRaw);
+        bDoReload = true;
     }
 
     if (CondInvoke(ImGui::BeginMenuBar(), ImGui::EndMenuBar))
@@ -158,22 +153,22 @@ void widgets::ConfigWindow::tryRenderEditorContext()
             }
         }
 
-        auto const bRefreshShortcut
-                = ImGui::IsKeyDown(ImGuiKey_LeftCtrl)
-               && ImGui::IsKeyPressed(ImGuiKey_R);
+        bDoReload |= ImGui::IsKeyDown(ImGuiKey_LeftCtrl) && ImGui::IsKeyPressed(ImGuiKey_R);
 
         ImGui::PushStyleColor(ImGuiCol_Text, ColorRefs::FrontWarn);
-        if (entity->_bHasUpdateForEditor && (bRefreshShortcut || ImGui::SmallButton("Reload! (^R)")))
-        {
-            Json *minPtr = {}, *maxPtr = {};
-            if (not entity->optMin.empty()) { minPtr = &entity->optMin; }
-            if (not entity->optMax.empty()) { maxPtr = &entity->optMax; }
-
-            _ctx.editor.Reset(Json{entity->value}, minPtr, maxPtr);
-            _ctx.bDirty = false;
-            entity->_bHasUpdateForEditor = false;
-        }
+        bDoReload |= entity->_bHasUpdateForEditor && ImGui::SmallButton("Reload! (^R)");
         ImGui::PopStyleColor();
+    }
+
+    if (bDoReload)
+    {
+        Json *minPtr = {}, *maxPtr = {};
+        if (not entity->optMin.empty()) { minPtr = &entity->optMin; }
+        if (not entity->optMax.empty()) { maxPtr = &entity->optMax; }
+
+        _ctx.editor.Reset(Json{entity->value}, minPtr, maxPtr);
+        _ctx.bDirty = false;
+        entity->_bHasUpdateForEditor = false;
     }
 
     bool bCommitValue = _ctx.bDirty && entity->_bUpdateOnEdit;
@@ -194,7 +189,7 @@ void widgets::ConfigWindow::tryRenderEditorContext()
 
     ImGui::EndChild();
 
-    if (not bCommitValue && _ctx.bDirty)
+    if (not bCommitValue && _ctx.bDirty && not entity->_bUpdateOnEdit)
     {
         auto ptStart = ImGui::GetCursorPosY();
         ImGui::PushStatefulColors(ImGuiCol_Button, ColorRefs::BackOkay);

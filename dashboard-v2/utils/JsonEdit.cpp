@@ -130,6 +130,7 @@ struct JsonEditor::Impl
 
     bool           bRawEditMode = false;
     TextEditor     rawEditor;
+    TextEditor     stringEditor;
 };
 
 void JsonEditor::Render(void* id)
@@ -140,7 +141,7 @@ void JsonEditor::Render(void* id)
     if (_self->bRawEditMode)
     {
         _self->rawEditor.Render("##EditJson", {}, false);
-        _flags.bIsDirty |= _self->rawEditor.IsTextChanged();
+        _flags.bIsDirty = _flags.bIsDirty || _self->rawEditor.IsTextChanged();
     }
     else
     {
@@ -166,7 +167,7 @@ void JsonEditor::Reset(JsonEditor::Json&& object, const JsonEditor::Json* min, c
     s.max.reset();
 
     if (min) { s.min.emplace(*min); }
-    if (max) { s.min.emplace(*max); }
+    if (max) { s.max.emplace(*max); }
 
     _flags = {};
 }
@@ -271,7 +272,12 @@ void JsonEditor::renderRecurse(JsonEditor::Json* ptr, Json const* min, Json cons
         {
             ImGui::PushStyleColor(ImGuiCol_Text, typeColor);
             ImGui::AlignTextToFramePadding();
-            // TODO: Edit string box
+
+            // Edit string box
+            ImGui::Selectable("##Btn");
+            ImGui::SameLine();
+            ImGui::TextUnformatted(ptr->get_ref<string&>().c_str());
+
             ImGui::PopStyleColor();
             break;
         }
@@ -290,11 +296,54 @@ void JsonEditor::renderRecurse(JsonEditor::Json* ptr, Json const* min, Json cons
         case nlohmann::detail::value_t::number_float:
         {
             ImGui::PushStyleColor(ImGuiCol_Text, typeColor);
-            ImGui::PushStyleColor(ImGuiCol_FrameBg, 0);
             ImGui::AlignTextToFramePadding();
-            // TODO: Edit number box
-            ImGui::PopStyleColor(2);
 
+            // Edit number box
+            void*         vdata = nullptr;
+            void const *  vmin = nullptr, *vmax = nullptr;
+            ImGuiDataType dataType = -1;
+            float         step = 1.f;
+
+            switch (ptr->type())
+            {
+                case nlohmann::detail::value_t::number_integer:
+                    vdata = ptr->get_ptr<int64_t*>();
+                    if (min) { vmin = min->get_ptr<int64_t const*>(); }
+                    if (max) { vmax = max->get_ptr<int64_t const*>(); }
+                    dataType = ImGuiDataType_S64;
+                    break;
+
+                case nlohmann::detail::value_t::number_unsigned:
+                    vdata = ptr->get_ptr<uint64_t*>();
+                    if (min) { vmin = min->get_ptr<uint64_t const*>(); }
+                    if (max) { vmax = max->get_ptr<uint64_t const*>(); }
+                    dataType = ImGuiDataType_U64;
+                    break;
+
+                case nlohmann::detail::value_t::number_float:
+                    vdata = ptr->get_ptr<double*>();
+                    if (min) { vmin = min->get_ptr<double const*>(); }
+                    if (max) { vmax = max->get_ptr<double const*>(); }
+                    dataType = ImGuiDataType_Double;
+                    step = std::max(1e-6, std::abs(*ptr->get_ptr<double*>() * 0.005));
+                    break;
+
+                default: abort();
+            }
+
+            ImGui::SetNextItemWidth(-1.f);
+            if (vmin && vmax)
+            {  // Create slider control
+                if (ImGui::SliderScalar("##Scalar", dataType, vdata, vmin, vmax))
+                    _flags.bIsDirty = true;
+            }
+            else
+            {  // Create drag control
+                if (ImGui::DragScalar("##Scalar", dataType, vdata, step, vmin, vmax))
+                    _flags.bIsDirty = true;
+            }
+
+            ImGui::PopStyleColor();
             break;
         }
 
