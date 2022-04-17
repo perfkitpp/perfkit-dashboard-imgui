@@ -246,11 +246,9 @@ void JsonEditor::renderRecurse(JsonEditor::Json* ptr, Json const* min, Json cons
                 // TODO: Add cloneable feature
 
                 ImGui::AlignTextToFramePadding();
-                ImGui::TextUnformatted(usprintf("%zu", n));
+                ImGui::TextUnformatted(usprintf("[%zu]", n));
 
-                ImGui::SameLine(0, 0), ImGui::TextUnformatted(":");
                 ImGui::SameLine();
-
                 renderRecurse(
                         &(*ptr)[n],
                         min && n < min->size() ? &(*min)[n] : nullptr,
