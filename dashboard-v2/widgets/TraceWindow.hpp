@@ -45,6 +45,8 @@ class TraceWindow
         // [timers]
         poll_timer               tmNextPublish{100ms};
         steady_clock::time_point _waitExpiry = {};
+        stopwatch                _tmActualDeltaUpdate;
+        float                    _actualDeltaUpdateSec = 0;
 
         // [transient]
         bool bIsTracingCached = false;

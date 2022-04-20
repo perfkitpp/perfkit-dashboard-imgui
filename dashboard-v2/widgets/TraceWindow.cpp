@@ -25,9 +25,8 @@ void widgets::TraceWindow::BuildService(rpc::service_builder& s)
 
 void widgets::TraceWindow::Render(bool* bKeepOpen)
 {
-    ImGui::SetNextWindowSize({480, 272}, ImGuiCond_Once);
-
     CPPH_CALL_ON_EXIT(ImGui::End());
+    ImGui::SetNextWindowSize({480, 272}, ImGuiCond_Once);
     if (not ImGui::Begin(usprintf("traces [%s]###%s", _host->DisplayString().c_str(), _host->KeyString().c_str()), bKeepOpen))
         return;
 
@@ -57,33 +56,46 @@ void widgets::TraceWindow::Render(bool* bKeepOpen)
         CPPH_CALL_ON_EXIT(ImGui::PopID());
 
         /// Draw spinner
-        auto requestIntervalMs = float(tracer.tmNextPublish.interval_sec().count() * 1e3);
         {
-            char       spinText[] = " ------------- ";
+            char       spinText[] = "[             ]";
             auto const groundLen = (size(spinText) - 3) - 1;
-            uint64_t   starAt;
+            uint64_t   starPos, starAt;
 
-            auto       alpha = min(1.f, tracer._updateGap / requestIntervalMs * 1e3f);
-            auto       delta = uint64_t(alpha * (tracer.fence - tracer._fencePrev));
+            auto       alpha = min(1.f, tracer._updateGap / tracer._actualDeltaUpdateSec);
+            auto       delta = uint64_t(alpha * (tracer.fence - tracer._fencePrev)) % (groundLen * 3);
             tracer._updateGap += ImGui::GetIO().DeltaTime;
 
-            starAt = (tracer._fencePrev) % (groundLen * 2);
-            starAt = starAt < groundLen ? starAt : groundLen - (starAt % groundLen);
-            spinText[starAt + 1] = '*';
+            for (int i = 0; i <= delta; ++i)
+            {
+                starPos = (tracer.fence + i) % (groundLen * 2);
+                starAt = starPos < groundLen ? starPos : groundLen - (starPos % groundLen);
+                spinText[starAt + 1] = '-';
+            }
 
-            starAt = (tracer._fencePrev + delta) % (groundLen * 2);
-            starAt = starAt < groundLen ? starAt : groundLen - (starAt % groundLen);
-            spinText[starAt + 1] = '?';
+            starPos = (tracer.fence + delta) % (groundLen * 2);
+            starAt = starPos < groundLen ? starPos : groundLen - (starPos % groundLen);
+            spinText[starAt + 1] = starPos < groundLen ? '>' : '<';
 
             starAt = (tracer.fence) % (groundLen * 2);
             starAt = starAt < groundLen ? starAt : groundLen - (starAt % groundLen);
-            spinText[starAt + 1] = '#';
+            spinText[starAt + 1] = '@';
 
             ImGui::SameLine();
-            ImGui::TextColored({1, 1, .2, 1}, "%s", spinText);
+            ImGui::PushStyleColor(ImGuiCol_Text, {0, 1, 1, .7});
+            ImGui::TextUnformatted(spinText, spinText + starAt + 1);
+
+            ImGui::SameLine(0, 0);
+            ImGui::PushStyleColor(ImGuiCol_Text, ColorRefs::FrontOkay);
+            ImGui::TextUnformatted(spinText + starAt + 1, spinText + starAt + 2);
+
+            ImGui::SameLine(0, 0);
+            ImGui::PopStyleColor();
+            ImGui::TextUnformatted(spinText + starAt + 2, spinText + sizeof spinText - 1);
+
+            ImGui::PopStyleColor();
 
             ImGui::SameLine();
-            ImGui::TextDisabled("%llu", tracer.fence);
+            ImGui::TextColored({.6, .6, .6, .8}, "[ %llu ]", tracer.fence);
         }
 
         /// Draw interval control
@@ -94,17 +106,11 @@ void widgets::TraceWindow::Render(bool* bKeepOpen)
         {
             CPPH_CALL_ON_EXIT(ImGui::EndPopup());
 
+            auto requestIntervalMs = float(tracer.tmNextPublish.interval_sec().count() * 1e3);
             if (ImGui::SliderFloat("Intervals", &requestIntervalMs, 1, 1000, "%6.0f ms"))
             {
                 tracer.tmNextPublish.reset(requestIntervalMs * 1.ms);
             }
-        }
-
-        /// Publish subscribe request periodically
-        if (tracer.tmNextPublish.check_sparse() && tracer._waitExpiry < _cachedTpNow)
-        {
-            tracer._waitExpiry = steady_clock::now() + 5s;
-            proto::service::trace_request_update(_host->RpcSession()).notify(tracer.info.tracer_id);
         }
 
         for (auto idx : tracer.rootNodeIndices)
@@ -124,6 +130,17 @@ void widgets::TraceWindow::Tick()
     {
         _tracers.clear();
         return;
+    }
+
+    /// Publish subscribe request periodically.
+    // This operation is performed regardless of window visibility.
+    for (auto& tracer : _tracers)
+    {
+        if (tracer.bIsTracingCached && tracer.tmNextPublish.check_sparse() && tracer._waitExpiry < _cachedTpNow)
+        {
+            tracer._waitExpiry = steady_clock::now() + 5s;
+            proto::service::trace_request_update(_host->RpcSession()).notify(tracer.info.tracer_id);
+        }
     }
 }
 
@@ -224,15 +241,20 @@ void widgets::TraceWindow::_recurseRootTraceNode(
     if (node->children.empty())
         nodeFlags |= ImGuiTreeNodeFlags_Leaf;
 
+    // TODO: Draw node text green if node is latest ...
+    // TODO: Draw node background green if node is fresh (by time)
+    // TODO: Draw node label
+    // TODO: Draw node graph trace button
+
     if (not ImGui::TreeNodeEx(node->info.name.c_str(), nodeFlags))
         return;
+
+    CPPH_CALL_ON_EXIT(ImGui::TreePop());
 
     for (auto idx : node->children)
     {
         _recurseRootTraceNode(tracer, tracer->nodes.at(idx).get());
     }
-
-    ImGui::TreePop();
 }
 
 void widgets::TraceWindow::_fnOnTraceUpdate(
@@ -242,10 +264,15 @@ void widgets::TraceWindow::_fnOnTraceUpdate(
             _host->SessionAnchor(), [this, tracer_id, updates] {
                 if (auto tracer = _findTracer(tracer_id))
                 {
+                    tracer->_actualDeltaUpdateSec = float(tracer->_tmActualDeltaUpdate.elapsed().count());
+                    tracer->_tmActualDeltaUpdate.reset();
+
+                    tracer->tmNextPublish.reset();
+
                     tracer->_fencePrev = tracer->fence;
                     tracer->_updateGap = 0;
-
                     tracer->_waitExpiry = {};
+
                     auto nodes = &tracer->nodes;
 
                     for (auto& update : updates)
@@ -260,6 +287,8 @@ void widgets::TraceWindow::_fnOnTraceUpdate(
                         auto node = (*nodes)[update.index].get();
                         node->data = update;
                         node->_updateAt = steady_clock::now();
+
+                        // TODO: Plot link data push
                     }
 
                     // TODO: Sort all node's children by their fence, to make fresh nodes
