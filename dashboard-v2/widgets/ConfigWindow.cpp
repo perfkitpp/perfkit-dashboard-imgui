@@ -26,7 +26,7 @@ static struct
 } gEvtThisFrame;
 
 //
-void widgets::ConfigWindow::RenderConfigWindow(bool* bKeepOpen)
+void widgets::ConfigWindow::Render(bool* bKeepOpen)
 {
     /// Render tools -> expand all, collapse all, filter, etc ...
     static size_t _latestFrameCount = 0;

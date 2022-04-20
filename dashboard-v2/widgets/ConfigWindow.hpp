@@ -152,7 +152,7 @@ class ConfigWindow
     //               Rendering
     //
     void Tick();
-    void RenderConfigWindow(bool* bKeepOpen);
+    void Render(bool* bKeepOpen);
     void ClearContexts();
 
    private:

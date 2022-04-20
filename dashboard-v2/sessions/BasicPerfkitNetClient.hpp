@@ -14,6 +14,7 @@
 #include "interfaces/RpcSessionOwner.hpp"
 #include "interfaces/Session.hpp"
 #include "widgets/ConfigWindow.hpp"
+#include "widgets/TraceWindow.hpp"
 
 namespace message = net::message;
 
@@ -53,11 +54,12 @@ class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNe
     notify::session_status_t _sessionStats{};
 
     // TTY
-    TextEditor             _tty;
-    locked<string>         _ttyQueue;
+    TextEditor     _tty;
+    locked<string> _ttyQueue;
 
     // Widgets
     widgets::ConfigWindow _wndConfig{this};
+    widgets::TraceWindow  _wndTrace{this};
 
     // Flags
     struct

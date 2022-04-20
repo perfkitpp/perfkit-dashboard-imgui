@@ -47,6 +47,8 @@ BasicPerfkitNetClient::BasicPerfkitNetClient()
                        PostEventMainThreadWeak(weak_from_this(), [this, arg] { _sessionStats = arg; });
                    });
 
+    _wndTrace.BuildService(service_info);
+
     _notify_handler = service_info.build();
 
     // Create monitor
@@ -181,7 +183,7 @@ void BasicPerfkitNetClient::TickSession()
     if (bIsSessionOpenCache) { tickHeartbeat(); }
 
     _wndConfig.Tick();
-    // _wndTrace.TickWindow();
+    _wndTrace.Tick();
     // _wndGraphics.TickWindow();
 
     if (_uiState.bConfigOpen)
@@ -189,8 +191,13 @@ void BasicPerfkitNetClient::TickSession()
         ImGui::SetNextWindowSize({240, 320}, ImGuiCond_Once);
         if (CPPH_CALL_ON_EXIT(ImGui::End()); ImGui::Begin("configs", nullptr, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_AlwaysVerticalScrollbar))
         {
-            _wndConfig.RenderConfigWindow(&_uiState.bConfigOpen);
+            _wndConfig.Render(&_uiState.bConfigOpen);
         }
+    }
+
+    if (_uiState.bTraceOpen)
+    {
+        _wndTrace.Render(&_uiState.bTraceOpen);
     }
 }
 

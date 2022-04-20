@@ -61,6 +61,7 @@ enum : uint32_t
     BackError = 0xff000088,
     BackWarn = 0xff008888,
     BackOkay = 0xff008800,
+    BackOkayDim = 0xff004400,
 
     GlyphKeyword = 0xffd69c56,
     GlyphUserType = 0xffb0c94e,
