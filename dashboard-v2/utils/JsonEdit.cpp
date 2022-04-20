@@ -343,6 +343,7 @@ void JsonEditor::renderRecurse(JsonEditor::Json* ptr, Json const* min, Json cons
                     if (min) { vmin = min->get_ptr<int64_t const*>(); }
                     if (max) { vmax = max->get_ptr<int64_t const*>(); }
                     dataType = ImGuiDataType_S64;
+                    step = std::max(0.005, std::abs(*ptr->get_ptr<int64_t*>() * 0.00005));
                     break;
 
                 case nlohmann::detail::value_t::number_float:
@@ -350,7 +351,7 @@ void JsonEditor::renderRecurse(JsonEditor::Json* ptr, Json const* min, Json cons
                     if (min) { vmin = min->get_ptr<double const*>(); }
                     if (max) { vmax = max->get_ptr<double const*>(); }
                     dataType = ImGuiDataType_Double;
-                    step = std::max(1e-6, std::abs(*ptr->get_ptr<double*>() * 0.005));
+                    step = std::max(1e-6, std::abs(*ptr->get_ptr<double*>() * 0.0005));
                     break;
 
                 default: abort();
