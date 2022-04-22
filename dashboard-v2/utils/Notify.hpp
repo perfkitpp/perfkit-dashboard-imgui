@@ -23,18 +23,18 @@ class NotifyToast
    public:
     struct Content
     {
-        NotifySeverity           Severity = NotifySeverity::Info;
+        NotifySeverity Severity = NotifySeverity::Info;
         vector<function<bool()>> ContentDecos;  // returns true if toast should be closed
         steady_clock::time_point Lifespan = steady_clock::now() + 5s;
         steady_clock::time_point Birth;
 
-        function<void()>         OnForceClose = perfkit::default_function;
+        function<void()> OnForceClose = perfkit::default_function;
 
-        bool                     bInfinity = false;
-        int                      stateIdAlloc = -1;
-        float                    stateHeightOffset = 0.f;
-        float                    toastHeightCache = 0.f;
-        bool                     stateHovering = false;
+        bool bInfinity = false;
+        int stateIdAlloc = -1;
+        float stateHeightOffset = 0.f;
+        float toastHeightCache = 0.f;
+        bool stateHovering = false;
     };
 
    private:

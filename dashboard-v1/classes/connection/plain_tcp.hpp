@@ -28,7 +28,7 @@
 
 #pragma once
 #include <asio/ip/tcp.hpp>
-#include <perfkit/common/memory/pool.hxx>
+#include <cpph/memory/pool.hxx>
 #include <perfkit/logging.h>
 
 #include "../if_session_connection.hpp"

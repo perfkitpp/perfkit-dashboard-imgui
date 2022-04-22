@@ -37,11 +37,11 @@
 #include <range/v3/view/transform.hpp>
 
 #include "imgui_internal.h"
-#include "perfkit/common/algorithm.hxx"
-#include "perfkit/common/counter.hxx"
-#include "perfkit/common/macros.hxx"
-#include "perfkit/common/utility/cleanup.hxx"
-#include "perfkit/common/zip.hxx"
+#include "cpph/algorithm.hxx"
+#include "cpph/counter.hxx"
+#include "cpph/macros.hxx"
+#include "cpph/utility/cleanup.hxx"
+#include "cpph/zip.hxx"
 
 namespace views = ranges::views;
 using namespace perfkit::utilities;

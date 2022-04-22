@@ -7,8 +7,8 @@
 #include <memory>
 #include <vector>
 
-#include <perfkit/common/event.hxx>
-#include <perfkit/common/utility/singleton.hxx>
+#include <cpph/event.hxx>
+#include <cpph/utility/singleton.hxx>
 
 namespace asio {
 class io_context;
@@ -20,14 +20,14 @@ class Application
 {
     struct SessionNode
     {
-        string                     Key;
-        ESessionType               Type;
+        string Key;
+        ESessionType Type;
         shared_ptr<class ISession> Ref;
 
-        bool                       bShow = false;
-        bool                       bPendingClose = false;
+        bool bShow = false;
+        bool bPendingClose = false;
 
-        string                     CachedDisplayName;
+        string CachedDisplayName;
     };
 
    public:
@@ -36,9 +36,9 @@ class Application
 
    private:
     unique_ptr<asio::io_context> _ioc;
-    vector<SessionNode>          _sessions;
-    std::string                  _workspacePath;
-    bool                         _workspacePathChanged = true;
+    vector<SessionNode> _sessions;
+    std::string _workspacePath;
+    bool _workspacePathChanged = true;
 
     // UI Flags - View
     bool _bDrawSessionList = true;
@@ -51,10 +51,10 @@ class Application
     // UI State - Add New Session
     struct
     {
-        bool         bActivateButton = false;
-        bool         bSetNextFocusToInput = false;
+        bool bActivateButton = false;
+        bool bSetNextFocusToInput = false;
         ESessionType Selected = {};
-        char         UriBuffer[1024] = {};
+        char UriBuffer[1024] = {};
     } _addSessionModalState;
 
    public:
@@ -70,9 +70,9 @@ class Application
     //! Register session with given key ...
     //! All sessions must be
     SessionNode* RegisterSessionMainThread(
-            string       keyString,
+            string keyString,
             ESessionType type,
-            string_view  optionalDefaultDisplayName = {});
+            string_view optionalDefaultDisplayName = {});
 
     //! Save workspace
     void SaveWorkspaceMainThread() { saveWorkspace(); }

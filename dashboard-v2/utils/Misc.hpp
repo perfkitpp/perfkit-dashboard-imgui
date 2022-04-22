@@ -16,8 +16,8 @@ void xterm_leap_escape(TextEditor* edit, std::string_view content);
  * B/s -> KiB/s -> MiB/s -> GiB/s -> TiB/s
  */
 char const* FormatBitText(
-        int64_t      value,
-        bool         bBits = true,
-        bool         bSpeed = true,
-        int64_t*     valueOut = nullptr,
+        int64_t value,
+        bool bBits = true,
+        bool bSpeed = true,
+        int64_t* valueOut = nullptr,
         char const** suffixOut = nullptr);

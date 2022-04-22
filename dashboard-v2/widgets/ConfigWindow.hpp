@@ -8,8 +8,8 @@
 #include <nlohmann/json.hpp>
 
 #include "TextEditor.h"
+#include "cpph/timer.hxx"
 #include "interfaces/RpcSessionOwner.hpp"
-#include "perfkit/common/timer.hxx"
 #include "perfkit/extension/net/protocol.hpp"
 #include "utils/JsonEdit.hpp"
 
@@ -44,21 +44,21 @@ class ConfigWindow
     struct ConfigEntityContext : FilterEntity
     {
         uint64_t configKey;
-        Json     value;
+        Json value;
 
-        string   name;
-        string   description;
+        string name;
+        string description;
 
-        Json     optMin;
-        Json     optMax;
-        Json     optOneOf;
+        Json optMin;
+        Json optMax;
+        Json optOneOf;
 
         //! [transient]
-        string             _cachedStringify;
+        string _cachedStringify;
 
-        bool               _bIsDirty = false;
-        bool               _bHasUpdate = false;
-        bool               _bHasUpdateForEditor = false;
+        bool _bIsDirty = false;
+        bool _bHasUpdate = false;
+        bool _bHasUpdateForEditor = false;
         perfkit::stopwatch _timeSinceUpdate;
 
         //! [configs]
@@ -128,8 +128,8 @@ class ConfigWindow
 
         //! [transient]
         size_t _frameCountFence = 0;
-        float  _editAreaMinusOffset = 0;
-        bool   _bReloadFrame = false;
+        float _editAreaMinusOffset = 0;
+        bool _bReloadFrame = false;
     };
 
    private:

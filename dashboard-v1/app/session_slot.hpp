@@ -24,11 +24,11 @@
 
 #pragma once
 
-#include <perfkit/common/circular_queue.hxx>
-#include <perfkit/common/format.hxx>
-#include <perfkit/common/functional.hxx>
-#include <perfkit/common/macros.hxx>
-#include <perfkit/common/utility/ownership.hxx>
+#include <cpph/circular_queue.hxx>
+#include <cpph/format.hxx>
+#include <cpph/functional.hxx>
+#include <cpph/macros.hxx>
+#include <cpph/utility/ownership.hxx>
 
 #include "TextEditor.h"
 #include "classes/session_context.hpp"

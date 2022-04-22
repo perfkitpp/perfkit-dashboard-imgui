@@ -24,10 +24,10 @@
 
 #include "session_slot.hpp"
 
-#include <perfkit/common/counter.hxx>
-#include <perfkit/common/futils.hxx>
-#include <perfkit/common/utility/cleanup.hxx>
-#include <perfkit/common/zip.hxx>
+#include <cpph/counter.hxx>
+#include <cpph/futils.hxx>
+#include <cpph/utility/cleanup.hxx>
+#include <cpph/zip.hxx>
 
 #include "application.hpp"
 #include "classes/connection/plain_tcp.hpp"

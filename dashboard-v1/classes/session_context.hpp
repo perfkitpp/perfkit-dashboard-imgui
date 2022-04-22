@@ -27,11 +27,11 @@
 
 #include "if_session_connection.hpp"
 #include "messages.hpp"
-#include "perfkit/common/array_view.hxx"
-#include "perfkit/common/assert.hxx"
-#include "perfkit/common/functional.hxx"
-#include "perfkit/common/hasher.hxx"
-#include "perfkit/common/thread/locked.hxx"
+#include "cpph/array_view.hxx"
+#include "cpph/assert.hxx"
+#include "cpph/functional.hxx"
+#include "cpph/hasher.hxx"
+#include "cpph/thread/locked.hxx"
 
 struct session_context_message_marshal_error : std::exception
 {

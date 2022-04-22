@@ -28,8 +28,8 @@
 
 #include "app/application.hpp"
 #include "messages.hpp"
-#include "perfkit/common/algorithm/base64.hxx"
-#include "perfkit/common/macros.hxx"
+#include "cpph/algorithm/base64.hxx"
+#include "cpph/macros.hxx"
 #include "picosha2.h"
 
 using namespace perfkit::terminal::net;

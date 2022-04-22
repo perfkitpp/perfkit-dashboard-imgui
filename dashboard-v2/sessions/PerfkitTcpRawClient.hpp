@@ -19,13 +19,13 @@ class PerfkitTcpRawClient : public BasicPerfkitNetClient
     };
 
    private:
-    string                  _uri;    // Key URI
-    EConnectionState        _state;  // Current connection state
+    string _uri;              // Key URI
+    EConnectionState _state;  // Current connection state
 
-    asio::system_executor   _exec;      // System executor
+    asio::system_executor _exec;        // System executor
     asio::ip::tcp::endpoint _endpoint;  // Active endpoint
 
-    string                  _uiStateMessage;  // UI State
+    string _uiStateMessage;  // UI State
     std::atomic<asio::ip::tcp::socket*>
             _sockPtrConnecting = {};  // Has value during connecting
 

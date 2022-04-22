@@ -1,7 +1,7 @@
 #pragma once
 #include <memory>
 
-namespace perfkit::rpc {
+namespace cpph::rpc {
 class session;
 }
 

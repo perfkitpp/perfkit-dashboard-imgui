@@ -8,9 +8,9 @@
 #include <map>
 #include <mutex>
 
-#include <perfkit/common/futils.hxx>
-#include <perfkit/common/macros.hxx>
-#include <perfkit/common/utility/cleanup.hxx>
+#include <cpph/futils.hxx>
+#include <cpph/macros.hxx>
+#include <cpph/utility/cleanup.hxx>
 #include <spdlog/spdlog.h>
 
 #include "Application.hpp"
@@ -20,15 +20,15 @@
 
 static class NotifyContext
 {
-    std::list<unique_ptr<NotifyToast::Content>>                     _queue;
-    std::mutex                                                      _mtxQueue;
+    std::list<unique_ptr<NotifyToast::Content>> _queue;
+    std::mutex _mtxQueue;
 
-    std::list<unique_ptr<NotifyToast::Content>>                     _toasts;
+    std::list<unique_ptr<NotifyToast::Content>> _toasts;
     std::map<steady_clock::time_point, decltype(_toasts)::iterator> _timeouts;
 
-    vector<int>                                                     _idPool;
+    vector<int> _idPool;
 
-    shared_ptr<spdlog::logger>                                      _logNotify = spdlog::default_logger()->clone("Notify");
+    shared_ptr<spdlog::logger> _logNotify = spdlog::default_logger()->clone("Notify");
 
    public:
     NotifyContext() noexcept
@@ -48,7 +48,7 @@ static class NotifyContext
         // Make all pending toasts current
         while (not newToasts.empty())
         {
-            auto  iter = newToasts.begin();
+            auto iter = newToasts.begin();
             auto& ptoast = *iter;
             ptoast->stateHeightOffset = 44;
 
@@ -94,8 +94,8 @@ static class NotifyContext
             constexpr auto Transition = 0.4f;
 
             using Seconds = std::chrono::duration<double>;
-            float      height = 0.f;
-            auto       timeNow = steady_clock::now();
+            float height = 0.f;
+            auto timeNow = steady_clock::now();
             auto const deltaTime = ImGui::GetIO().DeltaTime;
             auto const heightDecVal = 80.f * deltaTime;
 
@@ -109,7 +109,7 @@ static class NotifyContext
                     toast->stateHeightOffset = std::max(0.f, std::min(fixedDecr, rationalDescr));
                 }
 
-                auto   entityHeight = height + (*iter)->stateHeightOffset;
+                auto entityHeight = height + (*iter)->stateHeightOffset;
                 ImVec2 nextPos(posVp.x - PaddingX, posVp.y - PaddingY - entityHeight);
                 SetNextWindowPos(nextPos, ImGuiCond_Always, ImVec2(1.f, 1.f));
 

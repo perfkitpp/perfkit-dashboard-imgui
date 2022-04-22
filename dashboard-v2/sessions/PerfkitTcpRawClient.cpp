@@ -7,8 +7,8 @@
 #include <charconv>
 
 #include <asio/post.hpp>
-#include <perfkit/common/refl/rpc/connection/asio.hxx>
-#include <perfkit/common/refl/rpc/rpc.hxx>
+#include <cpph/refl/rpc/connection/asio.hxx>
+#include <cpph/refl/rpc/rpc.hxx>
 
 #include "imgui_extension.h"
 
@@ -91,8 +91,8 @@ void PerfkitTcpRawClient::startConnection()
             };
 
     string_view uri = _uri;
-    string      address;
-    int         port;
+    string address;
+    int port;
 
     if (auto pos = uri.find_last_of(':'); pos == uri.npos)
     {

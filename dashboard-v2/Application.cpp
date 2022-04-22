@@ -10,13 +10,13 @@
 #include <asio/dispatch.hpp>
 #include <asio/io_context.hpp>
 #include <asio/post.hpp>
+#include <cpph/algorithm/std.hxx>
+#include <cpph/helper/nlohmann_json_macros.hxx>
+#include <cpph/macros.hxx>
+#include <cpph/utility/cleanup.hxx>
 #include <imgui.h>
 #include <imgui_extension.h>
 #include <imgui_internal.h>
-#include <perfkit/common/algorithm/std.hxx>
-#include <perfkit/common/helper/nlohmann_json_macros.hxx>
-#include <perfkit/common/macros.hxx>
-#include <perfkit/common/utility/cleanup.hxx>
 #include <perfkit/configs.h>
 
 #include "interfaces/Session.hpp"
@@ -39,9 +39,9 @@ PERFKIT_CATEGORY(GConfig)
         struct SessionArchive
         {
             string key;
-            int    type = 0;
+            int type = 0;
             string displayName;
-            bool   bShow = false;
+            bool bShow = false;
 
             CPPHEADERS_DEFINE_NLOHMANN_JSON_ARCHIVER(SessionArchive, key, type, displayName, bShow);
         };
@@ -242,8 +242,8 @@ void Application::drawSessionList(bool* bKeepOpen)
         sess.Ref->FetchSessionDisplayName(&sess.CachedDisplayName);
 
         bool const bIsSessionOpen = sess.Ref->IsSessionOpen();
-        bool       bOpenStatus = true;
-        auto       headerFlag = 0;
+        bool bOpenStatus = true;
+        auto headerFlag = 0;
         CPPH_CALL_ON_EXIT(ImGui::PopStatefulColors());
 
         auto baseColor = bIsSessionOpen ? 0xff'113d16 : 0xff'080808;
@@ -372,7 +372,7 @@ void Application::drawSessionList(bool* bKeepOpen)
 void Application::drawAddSessionMenu()
 {
     constexpr char const* ItemNames[] = {"-- NONE --", "Tcp [unsafe]", "Tcp [ssl]", "Relay Server", "websocket"};
-    auto                  state = &_addSessionModalState;
+    auto state = &_addSessionModalState;
 
     static_assert(std::size(ItemNames) == int(ESessionType::ENUM_MAX_VALUE));
 
@@ -431,7 +431,7 @@ void Application::drawAddSessionMenu()
 }
 
 shared_ptr<ISession>
-     CreatePerfkitTcpRawClient();
+CreatePerfkitTcpRawClient();
 
 auto Application::RegisterSessionMainThread(
         string keyString, ESessionType type, string_view optionalDefaultDisplayName)
@@ -514,11 +514,11 @@ void Application::tickSessions()
         sess.Ref->TickSession();
         if (not sess.bShow) { continue; }
 
-        auto       nameStr = usprintf("%s [%s]###%s.%d.SSNWND",
-                                      sess.CachedDisplayName.c_str(),
-                                      sess.Key.c_str(),
-                                      sess.Key.c_str(),
-                                      sess.Type);
+        auto nameStr = usprintf("%s [%s]###%s.%d.SSNWND",
+                                sess.CachedDisplayName.c_str(),
+                                sess.Key.c_str(),
+                                sess.Key.c_str(),
+                                sess.Type);
 
         bool const bDrawGreenHeader = sess.Ref->IsSessionOpen();
         if (bDrawGreenHeader)
@@ -548,7 +548,7 @@ Application* Application::Get()
 double* detail::RefPersistentNumber(string_view name)
 {
     auto& _storage = *PersistentNumberStorage();
-    auto  iter = _storage.find(name);
+    auto iter = _storage.find(name);
 
     if (iter == _storage.end())
         iter = _storage.try_emplace(std::string{name}, 0).first;

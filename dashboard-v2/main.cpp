@@ -290,7 +290,7 @@ static Type_* LookUpRegistryVar(string_view key)
 {
     using Storage = std::map<std::string, RegistryVariant, std::less<>>;
     static Storage _storage;
-    auto           iter = _storage.find(key);
+    auto iter = _storage.find(key);
 
     if (iter == _storage.end())
     {
@@ -333,7 +333,7 @@ std::any& detail::GetAny(string_view key)
     using Storage = std::map<string, std::any, std::less<>>;
     static Storage _storage;
 
-    auto           iter = _storage.find(key);
+    auto iter = _storage.find(key);
 
     if (iter == _storage.end())
     {

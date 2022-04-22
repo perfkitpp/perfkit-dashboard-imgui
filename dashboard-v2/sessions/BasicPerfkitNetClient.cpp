@@ -6,10 +6,10 @@
 
 #include <asio/dispatch.hpp>
 #include <asio/post.hpp>
-#include <perfkit/common/macros.hxx>
-#include <perfkit/common/refl/object.hxx>
-#include <perfkit/common/refl/rpc/rpc.hxx>
-#include <perfkit/common/refl/rpc/service.hxx>
+#include <cpph/macros.hxx>
+#include <cpph/refl/object.hxx>
+#include <cpph/refl/rpc/rpc.hxx>
+#include <cpph/refl/rpc/service.hxx>
 #include <perfkit/configs.h>
 
 #include "Application.hpp"
@@ -24,7 +24,7 @@ class PerfkitNetClientRpcMonitor : public rpc::if_session_monitor
    public:
     std::weak_ptr<BasicPerfkitNetClient> _owner;
 
-    void                                 on_session_expired(rpc::session_profile_view profile) noexcept override
+    void on_session_expired(rpc::session_profile_view profile) noexcept override
     {
         if (auto lc = _owner.lock())
             lc->_onSessionDispose_(profile);
@@ -336,19 +336,19 @@ void BasicPerfkitNetClient::drawTTY()
     struct TtyContext
     {
         poll_timer timColorize{250ms};
-        bool       bScrollLock = false;
-        int        colorizeFence = 0;
+        bool bScrollLock = false;
+        int colorizeFence = 0;
 
-        char       cmdBuf[512];
-        int        cmdHistoryCursor = 0;
+        char cmdBuf[512];
+        int cmdHistoryCursor = 0;
 
-        float      uiControlPadHeight = 0;
+        float uiControlPadHeight = 0;
 
         //
         circular_queue<string> cmdHistory{256};
     };
     auto& _ = RefAny<TtyContext>("TTY");
-    bool  bFrameHasInput = false;
+    bool bFrameHasInput = false;
 
     // Retrieve buffer content
     _ttyQueue.access([&](string& str) {
@@ -422,7 +422,7 @@ void BasicPerfkitNetClient::drawTTY()
             auto fnTextCallback =
                     [](ImGuiInputTextCallbackData* cbData) {
                         auto& _ = *(TtyContext*)cbData->UserData;
-                        int   historyCursorDelta = 0;
+                        int historyCursorDelta = 0;
 
                         switch (cbData->EventFlag)
                         {

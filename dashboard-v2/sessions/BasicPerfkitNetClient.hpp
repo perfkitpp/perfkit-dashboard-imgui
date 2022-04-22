@@ -4,11 +4,11 @@
 
 #pragma once
 #include <TextEditor.h>
-#include <perfkit/common/circular_queue.hxx>
-#include <perfkit/common/refl/rpc/core.hxx>
-#include <perfkit/common/refl/rpc/detail/service.hxx>
-#include <perfkit/common/thread/locked.hxx>
-#include <perfkit/common/timer.hxx>
+#include <cpph/circular_queue.hxx>
+#include <cpph/refl/rpc/core.hxx>
+#include <cpph/refl/rpc/detail/service.hxx>
+#include <cpph/thread/locked.hxx>
+#include <cpph/timer.hxx>
 #include <perfkit/extension/net/protocol.hpp>
 
 #include "interfaces/RpcSessionOwner.hpp"
@@ -30,11 +30,11 @@ class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNe
     string _displayKey;
 
     //
-    shared_ptr<rpc::session>            _rpc;
+    shared_ptr<rpc::session> _rpc;
     shared_ptr<rpc::if_session_monitor> _monitor;
-    shared_ptr<void>                    _rpcFlushGuard = std::make_shared<nullptr_t>();
+    shared_ptr<void> _rpcFlushGuard = std::make_shared<nullptr_t>();
 
-    rpc::service                        _notify_handler = rpc::service::empty_service();
+    rpc::service _notify_handler = rpc::service::empty_service();
 
     // Lifetime anchor of single session.
     shared_ptr<void> _sessionAnchor;
@@ -43,23 +43,23 @@ class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNe
     rpc::request_handle _hrpcHeartbeat;
 
     // Login
-    rpc::request_handle   _hrpcLogin;
+    rpc::request_handle _hrpcLogin;
     message::auth_level_t _authLevel = message::auth_level_t::unauthorized;
 
     //
     poll_timer _timHeartbeat{1s};
 
     //
-    service::session_info_t  _sessionInfo;
+    service::session_info_t _sessionInfo;
     notify::session_status_t _sessionStats{};
 
     // TTY
-    TextEditor     _tty;
+    TextEditor _tty;
     locked<string> _ttyQueue;
 
     // Widgets
     widgets::ConfigWindow _wndConfig{this};
-    widgets::TraceWindow  _wndTrace{this};
+    widgets::TraceWindow _wndTrace{this};
 
     // Flags
     struct

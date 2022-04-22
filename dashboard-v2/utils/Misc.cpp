@@ -15,12 +15,12 @@ void xterm_leap_escape(TextEditor* edit, std::string_view content)
     if (content.empty())
         return;
 
-    size_t      index = 0;
-    bool        is_escape = false;
+    size_t index = 0;
+    bool is_escape = false;
     std::string buffer;
 
-    auto        line_begin = edit->GetTotalLines();
-    auto        is_read_only = edit->IsReadOnly();
+    auto line_begin = edit->GetTotalLines();
+    auto is_read_only = edit->IsReadOnly();
     edit->SetReadOnly(false);
 
     for (; not content.empty() && index < content.size(); ++index)
@@ -56,8 +56,8 @@ void xterm_leap_escape(TextEditor* edit, std::string_view content)
 
 char const* FormatBitText(int64_t value, bool bBits, bool bSpeed, int64_t* valueOut, char const** suffixOut)
 {
-    static const auto     locale = std::locale("en-us");
-    static char           buf[128];
+    static const auto locale = std::locale("en-us");
+    static char buf[128];
     constexpr char const* SUFFIXES[2][2][6]  // bBits, bSpeed, step
             = {
                     {
@@ -73,8 +73,8 @@ char const* FormatBitText(int64_t value, bool bBits, bool bSpeed, int64_t* value
     if (bBits) { value <<= 3; }
 
     auto& suffixes = SUFFIXES[bBits][bSpeed];
-    int   sufidx = std::clamp<int>((log2(value) - 8) / 10, 0, 6);
-    int   numShift = sufidx * 10;
+    int sufidx = std::clamp<int>((log2(value) - 8) / 10, 0, 6);
+    int numShift = sufidx * 10;
 
     value >>= numShift;
     if (valueOut) { *valueOut = value; }

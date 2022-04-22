@@ -3,14 +3,14 @@
 //
 
 #pragma once
+#include "cpph/thread/locked.hxx"
+#include "cpph/timer.hxx"
 #include "interfaces/RpcSessionOwner.hpp"
-#include "perfkit/common/thread/locked.hxx"
-#include "perfkit/common/timer.hxx"
 #include "perfkit/extension/net/protocol.hpp"
 
 namespace proto = perfkit::net::message;
 
-namespace perfkit::rpc {
+namespace cpph::rpc {
 class service_builder;
 }
 
@@ -20,10 +20,10 @@ class TraceWindow
    private:
     struct TraceNodeContext
     {
-        proto::trace_info_t   info;
+        proto::trace_info_t info;
         proto::trace_update_t data;
 
-        vector<int>           children;
+        vector<int> children;
 
         // [transient]
         steady_clock::time_point _updateAt = {};
@@ -31,7 +31,7 @@ class TraceWindow
 
     struct TracerContext
     {
-        proto::tracer_descriptor_t           info;
+        proto::tracer_descriptor_t info;
         vector<unique_ptr<TraceNodeContext>> nodes;
 
         // Index of root nodes
@@ -39,21 +39,21 @@ class TraceWindow
 
         // [state]
         uint64_t _fencePrev = 0;
-        float    _updateGap = 0;
+        float _updateGap = 0;
         uint64_t fence = 0;
 
         // [timers]
-        poll_timer               tmNextPublish{100ms};
+        poll_timer tmNextPublish{100ms};
         steady_clock::time_point _waitExpiry = {};
-        stopwatch                _tmActualDeltaUpdate;
-        float                    _actualDeltaUpdateSec = 0;
+        stopwatch _tmActualDeltaUpdate;
+        float _actualDeltaUpdateSec = 0;
 
         // [transient]
         bool bIsTracingCached = false;
     };
 
    private:
-    IRpcSessionOwner*     _host;
+    IRpcSessionOwner* _host;
     vector<TracerContext> _tracers;
 
     // [transient]
@@ -77,7 +77,7 @@ class TraceWindow
 
    private:
     size_t _findTracerIndex(uint64_t id) const;
-    auto   _findTracer(uint64_t id) -> TracerContext*;
-    void   _recurseRootTraceNode(TracerContext*, TraceNodeContext*);
+    auto _findTracer(uint64_t id) -> TracerContext*;
+    void _recurseRootTraceNode(TracerContext*, TraceNodeContext*);
 };
 }  // namespace widgets

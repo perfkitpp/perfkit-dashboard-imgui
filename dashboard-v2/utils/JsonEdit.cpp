@@ -4,11 +4,11 @@
 
 #include "JsonEdit.hpp"
 
+#include <cpph/algorithm/std.hxx>
+#include <cpph/counter.hxx>
+#include <cpph/macros.hxx>
+#include <cpph/utility/cleanup.hxx>
 #include <nlohmann/json.hpp>
-#include <perfkit/common/algorithm/std.hxx>
-#include <perfkit/common/counter.hxx>
-#include <perfkit/common/macros.hxx>
-#include <perfkit/common/utility/cleanup.hxx>
 
 #include "TextEditor.h"
 #include "imgui.h"
@@ -51,8 +51,8 @@ bool ImGui::SingleLineJsonEdit(char const* str_id, nlohmann::json& value, const 
         return ImGui::Checkbox(str_id, value.get_ptr<bool*>());
 
     ImGuiContext& g = *GImGui;
-    ImGuiWindow*  window = g.CurrentWindow;
-    ImVec2        pos_before = window->DC.CursorPos;
+    ImGuiWindow* window = g.CurrentWindow;
+    ImVec2 pos_before = window->DC.CursorPos;
 
     PushID(str_id);
     PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(g.Style.ItemSpacing.x, g.Style.FramePadding.y * 2.0f));
@@ -60,8 +60,8 @@ bool ImGui::SingleLineJsonEdit(char const* str_id, nlohmann::json& value, const 
     PopStyleVar();
 
     ImGuiID id = window->GetID("##Input");
-    bool    temp_input_is_active = TempInputIsActive(id);
-    bool    temp_input_start = ret ? IsMouseDoubleClicked(0) : false;
+    bool temp_input_is_active = TempInputIsActive(id);
+    bool temp_input_start = ret ? IsMouseDoubleClicked(0) : false;
 
     if (temp_input_start)
         SetActiveID(id, window);
@@ -70,8 +70,8 @@ bool ImGui::SingleLineJsonEdit(char const* str_id, nlohmann::json& value, const 
 
     if (temp_input_is_active || temp_input_start)
     {
-        void*       ptr = nullptr;
-        int         dataType = 0;
+        void* ptr = nullptr;
+        int dataType = 0;
         char const* format = 0;
 
         switch (value.type())
@@ -124,15 +124,15 @@ bool ImGui::SingleLineJsonEdit(char const* str_id, nlohmann::json& value, const 
 
 struct JsonEditor::Impl
 {
-    Json           editing;
+    Json editing;
     optional<Json> min;
     optional<Json> max;
 
-    bool           bRawEditMode = false;
-    TextEditor     rawEditor;
+    bool bRawEditMode = false;
+    TextEditor rawEditor;
 
-    TextEditor     stringEditor;
-    void*          editingID = nullptr;
+    TextEditor stringEditor;
+    void* editingID = nullptr;
 };
 
 void JsonEditor::Render(void* id)
@@ -330,10 +330,10 @@ void JsonEditor::renderRecurse(JsonEditor::Json* ptr, Json const* min, Json cons
             ImGui::AlignTextToFramePadding();
 
             // Edit number box
-            void*         vdata = nullptr;
-            void const *  vmin = nullptr, *vmax = nullptr;
+            void* vdata = nullptr;
+            void const *vmin = nullptr, *vmax = nullptr;
             ImGuiDataType dataType = -1;
-            float         step = 1.f;
+            float step = 1.f;
 
             switch (ptr->type())
             {

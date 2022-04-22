@@ -1,7 +1,7 @@
 #include "BasicPerfkitNetClient.hpp"
-#include "perfkit/common/refl/rpc/connection/asio.hxx"
-#include "perfkit/common/refl/rpc/protocol/msgpack-rpc.hxx"
-#include "perfkit/common/refl/rpc/session_builder.hxx"
+#include "cpph/refl/rpc/connection/asio.hxx"
+#include "cpph/refl/rpc/protocol/msgpack-rpc.hxx"
+#include "cpph/refl/rpc/session_builder.hxx"
 
 using namespace perfkit;
 

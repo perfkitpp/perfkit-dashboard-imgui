@@ -12,11 +12,11 @@ class JsonEditor
    public:
     struct EditorStateFlag
     {
-        bool bIsDirty      : 1;
-        bool bIsFocused    : 1;
+        bool bIsDirty : 1;
+        bool bIsFocused : 1;
 
         bool bEvtLostFocus : 1;
-        bool bEvtCtrlS     : 1;
+        bool bEvtCtrlS : 1;
     };
 
    private:
@@ -26,7 +26,7 @@ class JsonEditor
     struct Impl;
 
     unique_ptr<Impl> _self;
-    EditorStateFlag  _flags = {};
+    EditorStateFlag _flags = {};
 
    public:
     JsonEditor();
@@ -51,5 +51,5 @@ enum class value_t : uint8_t;
 
 namespace ImGui {
 ImU32 ContentColorByJsonType(nlohmann::detail::value_t type);
-bool  SingleLineJsonEdit(char const* str_id, nlohmann::json& value, string const& cacheStr, bool bConfirmEnter = true);
+bool SingleLineJsonEdit(char const* str_id, nlohmann::json& value, string const& cacheStr, bool bConfirmEnter = true);
 }  // namespace ImGui

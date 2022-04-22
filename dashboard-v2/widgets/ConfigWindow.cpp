@@ -4,25 +4,25 @@
 
 #include "ConfigWindow.hpp"
 
-#include <perfkit/common/macros.hxx>
-#include <perfkit/common/refl/object.hxx>
-#include <perfkit/common/refl/rpc/rpc.hxx>
-#include <perfkit/common/utility/cleanup.hxx>
+#include <cpph/macros.hxx>
+#include <cpph/refl/object.hxx>
+#include <cpph/refl/rpc/rpc.hxx>
+#include <cpph/utility/cleanup.hxx>
 
 #include "imgui_extension.h"
 
 widgets::ConfigWindow::EditContext widgets::ConfigWindow::globalEditContext;
-static bool                        bFilterTargetDirty = false;
+static bool bFilterTargetDirty = false;
 
 static struct
 {
-    bool        bShouldApplyFilter = false;
-    bool        bHasFilterUpdate = false;
+    bool bShouldApplyFilter = false;
+    bool bHasFilterUpdate = false;
 
     string_view filterContent = {};
 
-    bool        bExpandAll = false;
-    bool        bCollapseAll = false;
+    bool bExpandAll = false;
+    bool bCollapseAll = false;
 } gEvtThisFrame;
 
 //
@@ -30,7 +30,7 @@ void widgets::ConfigWindow::Render(bool* bKeepOpen)
 {
     /// Render tools -> expand all, collapse all, filter, etc ...
     static size_t _latestFrameCount = 0;
-    bool const    bShouldRenderStaticComponents = std::exchange(_latestFrameCount, gFrameIndex) != gFrameIndex;
+    bool const bShouldRenderStaticComponents = std::exchange(_latestFrameCount, gFrameIndex) != gFrameIndex;
 
     if (bShouldRenderStaticComponents)
     {
@@ -171,7 +171,7 @@ void widgets::ConfigWindow::tryRenderEditorContext()
         entity->_bHasUpdateForEditor = false;
     }
 
-    bool       bCommitValue = _ctx.bDirty && entity->_bUpdateOnEdit;
+    bool bCommitValue = _ctx.bDirty && entity->_bUpdateOnEdit;
     bool const bIsOneOf = not entity->optOneOf.empty() && entity->optOneOf.is_array();
 
     ImGui::BeginChild("##Editor", {0, _ctx._editAreaMinusOffset}, true);
@@ -185,7 +185,7 @@ void widgets::ConfigWindow::tryRenderEditorContext()
         {
             for (auto& elem : entity->optOneOf)
             {
-                auto       contentStr = elem.dump();
+                auto contentStr = elem.dump();
                 bool const bIsSelected = contentStr == curValue;
 
                 if (bIsSelected)
@@ -301,7 +301,7 @@ void widgets::ConfigWindow::_handleConfigsUpdate(config_entity_update_t const& e
 
 void widgets::ConfigWindow::_recursiveConstructCategories(
         ConfigRegistryContext* rg,
-        CategoryDesc const&    desc,
+        CategoryDesc const& desc,
         ConfigCategoryContext* parent)
 {
     auto category = &rg->categoryContexts[&desc];
@@ -356,13 +356,13 @@ void widgets::ConfigWindow::ClearContexts()
 
 void widgets::ConfigWindow::recursiveTickSubcategory(
         ConfigRegistryContext& rg,
-        CategoryDescPtr        category,
-        bool                   bCollapsed)
+        CategoryDescPtr category,
+        bool bCollapsed)
 {
-    auto        self = &rg.categoryContexts.at(category);
+    auto self = &rg.categoryContexts.at(category);
     auto const& evt = gEvtThisFrame;
 
-    auto const  fnCheckFilter
+    auto const fnCheckFilter
             = ([](string_view key) -> optional<pair<int, int>> {
                   static string buf1;
 
@@ -371,7 +371,7 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
 
                   auto const& evt = gEvtThisFrame;
 
-                  auto        pos = buf1.find(evt.filterContent);
+                  auto pos = buf1.find(evt.filterContent);
                   if (pos == key.npos)
                       return {};
                   else
@@ -457,7 +457,7 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
 
     bCollapsed = bCollapsed || evt.bShouldApplyFilter && not self->bFilterHitChild;
     bool const bShouldOpen = (self->bBaseOpen || evt.bShouldApplyFilter && self->bFilterHitChild) && not bCollapsed;
-    bool       bTreeIsOpen = false;
+    bool bTreeIsOpen = false;
 
     if (not bCollapsed)
     {

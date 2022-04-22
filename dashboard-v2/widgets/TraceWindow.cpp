@@ -4,13 +4,13 @@
 
 #include "TraceWindow.hpp"
 
+#include "cpph/macros.hxx"
+#include "cpph/refl/object.hxx"
+#include "cpph/refl/rpc/rpc.hxx"
+#include "cpph/refl/rpc/service.hxx"
+#include "cpph/utility/cleanup.hxx"
 #include "imgui.h"
 #include "imgui_extension.h"
-#include "perfkit/common/macros.hxx"
-#include "perfkit/common/refl/object.hxx"
-#include "perfkit/common/refl/rpc/rpc.hxx"
-#include "perfkit/common/refl/rpc/service.hxx"
-#include "perfkit/common/utility/cleanup.hxx"
 
 void widgets::TraceWindow::BuildService(rpc::service_builder& s)
 {
@@ -57,12 +57,12 @@ void widgets::TraceWindow::Render(bool* bKeepOpen)
 
         /// Draw spinner
         {
-            char       spinText[] = "[             ]";
+            char spinText[] = "[             ]";
             auto const groundLen = (size(spinText) - 3) - 1;
-            uint64_t   starPos, starAt;
+            uint64_t starPos, starAt;
 
-            auto       alpha = min(1.f, tracer._updateGap / tracer._actualDeltaUpdateSec);
-            auto       delta = uint64_t(alpha * (tracer.fence - tracer._fencePrev)) % (groundLen * 3);
+            auto alpha = min(1.f, tracer._updateGap / tracer._actualDeltaUpdateSec);
+            auto delta = uint64_t(alpha * (tracer.fence - tracer._fencePrev)) % (groundLen * 3);
             tracer._updateGap += ImGui::GetIO().DeltaTime;
 
             for (int i = 0; i <= delta; ++i)
@@ -212,7 +212,7 @@ void widgets::TraceWindow::_fnOnNewTraceNode(uint64_t tracer_id, vector<proto::t
 
                             // Register as child to parent
                             auto& parent = curNodes->at(newNode.parent_index);
-                            auto  uIter = lower_bound(parent->children, newNode.index);
+                            auto uIter = lower_bound(parent->children, newNode.index);
 
                             // Unique add ...
                             if (uIter == parent->children.end() || *uIter != newNode.index)
