@@ -297,7 +297,7 @@ void widgets::TraceWindow::_recurseRootTraceNode(
         ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetColorU32(ImGuiCol_TextDisabled));
 
     // Draw node label
-    auto const bSkipChildren = not ImGui::TreeNodeEx(usprintf("%s", node->info.name.c_str(), node->info.index));
+    auto const bSkipChildren = not ImGui::TreeNodeEx(node->info.name.c_str(), nodeFlags);
     ImGui::PopStyleColor();
 
     bool const bShowContentTooltip = ImGui::IsItemHovered();
