@@ -12,6 +12,7 @@
 #include "imgui.h"
 #include "imgui_extension.h"
 #include "imgui_internal.h"
+#include "spdlog/spdlog.h"
 
 void widgets::TraceWindow::BuildService(rpc::service_builder& s)
 {
@@ -20,7 +21,7 @@ void widgets::TraceWindow::BuildService(rpc::service_builder& s)
 
     s.route(notify::new_tracer, bind_front(&Self::_fnOnNewTracer, this));
     s.route(notify::new_trace_node, bind_front(&Self::_fnOnNewTraceNode, this));
-    s.route(notify::deleted_tracer, bind_front(&Self::_fnOnDestroyTracer, this));
+    s.route(notify::validate_tracer_list, bind_front(&Self::_fnOnValidateTracer, this));
     s.route(notify::trace_node_update, bind_front(&Self::_fnOnTraceUpdate, this));
 }
 
@@ -159,12 +160,15 @@ void widgets::TraceWindow::_fnOnNewTracer(proto::tracer_descriptor_t& trc)
             });
 }
 
-void widgets::TraceWindow::_fnOnDestroyTracer(uint64_t tracer_id)
+void widgets::TraceWindow::_fnOnValidateTracer(vector<uint64_t>& aliveTracers)
 {
+    sort(aliveTracers);
+
     PostEventMainThreadWeak(
-            _host->SessionAnchor(), [this, tracer_id]() mutable {
-                if (auto idx = _findTracerIndex(tracer_id); ~size_t{} != idx)
-                    _tracers.erase(_tracers.begin() + idx);
+            _host->SessionAnchor(), [this, aliveTracers = std::move(aliveTracers)]() mutable {
+                erase_if_each(_tracers, [&](TracerContext& t) {
+                    return not binary_search(aliveTracers, t.info.tracer_id);
+                });
             });
 }
 
@@ -293,7 +297,7 @@ void widgets::TraceWindow::_recurseRootTraceNode(
         ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetColorU32(ImGuiCol_TextDisabled));
 
     // Draw node label
-    auto const bSkipChildren = not ImGui::TreeNodeEx(usprintf("%s#%d", node->info.name.c_str(), node->info.index), nodeFlags);
+    auto const bSkipChildren = not ImGui::TreeNodeEx(usprintf("%s", node->info.name.c_str(), node->info.index));
     ImGui::PopStyleColor();
 
     bool const bShowContentTooltip = ImGui::IsItemHovered();

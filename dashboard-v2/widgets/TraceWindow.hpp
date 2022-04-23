@@ -72,7 +72,7 @@ class TraceWindow
 
    private:
     void _fnOnNewTracer(proto::tracer_descriptor_t&);
-    void _fnOnDestroyTracer(uint64_t);
+    void _fnOnValidateTracer(vector<uint64_t> &tracer_id);
     void _fnOnNewTraceNode(uint64_t, vector<proto::trace_info_t>&);
     void _fnOnTraceUpdate(uint64_t, vector<proto::trace_update_t>&);
 
