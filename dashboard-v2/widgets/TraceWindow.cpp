@@ -275,15 +275,23 @@ static ImU32 VisitPayloadEntity(string* out, bool const& value)
     return ColorRefs::GlyphKeyword;
 }
 
-static void DrawTracePayload(proto::trace_payload_t const& payload)
+static bool DrawTracePayload(proto::trace_payload_t const& payload)
 {
     static string builder;
     builder.clear();
 
     ImU32 color = std::visit([](auto&& e) { return VisitPayloadEntity(&builder, e); }, payload);
     ImGui::PushStyleColor(ImGuiCol_Text, color);
+
+    auto size = ImGui::CalcTextSize(builder.data(), builder.data() + builder.size());
+    ImGui::SetCursorPosX(std::max(ImGui::GetCursorPosX(), ImGui::GetContentRegionMax().x - size.x));
+
+    bool selected = ImGui::Selectable("##SEL_ACT");
+    ImGui::SameLine(0, 0);
     ImGui::TextUnformatted(builder.data(), builder.data() + builder.size());
+
     ImGui::PopStyleColor();
+    return selected;
 }
 
 void widgets::TraceWindow::_recurseRootTraceNode(
@@ -296,8 +304,9 @@ void widgets::TraceWindow::_recurseRootTraceNode(
 
     // Highlight node text if node is latest ...
     using std::chrono::duration_cast;
+    bool const bIsActiveNode = node->data.fence_value == tracer->fence;
 
-    if (node->data.fence_value == tracer->fence)
+    if (bIsActiveNode)
         ImGui::PushStyleColor(ImGuiCol_Text, 0xffbbbbbb);
     else
         ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetColorU32(ImGuiCol_TextDisabled));
@@ -317,8 +326,8 @@ void widgets::TraceWindow::_recurseRootTraceNode(
     {
         ImGui::SameLine();
         auto at = ImGui::GetCursorScreenPos();
-        at.y += ImGui::GetTextLineHeight() / 2;
-        dl->AddCircleFilled(at, ImGui::GetFontSize() / 6, 0xff00ff00);
+        at.y += ImGui::GetTextLineHeight() / 3;
+        dl->AddCircleFilled(at, ImGui::GetFontSize() / 6, bIsActiveNode ? 0xff00ff00 : 0x4400ff00);
         ImGui::Spacing();
     }
 

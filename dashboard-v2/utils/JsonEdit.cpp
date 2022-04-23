@@ -83,7 +83,7 @@ bool ImGui::SingleLineJsonEdit(
         }
 
         ImGui::SetNextItemWidth(-1.f);
-        if (ImGui::InputScalar("##Scalar", dataType, vdata))
+        if (ImGui::InputScalar("##Scalar", dataType, vdata, 0, 0, 0, ImGuiInputTextFlags_EnterReturnsTrue))
             bValueChanged = true;
     }
     else if (value.is_string())
@@ -103,7 +103,7 @@ bool ImGui::SingleLineJsonEdit(
                 "##TEDIT",
                 str.data(),
                 str.size(),
-                ImGuiInputTextFlags_CallbackResize,
+                ImGuiInputTextFlags_CallbackResize | ImGuiInputTextFlags_EnterReturnsTrue,
                 [](ImGuiInputTextCallbackData* cbdata) {
                     if (cbdata->EventFlag == ImGuiInputTextFlags_CallbackResize)
                     {
@@ -356,7 +356,7 @@ void JsonEditor::renderRecurse(JsonEditor::Json* ptr, Json const* min, Json cons
                     if (min) { vmin = min->get_ptr<int64_t const*>(); }
                     if (max) { vmax = max->get_ptr<int64_t const*>(); }
                     dataType = ImGuiDataType_S64;
-                    step = std::max(0.005, std::abs(*ptr->get_ptr<int64_t*>() * 0.00005));
+                    step = std::max(0.005, std::abs(*ptr->get_ptr<int64_t*>() * 0.0005)) / DpiScale();
                     break;
 
                 case nlohmann::detail::value_t::number_float:
@@ -364,7 +364,7 @@ void JsonEditor::renderRecurse(JsonEditor::Json* ptr, Json const* min, Json cons
                     if (min) { vmin = min->get_ptr<double const*>(); }
                     if (max) { vmax = max->get_ptr<double const*>(); }
                     dataType = ImGuiDataType_Double;
-                    step = std::max(1e-6, std::abs(*ptr->get_ptr<double*>() * 0.0005));
+                    step = std::max(1e-6, std::abs(*ptr->get_ptr<double*>() * 0.0005)) / DpiScale();
                     break;
 
                 default: abort();
