@@ -43,83 +43,94 @@ ImU32 ImGui::ContentColorByJsonType(nlohmann::detail::value_t type)
     }
 }
 
-bool ImGui::SingleLineJsonEdit(char const* str_id, nlohmann::json& value, const string& cacheStr, bool bConfirmEnter)
+bool ImGui::SingleLineJsonEdit(
+        char const* str_id, nlohmann::json& value,
+        const string& cacheStr, bool* bIsClicked)
 {
-    IM_ASSERT(value.is_number() || value.is_boolean());
-
+    bool bValueChanged = false;
     if (value.is_boolean())
         return ImGui::Checkbox(str_id, value.get_ptr<bool*>());
 
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
-    ImVec2 pos_before = window->DC.CursorPos;
+    auto type = value.type();
+    auto typeColor = ImGui::ContentColorByJsonType(type);
+    ImGui::PushID(&value);
+    ImGui::PushStyleColor(ImGuiCol_Text, typeColor);
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, 0);
 
-    PushID(str_id);
-    PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(g.Style.ItemSpacing.x, g.Style.FramePadding.y * 2.0f));
-    bool ret = Selectable("##Selectable", false, ImGuiSelectableFlags_AllowDoubleClick | ImGuiSelectableFlags_AllowItemOverlap);
-    PopStyleVar();
-
-    ImGuiID id = window->GetID("##Input");
-    bool temp_input_is_active = TempInputIsActive(id);
-    bool temp_input_start = ret ? IsMouseDoubleClicked(0) : false;
-
-    if (temp_input_start)
-        SetActiveID(id, window);
-
-    ImGui::PushStyleColor(ImGuiCol_Text, ContentColorByJsonType(value.type()));
-
-    if (temp_input_is_active || temp_input_start)
+    if (value.is_number())
     {
-        void* ptr = nullptr;
-        int dataType = 0;
-        char const* format = 0;
+        ImGui::AlignTextToFramePadding();
+
+        // Edit number box
+        void* vdata = nullptr;
+        ImGuiDataType dataType = -1;
 
         switch (value.type())
         {
             case nlohmann::detail::value_t::number_integer:
-                ptr = value.get_ptr<int64_t*>();
-                dataType = ImGuiDataType_S64;
-                format = "%lld";
-                break;
-
             case nlohmann::detail::value_t::number_unsigned:
-                ptr = value.get_ptr<uint64_t*>();
-                dataType = ImGuiDataType_U64;
-                format = "%llu";
+                vdata = value.get_ptr<int64_t*>();
+                dataType = ImGuiDataType_S64;
                 break;
 
             case nlohmann::detail::value_t::number_float:
-                ptr = value.get_ptr<double*>();
+                vdata = value.get_ptr<double*>();
                 dataType = ImGuiDataType_Double;
-                format = "%f";
                 break;
 
-            default:
-                break;
+            default: abort();
         }
 
-        IM_ASSERT(dataType != 0);
-        IM_ASSERT(!!ptr);
+        ImGui::SetNextItemWidth(-1.f);
+        if (ImGui::InputScalar("##Scalar", dataType, vdata))
+            bValueChanged = true;
+    }
+    else if (value.is_string())
+    {
+        struct context_t
+        {
+            string* str;
+            size_t text_len;
+        };
+        auto& str = value.get_ref<string&>();
+        auto ctx = context_t{&str, str.size()};
 
-        ImVec2 pos_after = window->DC.CursorPos;
-        window->DC.CursorPos = pos_before;
-        ret = ImGui::TempInputScalar(ImRect(GetItemRectMin(), GetItemRectMax()), id, "##Input", dataType, ptr, format);
-        ret = (ret && not bConfirmEnter) || (bConfirmEnter && ImGui::IsKeyPressed(ImGuiKey_Enter, false));
+        ImGui::SetNextItemWidth(-1.f);
 
-        window->DC.CursorPos = pos_after;
+        str.resize(str.size() + 32);
+        bValueChanged = ImGui::InputText(
+                "##TEDIT",
+                str.data(),
+                str.size(),
+                ImGuiInputTextFlags_CallbackResize,
+                [](ImGuiInputTextCallbackData* cbdata) {
+                    if (cbdata->EventFlag == ImGuiInputTextFlags_CallbackResize)
+                    {
+                        auto ctx = (context_t*)cbdata->UserData;
+                        auto str = ctx->str;
+                        str->resize(str->size() + 128);
+
+                        cbdata->BufSize = str->size();
+                        cbdata->BufDirty = true;
+                        ctx->text_len = cbdata->BufTextLen;
+                    }
+
+                    return 0;
+                },
+                &ctx);
+
+        str.resize(ctx.text_len);
     }
     else
     {
-        ret = false;
-        ImGui::SameLine(0, 0);
-        ImGui::AlignTextToFramePadding();
-        ImGui::TextUnformatted(cacheStr.c_str());
+        *bIsClicked = ImGui::Selectable("##SEL");
+        ImGui::SameLine();
+        ImGui::TextUnformatted(cacheStr.data(), cacheStr.data() + cacheStr.size());
     }
 
-    ImGui::PopStyleColor();
-
-    PopID();
-    return ret;
+    ImGui::PopStyleColor(2);
+    ImGui::PopID();
+    return bValueChanged;
 }
 
 struct JsonEditor::Impl
@@ -294,6 +305,7 @@ void JsonEditor::renderRecurse(JsonEditor::Json* ptr, Json const* min, Json cons
                 {  // Editor popup has just been closed.
                     _self->editingID = nullptr;
                     ptr->get_ref<string&>() = _self->stringEditor.GetText();
+                    ptr->get_ref<string&>().pop_back();  // Erase last newline
                 }
 
                 auto editStr = ImGui::Selectable("##Btn");

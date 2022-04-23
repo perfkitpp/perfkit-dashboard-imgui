@@ -579,19 +579,19 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
                     }
                 }
             }
-            else if (entity->value.is_boolean() || entity->value.is_number())
-            {
-                bHasUpdate = ImGui::SingleLineJsonEdit(
-                        usprintf("##%p", entity),
-                        entity->value,
-                        entity->_cachedStringify);
-            }
             else
             {
-                ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ContentColorByJsonType(entity->value));
-                ImGui::AlignTextToFramePadding();
-                ImGui::TextUnformatted(entity->_cachedStringify.c_str());
-                ImGui::PopStyleColor();
+                bool bIsClicked = false;
+                bHasUpdate = ImGui::SingleLineJsonEdit(
+                        usprintf("##%p", entity),
+                        entity->value, entity->_cachedStringify,
+                        &bIsClicked);
+
+                if (bIsClicked && (entity->value.is_object() || entity->value.is_array()))
+                {
+                    globalEditContext.ownerRef = rg.WrapPtr(this);
+                    globalEditContext.entityRef = rg.WrapPtr(entity);
+                }
             }
 
             if (bHasUpdate)

@@ -51,5 +51,6 @@ enum class value_t : uint8_t;
 
 namespace ImGui {
 ImU32 ContentColorByJsonType(nlohmann::detail::value_t type);
-bool SingleLineJsonEdit(char const* str_id, nlohmann::json& value, string const& cacheStr, bool bConfirmEnter = true);
+bool SingleLineJsonEdit(char const* str_id, nlohmann::json& value,
+                        string const& cacheStr, bool* bIsClicked);
 }  // namespace ImGui
