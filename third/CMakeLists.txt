@@ -2,13 +2,21 @@ include(FetchContent)
 
 ### CONFIGURE BUNDLED IMGUI
 project(perfkitpp-imgui-bundled)
+add_library(${PROJECT_NAME} STATIC)
+
 FetchContent_Declare(imgui URL https://github.com/ocornut/imgui/archive/refs/heads/docking.zip)
 FetchContent_Populate(imgui)
 
-add_library(
+FetchContent_Declare(implot URL https://github.com/epezent/implot/archive/refs/heads/master.zip)
+FetchContent_Populate(implot)
+
+FetchContent_Declare(glfw URL https://github.com/glfw/glfw/archive/refs/tags/3.3.7.tar.gz)
+FetchContent_MakeAvailable(glfw)
+
+target_sources(
         ${PROJECT_NAME}
 
-        STATIC
+        PUBLIC
         ${imgui_SOURCE_DIR}/imgui.cpp
         ${imgui_SOURCE_DIR}/imgui_tables.cpp
         ${imgui_SOURCE_DIR}/imgui_widgets.cpp
@@ -16,9 +24,9 @@ add_library(
         ${imgui_SOURCE_DIR}/imgui_demo.cpp
         ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
         ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
+        ${implot_SOURCE_DIR}/implot.cpp
+        ${implot_SOURCE_DIR}/implot_items.cpp
         ImGuiColorTextEdit/TextEditor.cpp
-        implot/implot.cpp
-        implot/implot_items.cpp
         imgui-extension/imgui_extension.cpp
 )
 
@@ -28,7 +36,7 @@ target_include_directories(
         PUBLIC
         ${imgui_SOURCE_DIR}
         ${imgui_SOURCE_DIR}/backends
-        implot
+        ${implot_SOURCE_DIR}
         ${OpenGL_INCLUDE_DIRS}
         ImGuiColorTextEdit
         imgui-extension
