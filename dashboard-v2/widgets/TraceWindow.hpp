@@ -58,6 +58,7 @@ class TraceWindow
 
     // [transient]
     steady_clock::time_point _cachedTpNow;
+    string _reusedStringBuilder;
 
    public:
     explicit TraceWindow(IRpcSessionOwner* host) : _host(host)

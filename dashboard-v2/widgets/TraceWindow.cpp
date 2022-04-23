@@ -275,25 +275,6 @@ static ImU32 VisitPayloadEntity(string* out, bool const& value)
     return ColorRefs::GlyphKeyword;
 }
 
-static bool DrawTracePayload(proto::trace_payload_t const& payload)
-{
-    static string builder;
-    builder.clear();
-
-    ImU32 color = std::visit([](auto&& e) { return VisitPayloadEntity(&builder, e); }, payload);
-    ImGui::PushStyleColor(ImGuiCol_Text, color);
-
-    auto size = ImGui::CalcTextSize(builder.data(), builder.data() + builder.size());
-    ImGui::SetCursorPosX(std::max(ImGui::GetCursorPosX(), ImGui::GetContentRegionMax().x - size.x));
-
-    bool selected = ImGui::Selectable("##SEL_ACT");
-    ImGui::SameLine(0, 0);
-    ImGui::TextUnformatted(builder.data(), builder.data() + builder.size());
-
-    ImGui::PopStyleColor();
-    return selected;
-}
-
 void widgets::TraceWindow::_recurseRootTraceNode(
         TracerContext* tracer, TraceNodeContext* node)
 {
@@ -343,16 +324,42 @@ void widgets::TraceWindow::_recurseRootTraceNode(
                 .notify(tracer->info.tracer_id, node->info.index, arg);
     }
 
+    // Draw node value
+    ImGui::SameLine();
+    {
+        auto& builder = _reusedStringBuilder;
+        builder.clear();
+
+        ImU32 color = std::visit([&](auto&& e) { return VisitPayloadEntity(&builder, e); }, node->data.payload);
+        ImGui::PushStyleColor(ImGuiCol_Text, color);
+
+        auto size = ImGui::CalcTextSize(builder.data(), builder.data() + builder.size());
+        ImGui::SetCursorPosX(std::max(ImGui::GetCursorPosX(), ImGui::GetContentRegionMax().x - size.x));
+
+        ImGui::Selectable("##SEL_ACT");
+        ImGui::SameLine(0, 0);
+
+        bTogglePlotWindow = ImGui::IsItemClicked(ImGuiMouseButton_Right);
+        bool bDrawValueToolTip = ImGui::IsItemHovered();
+
+        ImGui::TextUnformatted(builder.data(), builder.data() + builder.size());
+
+        if (bDrawValueToolTip)
+        {
+            ImGui::BeginTooltip();
+            ImGui::PushTextWrapPos(DpiScale() * 480);
+            ImGui::TextUnformatted(builder.data(), builder.data() + builder.size());
+            ImGui::PopTextWrapPos();
+            ImGui::EndTooltip();
+        }
+
+        ImGui::PopStyleColor();
+    }
+
     if (bTogglePlotWindow)
     {
         ImGui::Text("DDDDD");
     }
-
-    // TODO: Draw node graph trace button
-
-    // TODO: Draw node value
-    ImGui::SameLine();
-    DrawTracePayload(node->data.payload);
 
     if (bSkipChildren) { return; }
 
