@@ -342,3 +342,8 @@ std::any& detail::GetAny(string_view key)
 
     return iter->second;
 }
+
+float DpiScale()
+{
+    return ImGui::GetIO().FontGlobalScale;
+}

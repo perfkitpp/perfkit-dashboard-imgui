@@ -12,6 +12,7 @@
 
 #include "TextEditor.h"
 #include "imgui.h"
+#include "imgui_extension.h"
 #include "imgui_internal.h"
 
 ImU32 ImGui::ContentColorByJsonType(nlohmann::detail::value_t type)
@@ -36,7 +37,7 @@ ImU32 ImGui::ContentColorByJsonType(nlohmann::detail::value_t type)
         case nlohmann::detail::value_t::number_integer:
         case nlohmann::detail::value_t::number_unsigned:
         case nlohmann::detail::value_t::number_float:
-            return ColorRefs::GlpyhNumber;
+            return ColorRefs::GlyphNumber;
 
         default:
             return ColorRefs::FrontError;
@@ -289,7 +290,7 @@ void JsonEditor::renderRecurse(JsonEditor::Json* ptr, Json const* min, Json cons
             {
                 ImGui::Text("-- editing --");
 
-                ImGui::SetNextWindowSize({480, 272});
+                ImGui::SetNextWindowSize(ImVec2{480, 272} * DpiScale());
                 if (CondInvoke(ImGui::BeginPopup(POPUP_ID), &ImGui::EndPopup))
                 {
                     _self->stringEditor.Render("##Editor");

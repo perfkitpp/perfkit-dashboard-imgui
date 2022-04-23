@@ -67,7 +67,7 @@ enum : uint32_t
     GlyphKeyword = 0xffd69c56,
     GlyphUserType = 0xffb0c94e,
     GlyphString = 0xff94bbff,
-    GlpyhNumber = 0xff56bf6f
+    GlyphNumber = 0xff56bf6f
 };
 }
 
@@ -169,5 +169,11 @@ Type_& RefAny(char const* format, Args_&&... args)
 
     return *result;
 }
+
+/**
+ * Get global Dpi Scale.
+ * @return
+ */
+float DpiScale();
 
 #include "utils/Notify.hpp"

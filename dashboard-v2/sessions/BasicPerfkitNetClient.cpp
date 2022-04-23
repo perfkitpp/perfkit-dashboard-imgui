@@ -537,6 +537,12 @@ void BasicPerfkitNetClient::RenderSessionListEntityContent()
                               }
                           };
 
+                if (not _rpc)
+                {
+                    CloseSession();
+                    return;
+                }
+
                 _hrpcLogin = service::login(_rpc).async_request(
                         &_authLevel,
                         "serialized_content",

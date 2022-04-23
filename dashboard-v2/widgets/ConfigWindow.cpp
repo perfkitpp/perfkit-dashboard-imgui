@@ -521,7 +521,7 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
                 ImGui::PushTextWrapPos(0);
                 CPPH_CALL_ON_EXIT(ImGui::PopTextWrapPos());
 
-                ImGui::SetNextWindowSize({240 * ImGui::GetWindowDpiScale(), 0});
+                ImGui::SetNextWindowSize({240 * ImGui::GetIO().FontGlobalScale, 0});
                 ImGui::BeginTooltip();
                 CPPH_CALL_ON_EXIT(ImGui::EndTooltip());
 

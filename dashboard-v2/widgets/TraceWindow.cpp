@@ -11,6 +11,7 @@
 #include "cpph/utility/cleanup.hxx"
 #include "imgui.h"
 #include "imgui_extension.h"
+#include "imgui_internal.h"
 
 void widgets::TraceWindow::BuildService(rpc::service_builder& s)
 {
@@ -44,7 +45,7 @@ void widgets::TraceWindow::Render(bool* bKeepOpen)
         /// Draw header
         bool bVisibleCross = true;
         tracer.bIsTracingCached = ImGui::CollapsingHeader(
-                tracer.info.name.c_str(),
+                usprintf("%s##%llu", tracer.info.name.c_str(), tracer.info.tracer_id),
                 tracer.bIsTracingCached ? &bVisibleCross : nullptr,
                 ImGuiTreeNodeFlags_AllowItemOverlap);
         ImGui::PopStyleColor();
@@ -150,7 +151,8 @@ void widgets::TraceWindow::_fnOnNewTracer(proto::tracer_descriptor_t& trc)
             _host->SessionAnchor(), [this, trc = trc]() mutable {
                 // If same ID-ed tracer has republished, delete existing local context
                 if (auto idx = _findTracerIndex(trc.tracer_id); ~size_t{} != idx)
-                    _tracers.erase(_tracers.begin() + idx);
+                    if (_tracers[idx].info.tracer_id == trc.tracer_id)
+                        return;
 
                 auto* newCtx = &_tracers.emplace_back();
                 newCtx->info = move(trc);
@@ -196,6 +198,8 @@ void widgets::TraceWindow::_fnOnNewTraceNode(uint64_t tracer_id, vector<proto::t
                     {
                         // Create new node
                         auto& curNode = curNodes->at(newNode.index);
+                        if (curNode != nullptr) { continue; }
+
                         curNode = make_unique<TraceNodeContext>();
                         curNode->info = newNode;
 
@@ -233,6 +237,55 @@ auto widgets::TraceWindow::_findTracer(uint64_t id) -> widgets::TraceWindow::Tra
         return &_tracers[idx];
 }
 
+static ImU32 VisitPayloadEntity(string* out, nullptr_t const& value)
+{
+    *out = "";
+    return ColorRefs::GlyphKeyword;
+}
+
+static ImU32 VisitPayloadEntity(string* out, steady_clock::duration const& value)
+{
+    auto sec = std::chrono::duration_cast<decltype(1.s)>(value).count();
+
+    fmt::format_to(back_inserter(*out), "{:.3f} ms", sec * 1e3);
+    return ColorRefs::GlyphUserType;
+}
+
+static ImU32 VisitPayloadEntity(string* out, int64_t const& value)
+{
+    fmt::format_to(back_inserter(*out), "{}", value);
+    return ColorRefs::GlyphNumber;
+}
+
+static ImU32 VisitPayloadEntity(string* out, double const& value)
+{
+    fmt::format_to(back_inserter(*out), "{:g}", value);
+    return ColorRefs::GlyphNumber;
+}
+
+static ImU32 VisitPayloadEntity(string* out, string const& value)
+{
+    *out = value;
+    return ColorRefs::GlyphString;
+}
+
+static ImU32 VisitPayloadEntity(string* out, bool const& value)
+{
+    *out = value ? "true" : "false";
+    return ColorRefs::GlyphKeyword;
+}
+
+static void DrawTracePayload(proto::trace_payload_t const& payload)
+{
+    static string builder;
+    builder.clear();
+
+    ImU32 color = std::visit([](auto&& e) { return VisitPayloadEntity(&builder, e); }, payload);
+    ImGui::PushStyleColor(ImGuiCol_Text, color);
+    ImGui::TextUnformatted(builder.data(), builder.data() + builder.size());
+    ImGui::PopStyleColor();
+}
+
 void widgets::TraceWindow::_recurseRootTraceNode(
         TracerContext* tracer, TraceNodeContext* node)
 {
@@ -241,13 +294,58 @@ void widgets::TraceWindow::_recurseRootTraceNode(
     if (node->children.empty())
         nodeFlags |= ImGuiTreeNodeFlags_Leaf;
 
-    // TODO: Draw node text green if node is latest ...
-    // TODO: Draw node background green if node is fresh (by time)
-    // TODO: Draw node label
+    // Highlight node text if node is latest ...
+    using std::chrono::duration_cast;
+
+    if (node->data.fence_value == tracer->fence)
+        ImGui::PushStyleColor(ImGuiCol_Text, 0xffbbbbbb);
+    else
+        ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetColorU32(ImGuiCol_TextDisabled));
+
+    // Draw node label
+    auto const bSkipChildren = not ImGui::TreeNodeEx(usprintf("%s#%d", node->info.name.c_str(), node->info.index), nodeFlags);
+    ImGui::PopStyleColor();
+
+    bool const bShowContentTooltip = ImGui::IsItemHovered();
+    bool bToggleSubsription = ImGui::IsItemClicked(ImGuiMouseButton_Right);
+    bool bTogglePlotWindow = ImGui::IsItemClicked() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left);
+
+    // Draw primitives
+    auto dl = ImGui::GetWindowDrawList();
+
+    if (node->data.ref_subscr())
+    {
+        ImGui::SameLine();
+        auto at = ImGui::GetCursorScreenPos();
+        at.y += ImGui::GetTextLineHeight() / 2;
+        dl->AddCircleFilled(at, ImGui::GetFontSize() / 6, 0xff00ff00);
+        ImGui::Spacing();
+    }
+
+    // TODO: Draw red dot on plot recording
+
+    if (bToggleSubsription)
+    {
+        // Toggle subscription state
+        proto::service::trace_control_t arg;
+        arg.subscribe = not node->data.ref_subscr();
+
+        proto::service::trace_request_control(_host->RpcSession())
+                .notify(tracer->info.tracer_id, node->info.index, arg);
+    }
+
+    if (bTogglePlotWindow)
+    {
+        ImGui::Text("DDDDD");
+    }
+
     // TODO: Draw node graph trace button
 
-    if (not ImGui::TreeNodeEx(node->info.name.c_str(), nodeFlags))
-        return;
+    // TODO: Draw node value
+    ImGui::SameLine();
+    DrawTracePayload(node->data.payload);
+
+    if (bSkipChildren) { return; }
 
     CPPH_CALL_ON_EXIT(ImGui::TreePop());
 
@@ -285,6 +383,7 @@ void widgets::TraceWindow::_fnOnTraceUpdate(
                             continue;
 
                         auto node = (*nodes)[update.index].get();
+                        assert(node->info.index == update.index);
                         node->data = update;
                         node->_updateAt = steady_clock::now();
 

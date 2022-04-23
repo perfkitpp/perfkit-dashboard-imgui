@@ -212,12 +212,17 @@ void Application::drawMenuContents()
         ImGui::MenuItem("Demo", NULL, &_bShowDemo);
     }
 
-    if (CondInvoke(ImGui::BeginMenu("Add"), &ImGui::EndMenu))
-        if (CondInvoke(ImGui::BeginMenu("Session..."), &ImGui::EndMenu))
+    if (CondInvoke(ImGui::BeginMenu("Configure"), &ImGui::EndMenu))
+    {
+        if (CondInvoke(ImGui::BeginMenu("Add Session..."), &ImGui::EndMenu))
             drawAddSessionMenu();
 
-    ImGui::SetNextItemWidth(150 * ImGui::GetIO().FontGlobalScale);
-    ImGui::SliderFloat("##Scale", &ImGui::GetIO().FontGlobalScale, 1, 2, "Scale: %4.2f");
+        if (CondInvoke(ImGui::BeginMenu("Scale"), &ImGui::EndMenu))
+        {
+            ImGui::SetNextItemWidth(150 * ImGui::GetIO().FontGlobalScale);
+            ImGui::SliderFloat("##Scale", &ImGui::GetIO().FontGlobalScale, 1, 2, "Scale: %4.2f");
+        }
+    }
 }
 
 void Application::drawSessionList(bool* bKeepOpen)
