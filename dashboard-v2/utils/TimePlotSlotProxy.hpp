@@ -8,6 +8,7 @@
 using std::chrono::microseconds;
 
 class TimePlotWindowManager;
+
 namespace TimePlot {
 class SlotData;
 }
@@ -17,11 +18,12 @@ class TimePlotSlotProxy
     friend TimePlotWindowManager;
 
    private:
-    shared_ptr<void> _keyAnchor;
-    weak_ptr<TimePlot::SlotData> _bodyWeak;
+    shared_ptr<TimePlot::SlotData> _body;
 
    public:
     void Commit(double);
-    void Expire() { _keyAnchor.reset(), _bodyWeak.reset(); }
-    bool IsOnline() const noexcept { return not _bodyWeak.expired(); }
+    void Expire();
+
+    void FocusMe() {}
+    explicit operator bool() const noexcept;
 };
