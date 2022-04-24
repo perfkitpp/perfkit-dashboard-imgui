@@ -10,13 +10,19 @@ void TimePlotSlotProxy::Commit(double d)
 {
     VerifyMainThread();
 
-    if (_body->bMarkDestroied)
+    if (not _body)
+    {
+        return;
+    }
+    else if (_body->bMarkDestroied)
     {
         _body.reset();
         return;
     }
 
     _body->pointsPendingUploaded.push_back({steady_clock::now(), d});
+    _body->uploadSequence++;
+    _body->timeLastUpload = steady_clock::now();
 }
 
 void TimePlotSlotProxy::Expire()

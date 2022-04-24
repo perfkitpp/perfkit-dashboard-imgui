@@ -108,7 +108,7 @@ void BasicPerfkitNetClient::RenderTickSession()
     {
         auto fnWrapCheckbox =
                 [&](const char* label, bool* ptr) {
-                    CPPH_CALL_ON_EXIT(ImGui::PopStyleColor(2));
+                    CPPH_FINALLY(ImGui::PopStyleColor(2));
                     if (*ptr)
                     {
                         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
@@ -174,7 +174,7 @@ void BasicPerfkitNetClient::RenderTickSession()
             ImGui::PushStyleColor(ImGuiCol_Border, 0xff'117712);
         }
 
-        if (CPPH_CALL_ON_EXIT(ImGui::EndChild()); ImGui::BeginChild("TerminalGroup", {}, true))
+        if (CPPH_FINALLY(ImGui::EndChild()); ImGui::BeginChild("TerminalGroup", {}, true))
             drawTTY();
     }
 }
@@ -191,7 +191,7 @@ void BasicPerfkitNetClient::TickSession()
     if (_uiState.bConfigOpen)
     {
         ImGui::SetNextWindowSize({240, 320}, ImGuiCond_Once);
-        if (CPPH_CALL_ON_EXIT(ImGui::End()); ImGui::Begin("configs", nullptr, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_AlwaysVerticalScrollbar))
+        if (CPPH_FINALLY(ImGui::End()); ImGui::Begin("configs", nullptr, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_AlwaysVerticalScrollbar))
         {
             _wndConfig.Render(&_uiState.bConfigOpen);
         }

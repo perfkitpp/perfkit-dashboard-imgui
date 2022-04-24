@@ -158,7 +158,7 @@ struct JsonEditor::Impl
 void JsonEditor::Render(void* id)
 {
     ImGui::PushID(id);
-    CPPH_CALL_ON_EXIT(ImGui::PopID());
+    CPPH_FINALLY(ImGui::PopID());
 
     if (_self->bRawEditMode)
     {
@@ -208,7 +208,7 @@ void JsonEditor::renderRecurse(JsonEditor::Json* ptr, Json const* min, Json cons
     auto typeColor = ImGui::ContentColorByJsonType(type);
 
     ImGui::PushID(ptr);
-    CPPH_CALL_ON_EXIT(ImGui::PopID());
+    CPPH_FINALLY(ImGui::PopID());
 
     switch (type)
     {

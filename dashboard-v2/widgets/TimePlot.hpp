@@ -10,6 +10,7 @@
 
 namespace TimePlot {
 using std::chrono::steady_clock;
+class WindowContext;
 
 /**
  * Indicates single dot on plot
@@ -32,8 +33,6 @@ class WindowFrameDescriptor
 
     // window_width / range
     double displayDensityX = 0;
-
-    bool bDirty = false;
 };
 
 /**
@@ -51,8 +50,14 @@ struct SlotData
     // Index range in _cacheRender
     size_t cacheAxisRangeX[2] = {};
 
+    // Upload sequence index.
+    size_t uploadSequence = 0;
+
+    // Latest upload
+    steady_clock::time_point timeLastUpload;
+
     vector<Point> pointsPendingUploaded;  // Modify on main thread -> Loop Thread
-    weak_ptr<WindowFrameDescriptor> targetWindow;
+    weak_ptr<WindowContext> targetWindow;
 
     struct AsyncContext
     {
@@ -69,6 +74,16 @@ struct SlotData
    public:
     SlotData() noexcept : bMarkDestroied(false) {}
 };
+
+struct WindowContext
+{
+    //
+    WindowFrameDescriptor frameInfo = {};
+
+    // State has changed?
+    bool bDirty = false;
+};
+
 }  // namespace TimePlot
 
 /**
@@ -84,7 +99,7 @@ class TimePlotWindowManager
     vector<double> _cacheRender;
 
     // Async work thread
-    thread_pool _worker{1};
+    thread_pool _asyncWorker{1};
 
     // Async cache context
     // Only accessible from async thread
@@ -102,11 +117,22 @@ class TimePlotWindowManager
     bool _caching = false;
     poll_timer _timerCacheTrig = {100ms};
 
+    // Widget context
+    struct WidgetContext
+    {
+        // Show main panel ?
+        bool bShowListPanel = false;
+    } _widget;
+
+    // List of window contexts
+    set<shared_ptr<TimePlot::WindowContext>, std::owner_less<>> _windows;
+
    public:
     void TickWindow();
     auto CreateSlot(string name) -> TimePlotSlotProxy;
 
    private:
+    void _fnTriggerAsyncJob();
     void _fnAsyncValidateCache();
     void _fnMainThreadSwapBuffer();
 };

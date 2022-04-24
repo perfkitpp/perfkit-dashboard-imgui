@@ -128,7 +128,7 @@ static class NotifyContext
                     case NotifySeverity::Error: PushStyleColor(ImGuiCol_Border, 0xff'6666ff); break;
                     case NotifySeverity::Fatal: PushStyleColor(ImGuiCol_Border, 0xff'0000ff); break;
                 }
-                CPPH_CALL_ON_EXIT(PopStyleColor());
+                CPPH_FINALLY(PopStyleColor());
 
                 float timeFromSpawn = Seconds(timeNow - toast->Birth).count();
                 float timeUntilDispose = toast->bInfinity ? Transition : Seconds(toast->Lifespan - timeNow).count();
@@ -137,7 +137,7 @@ static class NotifyContext
                 ImGui::PushStyleVar(ImGuiStyleVar_Alpha, opacity * (toast->stateHovering ? 1.f : 0.75f));
                 SetNextWindowBgAlpha(opacity * 0.8f);
 
-                CPPH_CALL_ON_EXIT(ImGui::PopStyleVar());
+                CPPH_FINALLY(ImGui::PopStyleVar());
                 toast->stateHovering = false;
 
                 auto wndFlags = ToastFlags;
@@ -145,12 +145,12 @@ static class NotifyContext
                 SetNextWindowSizeConstraints({150, -1}, sizeVp);
 
                 Begin(perfkit::futils::usprintf("###PDASH_TOAST%d", toast->stateIdAlloc), &bKeepOpen, wndFlags);
-                CPPH_CALL_ON_EXIT(End());
+                CPPH_FINALLY(End());
 
                 ImGui::BringWindowToDisplayFront(ImGui::GetCurrentWindow());
 
                 PushTextWrapPos(sizeVp.x / 4.f);
-                CPPH_CALL_ON_EXIT(PopTextWrapPos());
+                CPPH_FINALLY(PopTextWrapPos());
 
                 // Close condition
                 bool bCloseToast = not bKeepOpen;

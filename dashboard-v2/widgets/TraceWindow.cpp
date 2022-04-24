@@ -28,7 +28,7 @@ void widgets::TraceWindow::BuildService(rpc::service_builder& s)
 
 void widgets::TraceWindow::Render(bool* bKeepOpen)
 {
-    CPPH_CALL_ON_EXIT(ImGui::End());
+    CPPH_FINALLY(ImGui::End());
     ImGui::SetNextWindowSize({480, 272}, ImGuiCond_Once);
     if (not ImGui::Begin(usprintf("traces [%s]###%s", _host->DisplayString().c_str(), _host->KeyString().c_str()), bKeepOpen))
         return;
@@ -56,7 +56,7 @@ void widgets::TraceWindow::Render(bool* bKeepOpen)
             continue;
 
         ImGui::PushID(&tracer);
-        CPPH_CALL_ON_EXIT(ImGui::PopID());
+        CPPH_FINALLY(ImGui::PopID());
 
         /// Draw spinner
         {
@@ -107,7 +107,7 @@ void widgets::TraceWindow::Render(bool* bKeepOpen)
 
         if (ImGui::IsPopupOpen("CONF") && ImGui::BeginPopup("CONF"))
         {
-            CPPH_CALL_ON_EXIT(ImGui::EndPopup());
+            CPPH_FINALLY(ImGui::EndPopup());
 
             auto requestIntervalMs = float(tracer.tmNextPublish.interval_sec().count() * 1e3);
             if (ImGui::SliderFloat("Intervals", &requestIntervalMs, 1, 1000, "%6.0f ms"))
@@ -359,6 +359,14 @@ void widgets::TraceWindow::_recurseRootTraceNode(
             node->_bPlotting = false;
         }
 
+        if (bIsActiveNode)
+        {
+            ImGui::SameLine();
+            ImGui::PushStyleColor(ImGuiCol_Text, ColorRefs::FrontError);
+            ImGui::TextUnformatted("REC");
+            ImGui::PopStyleColor();
+        }
+
         if (ImGui::IsItemHovered()) { ImGui::SetTooltip("Click to delete plotting"); }
     }
     else
@@ -479,9 +487,14 @@ void widgets::TraceWindow::_fnOnTraceUpdate(
                                         {
                                             node->_hPlot.Commit(double(value));
                                         }
-                                        if constexpr (is_same_v<ValueType, steady_clock::duration>)
+                                        else if constexpr (is_same_v<ValueType, steady_clock::duration>)
                                         {
                                             node->_hPlot.Commit(to_seconds(value));
+                                        }
+                                        else
+                                        {
+                                            node->_hPlot.Expire();
+                                            node->_bPlotting = false;
                                         }
                                     };
 

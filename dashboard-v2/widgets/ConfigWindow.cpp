@@ -119,7 +119,7 @@ void widgets::ConfigWindow::tryRenderEditorContext()
     auto entity = &*_ctx.entityRef.lock();
 
     /// Render editor window
-    CPPH_CALL_ON_EXIT(ImGui::End());
+    CPPH_FINALLY(ImGui::End());
 
     bool bWndKeepOpen = true;
     bool bContinue = ImGui::Begin(
@@ -219,7 +219,7 @@ void widgets::ConfigWindow::tryRenderEditorContext()
     {
         auto ptStart = ImGui::GetCursorPosY();
         ImGui::PushStatefulColors(ImGuiCol_Button, ColorRefs::BackOkay);
-        CPPH_CALL_ON_EXIT(ImGui::PopStatefulColors());
+        CPPH_FINALLY(ImGui::PopStatefulColors());
 
         bCommitValue |= ImGui::IsKeyDown(ImGuiKey_LeftCtrl) && ImGui::IsKeyPressed(ImGuiKey_S);
         bCommitValue |= ImGui::Button("Commit (^S)", {-1, 0});
@@ -393,7 +393,7 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
     auto const fnRenderFilteredLabel
             = [](string_view text, FilterEntity const& entity, uint32_t baseColor = ImGui::GetColorU32(ImGuiCol_Text)) {
                   ImGui::PushStyleColor(ImGuiCol_Text, baseColor);
-                  CPPH_CALL_ON_EXIT(ImGui::PopStyleColor());
+                  CPPH_FINALLY(ImGui::PopStyleColor());
 
                   ImGui::Spacing();
                   ImGui::SameLine();
@@ -519,11 +519,11 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
             if (bIsItemHovered)
             {
                 ImGui::PushTextWrapPos(0);
-                CPPH_CALL_ON_EXIT(ImGui::PopTextWrapPos());
+                CPPH_FINALLY(ImGui::PopTextWrapPos());
 
                 ImGui::SetNextWindowSize({240 * ImGui::GetIO().FontGlobalScale, 0});
                 ImGui::BeginTooltip();
-                CPPH_CALL_ON_EXIT(ImGui::EndTooltip());
+                CPPH_FINALLY(ImGui::EndTooltip());
 
                 ImGui::TextUnformatted(entity->name.c_str());
                 ImGui::Separator();
@@ -553,7 +553,7 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
             {
                 // Implement 'OneOf' selector
                 ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ContentColorByJsonType(entity->value));
-                CPPH_CALL_ON_EXIT(ImGui::PopStyleColor());
+                CPPH_FINALLY(ImGui::PopStyleColor());
 
                 ImGui::SetNextItemWidth(-1);
                 auto bOpenCombo = ImGui::BeginCombo(
@@ -562,7 +562,7 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
 
                 if (bOpenCombo)
                 {
-                    CPPH_CALL_ON_EXIT(ImGui::EndCombo());
+                    CPPH_FINALLY(ImGui::EndCombo());
 
                     for (auto& e : entity->optOneOf)
                     {

@@ -489,7 +489,7 @@ void session_slot_trace_context::_plot_window()
     auto constexpr DRAG_DROP_CLASS       = "TracePlotArg";
     uint64_t currently_hovered_plot_ctx  = 0;
 
-    if (CPPH_FINALLY(&ImGui::End);
+    if (CPPH_CLEANUP(&ImGui::End);
         ImGui::Begin("Trace Plot - List", nullptr, ImGuiWindowFlags_HorizontalScrollbar))
     {
         void* selected_window = nullptr;
@@ -651,7 +651,7 @@ void session_slot_trace_context::_plot_window()
         }
     }
 
-    if (CPPH_FINALLY(&ImGui::End);
+    if (CPPH_CLEANUP(&ImGui::End);
         ImGui::Begin("Trace Plots"))
     {
         static double axis_limits[2];

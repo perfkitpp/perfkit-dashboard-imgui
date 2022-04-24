@@ -55,6 +55,9 @@ extern size_t const& gFrameIndex;
 namespace ColorRefs {
 enum : uint32_t
 {
+    Enabled = 0xffffffff,
+    Disabled = 0x88ffffff,
+
     FrontError = 0xff0000ff,
     FrontWarn = 0xff00ffff,
     FrontOkay = 0xff00ff00,

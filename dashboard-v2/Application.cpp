@@ -72,7 +72,7 @@ void Application::TickMainThread()
     if (_bDrawSessionList) { drawSessionList(&_bDrawSessionList); }
     if (_bShowMetrics) { ImGui::ShowMetricsWindow(&_bShowMetrics); }
     if (_bShowStyles)
-        if (CPPH_CALL_ON_EXIT(ImGui::End()); ImGui::Begin("Styles", &_bShowStyles)) { ImGui::ShowStyleEditor(nullptr); }
+        if (CPPH_FINALLY(ImGui::End()); ImGui::Begin("Styles", &_bShowStyles)) { ImGui::ShowStyleEditor(nullptr); }
     if (_bShowDemo) { ImGui::ShowDemoWindow(&_bShowDemo); }
 
     tickSessions();
@@ -206,7 +206,7 @@ Application::~Application() = default;
 void Application::drawMenuContents()
 {
     if (not ImGui::BeginMainMenuBar()) { return; }
-    CPPH_CALL_ON_EXIT(ImGui::EndMainMenuBar());
+    CPPH_FINALLY(ImGui::EndMainMenuBar());
 
     if (CondInvoke(ImGui::BeginMenu("File"), &ImGui::EndMenu))
     {
@@ -244,7 +244,7 @@ void Application::drawMenuContents()
 
 void Application::drawSessionList(bool* bKeepOpen)
 {
-    CPPH_CALL_ON_EXIT(ImGui::End());
+    CPPH_FINALLY(ImGui::End());
     if (not ImGui::Begin("Sessions", bKeepOpen)) { return; }
 
     if (ImGui::TreeNodeEx("Add Session", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_SpanAvailWidth))
@@ -252,7 +252,7 @@ void Application::drawSessionList(bool* bKeepOpen)
             drawAddSessionMenu();
 
     ImGui::AlignTextToFramePadding(), ImGui::BulletText("Sessions");
-    CPPH_CALL_ON_EXIT(ImGui::EndChild());
+    CPPH_FINALLY(ImGui::EndChild());
     ImGui::BeginChild("Session-List", {0, 0}, true);
 
     char textBuf[256];
@@ -266,7 +266,7 @@ void Application::drawSessionList(bool* bKeepOpen)
         bool const bIsSessionOpen = sess.Ref->IsSessionOpen();
         bool bOpenStatus = true;
         auto headerFlag = 0;
-        CPPH_CALL_ON_EXIT(ImGui::PopStatefulColors());
+        CPPH_FINALLY(ImGui::PopStatefulColors());
 
         auto baseColor = bIsSessionOpen ? 0xff'113d16 : 0xff'080808;
         baseColor = sess.bPendingClose ? 0xff'37b8db : baseColor;
@@ -329,7 +329,7 @@ void Application::drawSessionList(bool* bKeepOpen)
         {
             sprintf(textBuf, "%s##CHLD-%s-%d", sess.CachedDisplayName.c_str(), sess.Key.c_str(), sess.Type);
             ImGui::PushStyleColor(ImGuiCol_ChildBg, ImGui::GetStyleColorVec4(ImGuiCol_ChildBg) - ImVec4{.1, .1, .1, .0});
-            CPPH_CALL_ON_EXIT(ImGui::PopStyleColor());
+            CPPH_FINALLY(ImGui::PopStyleColor());
 
             if (CPPH_TMPVAR = ImGui::ScopedChildWindow(textBuf))
             {
@@ -552,7 +552,7 @@ void Application::tickSessions()
         }
 
         ImGui::SetNextWindowSize({640, 480}, ImGuiCond_Once);
-        if (CPPH_CALL_ON_EXIT(ImGui::End()); ImGui::Begin(nameStr, &sess.bShow))
+        if (CPPH_FINALLY(ImGui::End()); ImGui::Begin(nameStr, &sess.bShow))
         {
             sess.Ref->RenderTickSession();
         }
