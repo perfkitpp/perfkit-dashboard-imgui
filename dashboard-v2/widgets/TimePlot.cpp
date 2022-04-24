@@ -41,7 +41,7 @@ TimePlotWindowManager::TimePlotWindowManager()
                     auto newWnd = _createNewPlotWindow(l.key);
                     newWnd->title = l.title;
                     newWnd->bIsDisplayed = l.bIsDisplayed;
-                    newWnd->bMovingFrame = not l.bTimePlotMode;
+                    newWnd->bFollowGraphMovement = not l.bTimePlotMode;
                     newWnd->frameInfo.bTimeBuildMode = l.bTimePlotMode;
                 }
 
@@ -325,13 +325,13 @@ void TimePlotWindowManager::TickWindow()
 
                 ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x / 2);
                 ImGui::InputText("##Title", wnd->title);
-                if (ImGui::Checkbox("Time Plot", &bIsTimeBuildMode)) { wnd->bMovingFrame ^= true; }
-                ImGui::Checkbox(usprintf("%s##CHKBOX", bIsTimeBuildMode ? "Moving Frame" : "Fixed Frame"), &wnd->bMovingFrame);
+                ImGui::Checkbox("Time Plot", &bIsTimeBuildMode);
+                ImGui::Checkbox(usprintf("%s###CHKBOX", wnd->bFollowGraphMovement ? "Follow Plot" : "Fix Plot"), &wnd->bFollowGraphMovement);
             }
 
             if (CondInvoke(ImPlot::BeginPlot(usprintf("###%p", wnd->title.c_str(), wnd.get()), {-1, -1}), ImPlot::EndPlot))
             {
-                if (bCacheReceivedThisFrame && (bIsTimeBuildMode == wnd->bMovingFrame))
+                if (bCacheReceivedThisFrame && (bIsTimeBuildMode == wnd->bFollowGraphMovement))
                 {
                     auto [x, y] = wnd->frameInfo.rangeX;
                     auto dt = deltaTime.count();
@@ -442,6 +442,10 @@ void TimePlotWindowManager::_fnAsyncValidateCache()
             xmin = now + duration_cast<steady_clock::duration>(1.s * dmin);
             xmax = now + duration_cast<steady_clock::duration>(1.s * dmax);
         }
+
+        // Give some margin both side
+        auto margin = (xmax - xmin) / 20;
+        xmin -= margin, xmax += margin;
 
         if (numSampleLeftL == 0) { continue; }
         if (sbeg == send) { continue; }

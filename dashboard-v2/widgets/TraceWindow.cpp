@@ -353,13 +353,13 @@ void widgets::TraceWindow::_recurseRootTraceNode(
     {
         // Draw red dot on plot recording
 
-        if (drawDot(node->_bPlotting ? 0x0000ff : 0x008888))
+        if (drawDot(node->_bPlotting ? 0x0000ff : 0x00ffff))
         {
             node->_hPlot.Expire();
             node->_bPlotting = false;
         }
 
-        if (bIsActiveNode)
+        if (bIsActiveNode && node->_bPlotting)
         {
             ImGui::SameLine();
             ImGui::PushStyleColor(ImGuiCol_Text, ColorRefs::FrontError);

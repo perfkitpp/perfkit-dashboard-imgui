@@ -114,7 +114,7 @@ struct WindowContext
     bool bIsDisplayed = false;
 
     // Moving frame mode is enabled ...?
-    bool bMovingFrame = true;
+    bool bFollowGraphMovement = true;
 
     // State has changed?
     bool bDirty : 1;
