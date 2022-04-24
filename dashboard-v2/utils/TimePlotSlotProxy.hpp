@@ -23,6 +23,7 @@ class TimePlotSlotProxy
    public:
     void Commit(double);
     void Expire();
+    void EnableUserRemove(bool value = true);
 
     void FocusMe() {}
     explicit operator bool() const noexcept;

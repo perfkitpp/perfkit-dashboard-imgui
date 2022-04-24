@@ -37,6 +37,8 @@ TimePlotWindowManager::TimePlotWindowManager()
                 {
                     _createNewPlotWindow(l.key)->title = l.title;
                 }
+
+                _widget.bShowListPanel = RefPersistentNumber("TimePlotPersistant");
             };
 
     Application::Get()->OnDumpWorkspace +=
@@ -52,6 +54,7 @@ TimePlotWindowManager::TimePlotWindowManager()
                 }
 
                 GConfig::Widgets::TimePlotWindows.commit(wnds);
+                RefPersistentNumber("TimePlotPersistant") = _widget.bShowListPanel;
             };
 }
 
@@ -66,6 +69,13 @@ auto TimePlotWindowManager::CreateSlot(string name) -> TimePlotSlotProxy
 
     data->name = std::move(name);
     data->pointsPendingUploaded.reserve(256);
+
+    std::mt19937_64 mt{std::random_device{}()};
+    std::uniform_real_distribution<float> range{0.3, 1};
+    data->plotColor.w = 1.;
+    data->plotColor.x = range(mt);
+    data->plotColor.y = range(mt);
+    data->plotColor.z = range(mt);
 
     _slots.push_back(std::move(data));
     return proxy;
@@ -152,17 +162,25 @@ void TimePlotWindowManager::TickWindow()
         {
             auto spinChars = "*|/-\\|/-"sv;
             bool bLatest = (timeNow - slot->timeLastUpload) < 1s;
-            auto fnPopupID = [&] { return usprintf("##%p", slot.get()); };
             bool bFocusRenderedWindow = slot->bFocusRequested;
             slot->bFocusRequested = false;
 
-            if (ImGui::Selectable(fnPopupID(), false, ImGuiSelectableFlags_AllowItemOverlap | ImGuiSelectableFlags_SpanAllColumns))
+            ImGui::PushID(slot.get());
+            CPPH_CLEANUP(&ImGui::PopID);
+
+            ImGui::AlignTextToFramePadding();
+            if (ImGui::Selectable("##POPUP_SEL", false, ImGuiSelectableFlags_AllowItemOverlap | ImGuiSelectableFlags_SpanAllColumns))
             {
-                bFocusRenderedWindow = true;
+                ImGui::OpenPopup("##POPUP_SEL");
             }
             else if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
             {
-                ImGui::OpenPopup(fnPopupID());
+                bFocusRenderedWindow = true;
+            }
+
+            if (ImGui::SameLine(), ImGui::ColorButton("Graph Color", slot->plotColor))
+            {
+                ImGui::OpenPopup("##POPUP_COLOR");
             }
 
             ImGui::PushStyleColor(ImGuiCol_Text, bLatest ? ColorRefs::FrontOkay : ColorRefs::BackOkay);
@@ -170,25 +188,25 @@ void TimePlotWindowManager::TickWindow()
             ImGui::Text("[%c]", spinChars[slot->uploadSequence % spinChars.size()]);
             ImGui::SameLine();
 
-            ImGui::PushStyleColor(ImGuiCol_Text, bLatest ? ColorRefs::Enabled : ColorRefs::Disabled);
-            ImGui::SameLine();
-            ImGui::TextUnformatted(slot->name.c_str());
-
             if (auto wnd = slot->targetWindow.lock())
             {
                 ImGui::PushStyleColor(ImGuiCol_Text, bLatest ? ColorRefs::FrontWarn : ColorRefs::BackWarn);
                 ImGui::SameLine();
-                ImGui::Text("| %s", wnd->title.c_str());
+                ImGui::Text("%s |", wnd->title.c_str());
                 ImGui::PopStyleColor();
 
-                if (bFocusRenderedWindow) { wnd->bRequestFocus = true; }
+                if (bFocusRenderedWindow) { wnd->bRequestFocus = true, wnd->bIsDisplayed = true; }
             }
+
+            ImGui::PushStyleColor(ImGuiCol_Text, bLatest ? ColorRefs::Enabled : ColorRefs::Disabled);
+            ImGui::SameLine();
+            ImGui::TextUnformatted(slot->name.c_str());
 
             ImGui::PopStyleColor(2);
 
-            if (CondInvoke(ImGui::BeginPopup(fnPopupID()), &EndPopup))
+            if (CondInvoke(ImGui::BeginPopup("##POPUP_SEL"), &EndPopup))
             {
-                if (ImGui::MenuItem("Remove"))
+                if (not slot->bDisableUserRemove && ImGui::MenuItem("Remove"))
                 {
                     slot->bFocusRequested = true;
                 }
@@ -213,6 +231,7 @@ void TimePlotWindowManager::TickWindow()
                             {
                                 slot->targetWindow = wnd;
                                 slot->bTargetWndChanged = true;
+                                wnd->bIsDisplayed = true;
                             }
                         }
                     }
@@ -222,6 +241,13 @@ void TimePlotWindowManager::TickWindow()
                 {
                     slot->bMarkDestroied = true;
                 }
+            }
+
+            if (CondInvoke(ImGui::BeginPopup("##POPUP_COLOR"), &ImGui::EndPopup))
+            {
+                ImGui::SetColorEditOptions(ImGuiColorEditFlags_PickerHueWheel);
+
+                ImGui::ColorPicker4("Plot Color", (float*)&slot->plotColor);
             }
         }  // for (auto& slot : _slots)
     }

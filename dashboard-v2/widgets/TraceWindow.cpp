@@ -410,7 +410,29 @@ void widgets::TraceWindow::_recurseRootTraceNode(
     {
         if (not node->_hPlot)
         {
-            node->_hPlot = CreateTimePlot(fmt::format("{}/{}", tracer->info.name, node->info.name));
+            string hostName;
+            hostName.reserve(64);
+
+            auto cursor = node;
+
+            for (;;)
+            {
+                if (cursor->info.parent_index != -1)
+                {
+                    cursor = tracer->nodes[cursor->info.parent_index].get();
+                    hostName.append(cursor->info.name.rbegin(), cursor->info.name.rend());
+                    hostName += '.';
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            hostName.append(tracer->info.name.rbegin(), tracer->info.name.rend());
+            reverse(hostName);
+
+            node->_hPlot = CreateTimePlot(fmt::format("{} ({})", node->info.name, hostName));
         }
 
         node->_bPlotting = not node->_bPlotting;

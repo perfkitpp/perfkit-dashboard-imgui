@@ -6,6 +6,7 @@
 #include "cpph/circular_queue.hxx"
 #include "cpph/thread/thread_pool.hxx"
 #include "cpph/timer.hxx"
+#include "imgui.h"
 #include "utils/TimePlotSlotProxy.hpp"
 
 namespace TimePlot {
@@ -50,6 +51,9 @@ struct SlotData
     // Focus is requests
     bool bFocusRequested : 1;
 
+    // Do not expose remove control
+    bool bDisableUserRemove : 1;
+
     // Name of this node
     string name;
 
@@ -64,6 +68,9 @@ struct SlotData
 
     vector<Point> pointsPendingUploaded;  // Modify on main thread -> Loop Thread
     weak_ptr<WindowContext> targetWindow;
+
+    // Plotting color
+    ImVec4 plotColor = {};
 
     struct AsyncContext
     {

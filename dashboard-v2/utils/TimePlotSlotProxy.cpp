@@ -39,3 +39,13 @@ TimePlotSlotProxy::operator bool() const noexcept
 
     return _body && not _body->bMarkDestroied;
 }
+
+void TimePlotSlotProxy::EnableUserRemove(bool value)
+{
+    VerifyMainThread();
+
+    if (_body)
+    {
+        _body->bDisableUserRemove = not value;
+    }
+}
