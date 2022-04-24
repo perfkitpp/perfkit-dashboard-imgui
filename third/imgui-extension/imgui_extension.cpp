@@ -169,7 +169,7 @@ void EndChildAutoHeight(const char* key, bool bWasDrawn)
 
     ImGui::EndChild();
 
-    if(bWasDrawn) { *findStorage(key) = height; }
+    if (bWasDrawn) { *findStorage(key) = height; }
 }
 
 void PushStatefulColors(ImGuiCol idx, ImVec4 const& color)
@@ -266,5 +266,50 @@ bool SelectableInput(const char* str_id, bool selected, ImGuiSelectableFlags fla
 
     PopID();
     return ret;
+}
+
+bool InputText(const char* str_id, std::string& str, ImGuiInputTextFlags flags, ImGuiInputTextCallback cb, void* user)
+{
+    using std::string;
+    bool bValueChanged = false;
+    struct context_t
+    {
+        string*                str;
+        size_t                 text_len;
+        ImGuiInputTextCallback cb_org;
+        void*                  user_org;
+    };
+    auto ctx = context_t{&str, str.size(), cb, user};
+
+    bValueChanged = ImGui::InputText(
+            "##TEDIT",
+            str.data(),
+            str.size() + 1,
+            flags | ImGuiInputTextFlags_CallbackResize,
+            [](ImGuiInputTextCallbackData* cbdata) {
+                auto ctx = (context_t*)cbdata->UserData;
+
+                if (cbdata->EventFlag == ImGuiInputTextFlags_CallbackResize)
+                {
+                    auto str = ctx->str;
+                    str->resize(str->size() + 64);
+
+                    cbdata->BufSize  = str->size();
+                    cbdata->Buf      = str->data();
+                    cbdata->BufDirty = true;
+                    ctx->text_len    = cbdata->BufTextLen;
+                }
+                else if (ctx->cb_org)
+                {
+                    cbdata->UserData = ctx->user_org;
+                    return ctx->cb_org(cbdata);
+                }
+
+                return 0;
+            },
+            &ctx);
+
+    str.resize(ctx.text_len);
+    return bValueChanged;
 }
 }  // namespace ImGui

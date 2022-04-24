@@ -9,6 +9,7 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include "imgui_internal.h"
+#include "implot.h"
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #    include <GLES2/gl2.h>
 #endif
@@ -205,6 +206,10 @@ int main(int, char**)
 
     // Assure application initialization before drawing first frame.
     gApp.create();
+    gApp->Initialize();
+
+    // ImPlot initialization
+    ImPlot::CreateContext();
 
     // Main loop
     while (!glfwWindowShouldClose(window))

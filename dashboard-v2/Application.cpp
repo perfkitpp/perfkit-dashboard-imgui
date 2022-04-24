@@ -22,6 +22,7 @@
 #include <perfkit/configs.h>
 
 #include "interfaces/Session.hpp"
+#include "widgets/TimePlot.hpp"
 
 static auto PersistentNumberStorage()
 {
@@ -51,6 +52,8 @@ PERFKIT_CATEGORY(GConfig)
         PERFKIT_CONFIGURE(ArchivedSessions, vector<SessionArchive>{}).confirm();
         PERFKIT_CONFIGURE(Numbers, std::map<string, double, std::less<>>{}).confirm();
     }
+
+    PERFKIT_SUBCATEGORY(Widgets) {}
 }
 
 void Application::TickMainThread()
@@ -81,7 +84,7 @@ void Application::TickMainThread()
     tickGraphicsMainThread();
 
     // Tick time plots
-    _timePlot.TickWindow();
+    _timePlot->TickWindow();
 }
 
 void Application::PostMainThreadEvent(perfkit::function<void()> callable)
@@ -199,6 +202,12 @@ Application::Application()
                 GConfig::Application::Numbers.commit(*PersistentNumberStorage());
             },
             perfkit::event_priority::last);
+}
+
+void Application::Initialize()
+{
+    // Initialize after application is ready ..
+    _timePlot = make_unique<TimePlotWindowManager>();
 }
 
 Application::~Application() = default;

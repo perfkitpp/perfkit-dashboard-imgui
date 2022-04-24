@@ -4,11 +4,56 @@
 
 #include "TimePlot.hpp"
 
+#include "Application.hpp"
+#include "cpph/helper/nlohmann_json_macros.hxx"
 #include "cpph/macros.hxx"
 #include "cpph/utility/cleanup.hxx"
+#include "cpph/utility/random.hxx"
 #include "imgui.h"
 #include "imgui_extension.h"
 #include "implot.h"
+#include "perfkit/configs.h"
+
+PERFKIT_DECLARE_SUBCATEGORY(GConfig::Widgets)
+{
+    struct PlotWindow
+    {
+        string key;
+        string title;
+
+        CPPHEADERS_DEFINE_NLOHMANN_JSON_ARCHIVER(PlotWindow, key, title);
+    };
+
+    PERFKIT_CONFIGURE(TimePlotWindows, vector<PlotWindow>{}).confirm();
+}
+
+TimePlotWindowManager::TimePlotWindowManager()
+{
+    Application::Get()->OnLoadWorkspace +=
+            [this] {
+                auto& list = GConfig::Widgets::TimePlotWindows.ref();
+
+                for (auto& l : list)
+                {
+                    _createNewPlotWindow(l.key)->title = l.title;
+                }
+            };
+
+    Application::Get()->OnDumpWorkspace +=
+            [this] {
+                vector<GConfig::Widgets::PlotWindow> wnds;
+                wnds.reserve(_windows.size());
+
+                for (auto& wnd : _windows)
+                {
+                    auto& elem = wnds.emplace_back();
+                    elem.key = wnd->key;
+                    elem.title = wnd->title;
+                }
+
+                GConfig::Widgets::TimePlotWindows.commit(wnds);
+            };
+}
 
 auto TimePlotWindowManager::CreateSlot(string name) -> TimePlotSlotProxy
 {
@@ -22,7 +67,7 @@ auto TimePlotWindowManager::CreateSlot(string name) -> TimePlotSlotProxy
     data->name = std::move(name);
     data->pointsPendingUploaded.reserve(256);
 
-    _slots.insert(std::move(data));
+    _slots.push_back(std::move(data));
     return proxy;
 }
 
@@ -62,9 +107,43 @@ void TimePlotWindowManager::TickWindow()
         return;
 
     ImGui::SetNextWindowSize({640, 480}, ImGuiCond_Once);
-    if (CPPH_CLEANUP(&End); Begin("Time Plot List", &_widget.bShowListPanel))
+    if (CPPH_CLEANUP(&End); Begin("Time Plot List", &_widget.bShowListPanel, ImGuiWindowFlags_MenuBar))
     {
         /// Render window management menu
+        if (CondInvoke(ImGui::BeginMenuBar(), &ImGui::EndMenuBar))
+        {
+            if (CondInvoke(ImGui::BeginMenu("Windows"), &ImGui::EndMenu))
+            {
+                if (ImGui::MenuItem("+ Create New"))
+                {
+                    _createNewPlotWindow();
+                }
+                else if (not _windows.empty())
+                {
+                    ImGui::Separator();
+                    for (auto iter = _windows.begin(); iter != _windows.end();)
+                    {
+                        auto& wnd = *iter;
+                        if (CondInvoke(ImGui::BeginMenu(usfmt("{}###{}", wnd->title, wnd->key)), &ImGui::EndMenu))
+                        {
+                            ImGui::Checkbox("Visiblity", &wnd->bIsDisplayed);
+                            ImGui::SameLine();
+                            ImGui::SetCursorPosX(ImGui::GetContentRegionMax().x - 80 * DpiScale());
+                            bool bEraseWnd = ImGui::Button("delete", {-1, 0});
+                            ImGui::InputText("Title", wnd->title);
+
+                            if (bEraseWnd)
+                            {
+                                iter = _windows.erase(iter);
+                                continue;
+                            }
+                        }
+
+                        ++iter;
+                    }
+                }
+            }
+        }
 
         /// Render list of slots
         auto timeNow = steady_clock::now();
@@ -109,6 +188,11 @@ void TimePlotWindowManager::TickWindow()
 
             if (CondInvoke(ImGui::BeginPopup(fnPopupID()), &EndPopup))
             {
+                if (ImGui::MenuItem("Remove"))
+                {
+                    slot->bFocusRequested = true;
+                }
+
                 if (CondInvoke(ImGui::BeginMenu("View On"), &ImGui::EndMenu))
                 {
                     if (ImGui::MenuItem("+ Create New"))
@@ -142,23 +226,56 @@ void TimePlotWindowManager::TickWindow()
         }  // for (auto& slot : _slots)
     }
 
+    /// Make plot list
+    for (auto& slot : _slots)
+    {
+        if (slot->bMarkDestroied) { continue; }
+
+        if (auto wnd = slot->targetWindow.lock())
+        {
+            if (not wnd->bIsDisplayed) { continue; }
+            wnd->plotsThisFrame.push_back(slot.get());
+        }
+    }
+
     /// Iterate each window, and display if needed.
     for (auto& wnd : _windows)
     {
+        CPPH_FINALLY(wnd->plotsThisFrame.clear());
+
         if (not wnd->bIsDisplayed)
         {
             continue;
         }
 
+        if (wnd->bRequestFocus)
+        {
+            wnd->bRequestFocus = false;
+            // TODO: Focus here
+        }
+
         bool bKeepOpen = true;
-        if (CPPH_FINALLY(ImGui::End()); ImGui::Begin(usprintf("%s###%p", wnd->title.c_str(), wnd.get()), &bKeepOpen))
+        ImGui::SetNextWindowSize({640, 480}, ImGuiCond_Once);
+        if (CPPH_FINALLY(ImGui::End()); ImGui::Begin(usprintf("%s###%s", wnd->title.c_str(), wnd->key.c_str()), &bKeepOpen))
         {
             if (not bKeepOpen)
             {
                 wnd->bIsDisplayed = false;
             }
+
+            if (CondInvoke(ImPlot::BeginPlot(usprintf("%s##%p", wnd->title.c_str(), wnd.get()), {-1, -1}), ImPlot::EndPlot))
+            {
+                for (auto slot : wnd->plotsThisFrame)
+                {
+                    DrawPlotContent(slot);
+                }
+            }
         }
     }
+}
+
+void TimePlotWindowManager::DrawPlotContent(TimePlot::SlotData* slot)
+{
 }
 
 void TimePlotWindowManager::_fnAsyncValidateCache()
@@ -224,11 +341,18 @@ void TimePlotWindowManager::_fnTriggerAsyncJob()
     }
 }
 
-auto TimePlotWindowManager::_createNewPlotWindow() -> shared_ptr<TimePlot::WindowContext>
+auto TimePlotWindowManager::_createNewPlotWindow(string key) -> shared_ptr<TimePlot::WindowContext>
 {
+    if (key.empty())
+    {
+        key.resize(8);
+        generate_random_characters(key.begin(), 8, std::random_device{});
+    }
+
     auto ptr = make_shared<TimePlot::WindowContext>();
     ptr->title = fmt::format("Plot {}", ++_wndCreateIndexer);
+    ptr->key = std::move(key);
 
-    _windows.insert(ptr);
+    _windows.push_back(ptr);
     return ptr;
 }

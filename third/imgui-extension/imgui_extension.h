@@ -74,7 +74,7 @@ void        InputTextLeft(const char*            label,
                           void*                  userData = nullptr);
 
 bool        BeginChildAutoHeight(char const* key, float width = 0., bool bBorder = true, ImGuiWindowFlags flags = 0);
-void        EndChildAutoHeight(const char* key, bool bWasDrawn=true);
+void        EndChildAutoHeight(const char* key, bool bWasDrawn = true);
 
 char const* RetrieveCurrentWindowName();
 
@@ -108,4 +108,6 @@ inline void PushStatefulColorsUni(ImGuiCol idx, ImU32 color) { PushStatefulColor
 
 void        ToggleButton(const char* str_id, bool* v);
 bool        SelectableInput(const char* str_id, bool selected, ImGuiSelectableFlags flags, char* buf, size_t buf_size);
+
+bool        InputText(const char* str_id, std::string& buf, ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback cb = nullptr, void* user = nullptr);
 }  // namespace ImGui

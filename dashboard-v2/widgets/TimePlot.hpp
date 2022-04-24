@@ -83,11 +83,17 @@ struct SlotData
 
 struct WindowContext
 {
+    // Hash. Used to generate window.
+    string key;
+
     // Window name
     string title;
 
     //
     WindowFrameDescriptor frameInfo = {};
+
+    //
+    vector<SlotData*> plotsThisFrame;
 
     // Displaying ?
     bool bIsDisplayed = false;
@@ -108,7 +114,7 @@ struct WindowContext
 class TimePlotWindowManager
 {
     // All slot instances
-    set<shared_ptr<TimePlot::SlotData>, std::owner_less<>> _slots;
+    vector<shared_ptr<TimePlot::SlotData>> _slots;
 
     // To not reinitialize the whole array every time ...
     vector<double> _cacheRender;
@@ -140,12 +146,16 @@ class TimePlotWindowManager
     } _widget;
 
     // List of window contexts
-    set<shared_ptr<TimePlot::WindowContext>, std::owner_less<>> _windows;
+    vector<shared_ptr<TimePlot::WindowContext>> _windows;
     size_t _wndCreateIndexer = 0;
 
    public:
+    TimePlotWindowManager();
     void TickWindow();
     auto CreateSlot(string name) -> TimePlotSlotProxy;
+
+    // Must be inside of
+    void DrawPlotContent(TimePlot::SlotData*);
 
    private:
     void _fnTriggerAsyncJob();
@@ -153,5 +163,5 @@ class TimePlotWindowManager
     void _fnMainThreadSwapBuffer();
 
    private:
-    auto _createNewPlotWindow() -> shared_ptr<TimePlot::WindowContext>;
+    auto _createNewPlotWindow(string uniqueId = {}) -> shared_ptr<TimePlot::WindowContext>;
 };

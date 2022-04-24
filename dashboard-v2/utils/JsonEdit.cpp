@@ -91,42 +91,12 @@ bool ImGui::SingleLineJsonEdit(
     }
     else if (value.is_string())
     {
-        struct context_t
-        {
-            string* str;
-            size_t text_len;
-        };
         auto& str = value.get_ref<string&>();
-        auto ctx = context_t{&str, str.size()};
 
         ImGui::SetNextItemWidth(-1.f);
 
-        bValueChanged = ImGui::InputText(
-                "##TEDIT",
-                str.data(),
-                str.size() + 1,
-                ImGuiInputTextFlags_CallbackResize | ImGuiInputTextFlags_EnterReturnsTrue,
-                [](ImGuiInputTextCallbackData* cbdata) {
-                    if (cbdata->EventFlag == ImGuiInputTextFlags_CallbackResize)
-                    {
-                        auto ctx = (context_t*)cbdata->UserData;
-                        auto str = ctx->str;
-                        str->resize(str->size() + 64);
-
-                        cbdata->BufSize = str->size();
-                        cbdata->Buf = str->data();
-                        cbdata->BufDirty = true;
-                        ctx->text_len = cbdata->BufTextLen;
-                    }
-
-                    return 0;
-                },
-                &ctx);
-
-        if (bValueChanged)
+        if (ImGui::InputText("##TEDIT", str, ImGuiInputTextFlags_EnterReturnsTrue))
             ImGui::SetKeyboardFocusHere(-1);
-
-        str.resize(ctx.text_len);
     }
     else
     {

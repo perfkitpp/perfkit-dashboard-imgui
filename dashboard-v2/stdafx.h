@@ -2,6 +2,7 @@
 
 #include <any>
 #include <chrono>
+#include <list>
 #include <map>
 #include <memory>
 #include <optional>
@@ -14,6 +15,7 @@
 #include <cpph/functional.hxx>
 #include <cpph/futils.hxx>
 #include <perfkit/fwd.hpp>
+#include <spdlog/fmt/fmt.h>
 
 using cpph::bind_front;
 using cpph::bind_front_weak;
@@ -31,6 +33,7 @@ using std::make_shared;
 using std::make_tuple;
 using std::make_unique;
 
+using std::list;
 using std::map;
 using std::set;
 using std::unordered_map;
@@ -191,3 +194,17 @@ void VerifyMainThread();
  * Create time plot slot
  */
 TimePlotSlotProxy CreateTimePlot(string name);
+
+/**
+ * Unsafe formatting
+ */
+template <typename Str, typename... Args>
+char const* usfmt(Str&& fm, Args&&... args)
+{
+    VerifyMainThread();
+    static char buf[512];
+    auto head = fmt::format_to(buf, std::forward<Str>(fm), std::forward<Args>(args)...);
+    *head = 0;
+
+    return buf;
+}

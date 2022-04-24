@@ -10,12 +10,11 @@
 #include <cpph/event.hxx>
 #include <cpph/utility/singleton.hxx>
 
-#include "widgets/TimePlot.hpp"
-
 namespace asio {
 class io_context;
 }
 
+class TimePlotWindowManager;
 enum class ESessionType : int;
 
 class Application
@@ -60,13 +59,15 @@ class Application
     } _addSessionModalState;
 
     // Time plot window manager
-    TimePlotWindowManager _timePlot;
+    unique_ptr<TimePlotWindowManager> _timePlot;
 
    public:
     static Application* Get();
 
     Application();
     ~Application();
+
+    void Initialize();
 
    public:
     //! Ticks application on main thread.
@@ -83,7 +84,7 @@ class Application
     void SaveWorkspaceMainThread() { saveWorkspace(); }
 
     //! Get Timeplot Window Manager
-    auto TimePlotManager() { return &_timePlot; }
+    auto TimePlotManager() { return _timePlot.get(); }
 
    private:
     void tickGraphicsMainThread();
