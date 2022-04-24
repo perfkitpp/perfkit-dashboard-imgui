@@ -21,8 +21,10 @@ PERFKIT_DECLARE_SUBCATEGORY(GConfig::Widgets)
     {
         string key;
         string title;
+        bool bIsDisplayed;
+        bool bTimePlotMode;
 
-        CPPHEADERS_DEFINE_NLOHMANN_JSON_ARCHIVER(PlotWindow, key, title);
+        CPPHEADERS_DEFINE_NLOHMANN_JSON_ARCHIVER(PlotWindow, key, title, bIsDisplayed, bTimePlotMode);
     };
 
     PERFKIT_CONFIGURE(TimePlotWindows, vector<PlotWindow>{}).confirm();
@@ -36,7 +38,11 @@ TimePlotWindowManager::TimePlotWindowManager()
 
                 for (auto& l : list)
                 {
-                    _createNewPlotWindow(l.key)->title = l.title;
+                    auto newWnd = _createNewPlotWindow(l.key);
+                    newWnd->title = l.title;
+                    newWnd->bIsDisplayed = l.bIsDisplayed;
+                    newWnd->bMovingFrame = not l.bTimePlotMode;
+                    newWnd->frameInfo.bTimeBuildMode = l.bTimePlotMode;
                 }
 
                 _widget.bShowListPanel = RefPersistentNumber("TimePlotPersistant");
@@ -52,6 +58,8 @@ TimePlotWindowManager::TimePlotWindowManager()
                     auto& elem = wnds.emplace_back();
                     elem.key = wnd->key;
                     elem.title = wnd->title;
+                    elem.bIsDisplayed = wnd->bIsDisplayed;
+                    elem.bTimePlotMode = wnd->frameInfo.bTimeBuildMode;
                 }
 
                 GConfig::Widgets::TimePlotWindows.commit(wnds);
@@ -103,7 +111,9 @@ void TimePlotWindowManager::TickWindow()
      * 6. 메인 스레드에서 cache swap 수행.
      */
     /// Validate cache
-    if (not _caching && _timerCacheTrig.check())
+    bool const bAsyncJobTriggerFrame = not _caching && _timerCacheTrig.check();
+    bool const bCacheReceivedThisFrame = exchange(_cacheRecvFrame, false);
+    if (bAsyncJobTriggerFrame)
     {
         _fnTriggerAsyncJob();
     }
@@ -228,6 +238,10 @@ void TimePlotWindowManager::TickWindow()
                         slot->bTargetWndChanged = true;
                         newWnd->bIsDisplayed = true;
                     }
+                    else if (ImGui::MenuItem("Hide"))
+                    {
+                        slot->targetWindow = {};
+                    }
                     else if (not _windows.empty())
                     {
                         ImGui::Separator();
@@ -271,6 +285,13 @@ void TimePlotWindowManager::TickWindow()
         }
     }
 
+    decltype(1.s) deltaTime;
+    if (bCacheReceivedThisFrame)
+    {
+        deltaTime = _tmTimeplotDelta.elapsed();
+        _tmTimeplotDelta.reset();
+    }
+
     /// Iterate each window, and display if needed.
     for (auto& wnd : _windows)
     {
@@ -289,15 +310,45 @@ void TimePlotWindowManager::TickWindow()
 
         bool bKeepOpen = true;
         ImGui::SetNextWindowSize({640, 480}, ImGuiCond_Once);
-        if (CPPH_FINALLY(ImGui::End()); ImGui::Begin(usprintf("%s###%s", wnd->title.c_str(), wnd->key.c_str()), &bKeepOpen))
+        if (CPPH_FINALLY(ImGui::End()); ImGui::Begin(usprintf("%s###%s", wnd->title.c_str(), wnd->key.c_str()), &bKeepOpen, ImGuiWindowFlags_MenuBar))
         {
             if (not bKeepOpen)
             {
                 wnd->bIsDisplayed = false;
             }
 
-            if (CondInvoke(ImPlot::BeginPlot(usprintf("%s###%p", wnd->title.c_str(), wnd.get()), {-1, -1}), ImPlot::EndPlot))
+            bool& bIsTimeBuildMode = wnd->frameInfo.bTimeBuildMode;
+
+            if (CondInvoke(ImGui::BeginMenuBar(), &ImGui::EndMenuBar))
             {
+                ImGui::AlignTextToFramePadding();
+
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x / 2);
+                ImGui::InputText("##Title", wnd->title);
+                if (ImGui::Checkbox("Time Plot", &bIsTimeBuildMode)) { wnd->bMovingFrame ^= true; }
+                ImGui::Checkbox(usprintf("%s##CHKBOX", bIsTimeBuildMode ? "Moving Frame" : "Fixed Frame"), &wnd->bMovingFrame);
+            }
+
+            if (CondInvoke(ImPlot::BeginPlot(usprintf("###%p", wnd->title.c_str(), wnd.get()), {-1, -1}), ImPlot::EndPlot))
+            {
+                if (bCacheReceivedThisFrame && (bIsTimeBuildMode == wnd->bMovingFrame))
+                {
+                    auto [x, y] = wnd->frameInfo.rangeX;
+                    auto dt = deltaTime.count();
+                    if (not wnd->frameInfo.bTimeBuildMode) { dt = -dt; }
+                    ImPlot::SetupAxisLimits(ImAxis_X1, x + dt, y + dt, ImPlotCond_Always);
+                }
+
+                // TODO: Make legend drag-droppable
+                if (wnd->frameInfo.bTimeBuildMode)
+                {
+                    ImPlot::SetupAxis(ImAxis_X1, nullptr, ImPlotAxisFlags_Time);
+                }
+                else
+                {
+                    ImPlot::SetupAxis(ImAxis_X1, nullptr, 0);
+                }
+
                 // Invalidate cache if window layout has changed.
                 {
                     auto limits = ImPlot::GetPlotLimits();
@@ -309,18 +360,18 @@ void TimePlotWindowManager::TickWindow()
                     y1 = limits.Y.Min;
                     y2 = limits.Y.Max;
 
-                    if (x1 != limits.X.Min)
+                    if (abs(x1 - limits.X.Min) > 1e-6)
                     {
                         wnd->bDirty = true;
                         x1 = limits.X.Min;
                     }
-                    if (x2 != limits.X.Max)
+                    if (abs(x2 - limits.X.Max) > 1e-6)
                     {
                         wnd->bDirty = true;
                         x2 = limits.X.Max;
                     }
 
-                    if (double w = ImPlot::GetPlotSize().x; finfo->displayPixelWidth != w)
+                    if (double w = ImPlot::GetPlotSize().x; abs(finfo->displayPixelWidth - w) > 1e-6)
                     {
                         wnd->bDirty = true;
                         finfo->displayPixelWidth = w;
@@ -358,12 +409,17 @@ void TimePlotWindowManager::_fnAsyncValidateCache()
 
     bx->clear(), by->clear();
     auto now = steady_clock::now();
+    auto sysNow = system_clock::now();
+    auto nowD = now.time_since_epoch();
+    auto sysNowD = sysNow.time_since_epoch();
+    auto tzone = duration_cast<steady_clock::duration>(timezone_offset());
 
     // Iterate slots, cache plot window frame ranges
     for (auto& slot : _async.targets)
     {
         auto slotCtx = &slot->async;
         auto const& finfo = slotCtx->frameInfo;
+        auto const bTimeBuild = finfo.bTimeBuildMode;
         auto& [i1, i2] = slotCtx->cacheAxisRange;
         i1 = i2 = bx->size();
 
@@ -374,8 +430,18 @@ void TimePlotWindowManager::_fnAsyncValidateCache()
 
         // Sample within given window range
         auto [dmin, dmax] = finfo.rangeX;
-        auto xmin = now + duration_cast<steady_clock::duration>(1.s * dmin);
-        auto xmax = now + duration_cast<steady_clock::duration>(1.s * dmax);
+        steady_clock::time_point xmin, xmax;
+
+        if (bTimeBuild)
+        {
+            xmin = steady_clock::time_point{} + duration_cast<system_clock::duration>(1.s * dmin) - sysNowD + nowD - tzone;
+            xmax = steady_clock::time_point{} + duration_cast<system_clock::duration>(1.s * dmax) - sysNowD + nowD - tzone;
+        }
+        else
+        {
+            xmin = now + duration_cast<steady_clock::duration>(1.s * dmin);
+            xmax = now + duration_cast<steady_clock::duration>(1.s * dmax);
+        }
 
         if (numSampleLeftL == 0) { continue; }
         if (sbeg == send) { continue; }
@@ -384,8 +450,12 @@ void TimePlotWindowManager::_fnAsyncValidateCache()
         for (; sbeg != send && numSampleLeftL; --numSampleLeftL)
         {
             // Store cached value
-            bx->push_back(to_seconds(sbeg->timestamp - now));
             by->push_back(sbeg->value);
+
+            if (bTimeBuild)
+                bx->push_back(to_seconds(sbeg->timestamp.time_since_epoch() - nowD + sysNowD + tzone));
+            else
+                bx->push_back(to_seconds(sbeg->timestamp - now));
 
             // Determine next time-point by uniform division
             xmin = xmin + (xmax - xmin) / numSampleLeftL;
@@ -396,8 +466,12 @@ void TimePlotWindowManager::_fnAsyncValidateCache()
 
         // Must push last element, to make autofit available.
         // First element will automatically be added by above loop logic.
-        bx->push_back(to_seconds(allV->back().timestamp - now));
         by->push_back(allV->back().value);
+
+        if (bTimeBuild)
+            bx->push_back(to_seconds(allV->back().timestamp.time_since_epoch() - nowD + sysNowD + tzone));
+        else
+            bx->push_back(to_seconds(allV->back().timestamp - now));
 
         // Correct cache axis range
         i2 = bx->size();
@@ -411,6 +485,7 @@ void TimePlotWindowManager::_fnMainThreadSwapBuffer()
 {
     VerifyMainThread();
     _caching = false;
+    _cacheRecvFrame = true;
 
     // Swap build/render buffer here.
     swap(_cacheRender[0], _async.cacheBuild[0]);

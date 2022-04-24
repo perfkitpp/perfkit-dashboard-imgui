@@ -39,6 +39,9 @@ struct WindowFrameDescriptor
 
     // window_width / range
     double displayPixelWidth = 0;
+
+    // Use time based build mode
+    bool bTimeBuildMode = false;
 };
 
 /**
@@ -110,6 +113,9 @@ struct WindowContext
     // Displaying ?
     bool bIsDisplayed = false;
 
+    // Moving frame mode is enabled ...?
+    bool bMovingFrame = true;
+
     // State has changed?
     bool bDirty : 1;
 
@@ -148,6 +154,7 @@ class TimePlotWindowManager
 
     // Timer for cache revalidation, and a flag to prevent duplicated request.
     bool _caching = false;
+    bool _cacheRecvFrame = false;
     poll_timer _timerCacheTrig = {100ms};
 
     // Widget context
@@ -160,6 +167,9 @@ class TimePlotWindowManager
     // List of window contexts
     vector<shared_ptr<TimePlot::WindowContext>> _windows;
     size_t _wndCreateIndexer = 0;
+
+    // Time plot delta timer
+    stopwatch _tmTimeplotDelta;
 
    public:
     TimePlotWindowManager();
