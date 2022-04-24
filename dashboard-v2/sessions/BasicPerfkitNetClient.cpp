@@ -57,25 +57,27 @@ BasicPerfkitNetClient::BasicPerfkitNetClient()
 
     // Tty config
     _tty.SetReadOnly(true);
-
-    // Config Load/Store
-    gApp->OnLoadWorkspace +=
-            [this] {
-                _uiState.bTraceOpen = RefPersistentNumber("%s.WndTrace", _key.c_str());
-                _uiState.bConfigOpen = RefPersistentNumber("%s.WndConfig", _key.c_str());
-                _uiState.bGraphicsOpen = RefPersistentNumber("%s.WndGraphics", _key.c_str());
-            };
-
-    gApp->OnDumpWorkspace +=
-            [this] {
-                RefPersistentNumber("%s.WndTrace", _key.c_str()) = _uiState.bTraceOpen;
-                RefPersistentNumber("%s.WndConfig", _key.c_str()) = _uiState.bConfigOpen;
-                RefPersistentNumber("%s.WndGraphics", _key.c_str()) = _uiState.bGraphicsOpen;
-            };
 }
 
 void BasicPerfkitNetClient::InitializeSession(const string& keyUri)
 {
+    // Config Load/Store
+    gApp->OnLoadWorkspace.add_weak(
+            weak_from_this(),
+            [this] {
+                _uiState.bTraceOpen = RefPersistentNumber("%s.WndTrace", _key.c_str());
+                _uiState.bConfigOpen = RefPersistentNumber("%s.WndConfig", _key.c_str());
+                _uiState.bGraphicsOpen = RefPersistentNumber("%s.WndGraphics", _key.c_str());
+            });
+
+    gApp->OnDumpWorkspace.add_weak(
+            weak_from_this(),
+            [this] {
+                RefPersistentNumber("%s.WndTrace", _key.c_str()) = _uiState.bTraceOpen;
+                RefPersistentNumber("%s.WndConfig", _key.c_str()) = _uiState.bConfigOpen;
+                RefPersistentNumber("%s.WndGraphics", _key.c_str()) = _uiState.bGraphicsOpen;
+            });
+
     _displayKey = _key = keyUri;
     ((PerfkitNetClientRpcMonitor*)&*_monitor)->_owner = weak_from_this();
 }
