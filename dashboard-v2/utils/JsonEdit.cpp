@@ -56,7 +56,7 @@ bool ImGui::SingleLineJsonEdit(
     auto typeColor = ImGui::ContentColorByJsonType(type);
     ImGui::PushID(&value);
     ImGui::PushStyleColor(ImGuiCol_Text, typeColor);
-    ImGui::PushStyleColor(ImGuiCol_FrameBg, 0);
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImGui::GetColorU32(ImGuiCol_FrameBg) - 0xbb000000);
 
     if (value.is_number())
     {
@@ -84,7 +84,10 @@ bool ImGui::SingleLineJsonEdit(
 
         ImGui::SetNextItemWidth(-1.f);
         if (ImGui::InputScalar("##Scalar", dataType, vdata, 0, 0, 0, ImGuiInputTextFlags_EnterReturnsTrue))
+        {
+            ImGui::SetKeyboardFocusHere(-1);
             bValueChanged = true;
+        }
     }
     else if (value.is_string())
     {
@@ -98,20 +101,20 @@ bool ImGui::SingleLineJsonEdit(
 
         ImGui::SetNextItemWidth(-1.f);
 
-        str.resize(str.size() + 32);
         bValueChanged = ImGui::InputText(
                 "##TEDIT",
                 str.data(),
-                str.size(),
+                str.size() + 1,
                 ImGuiInputTextFlags_CallbackResize | ImGuiInputTextFlags_EnterReturnsTrue,
                 [](ImGuiInputTextCallbackData* cbdata) {
                     if (cbdata->EventFlag == ImGuiInputTextFlags_CallbackResize)
                     {
                         auto ctx = (context_t*)cbdata->UserData;
                         auto str = ctx->str;
-                        str->resize(str->size() + 128);
+                        str->resize(str->size() + 64);
 
                         cbdata->BufSize = str->size();
+                        cbdata->Buf = str->data();
                         cbdata->BufDirty = true;
                         ctx->text_len = cbdata->BufTextLen;
                     }
@@ -120,17 +123,22 @@ bool ImGui::SingleLineJsonEdit(
                 },
                 &ctx);
 
+        if (bValueChanged)
+            ImGui::SetKeyboardFocusHere(-1);
+
         str.resize(ctx.text_len);
     }
     else
     {
         *bIsClicked = ImGui::Selectable("##SEL");
         ImGui::SameLine();
+        ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted(cacheStr.data(), cacheStr.data() + cacheStr.size());
     }
 
     ImGui::PopStyleColor(2);
     ImGui::PopID();
+
     return bValueChanged;
 }
 
