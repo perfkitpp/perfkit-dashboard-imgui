@@ -20,6 +20,11 @@ struct Point
 {
     steady_clock::time_point timestamp = {};
     double value = 0;
+
+    bool operator<(steady_clock::time_point const& tp) const noexcept
+    {
+        return timestamp < tp;
+    }
 };
 
 /**
@@ -27,7 +32,7 @@ struct Point
  *
  * Once plotting window's frame moves,
  */
-class WindowFrameDescriptor
+struct WindowFrameDescriptor
 {
     double rangeX[2] = {};
     double rangeY[2] = {};
@@ -58,7 +63,7 @@ struct SlotData
     string name;
 
     // Index range in _cacheRender
-    size_t cacheAxisRangeX[2] = {};
+    size_t cacheAxisRange[2] = {};
 
     // Upload sequence index.
     size_t uploadSequence = 0;
@@ -81,7 +86,7 @@ struct SlotData
         WindowFrameDescriptor frameInfo;
 
         // Will be downloaded on junction
-        size_t cacheAxisRangeX[2] = {};
+        size_t cacheAxisRange[2] = {};
     } async;
 
    public:
@@ -124,7 +129,7 @@ class TimePlotWindowManager
     vector<shared_ptr<TimePlot::SlotData>> _slots;
 
     // To not reinitialize the whole array every time ...
-    vector<double> _cacheRender;
+    vector<double> _cacheRender[2];
 
     // Async work thread
     thread_pool _asyncWorker{1};
@@ -138,7 +143,7 @@ class TimePlotWindowManager
 
         // Cache that is being built.
         // Exchanged on thread junction, and may not access from main thread after.
-        vector<double> cacheBuild;
+        vector<double> cacheBuild[2];
     } _async;
 
     // Timer for cache revalidation, and a flag to prevent duplicated request.

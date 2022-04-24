@@ -7,6 +7,7 @@
 #include "Application.hpp"
 #include "cpph/helper/nlohmann_json_macros.hxx"
 #include "cpph/macros.hxx"
+#include "cpph/utility/chrono.hxx"
 #include "cpph/utility/cleanup.hxx"
 #include "cpph/utility/random.hxx"
 #include "imgui.h"
@@ -56,6 +57,12 @@ TimePlotWindowManager::TimePlotWindowManager()
                 GConfig::Widgets::TimePlotWindows.commit(wnds);
                 RefPersistentNumber("TimePlotPersistant") = _widget.bShowListPanel;
             };
+
+    //
+    _cacheRender[0].reserve(1 << 16);
+    _cacheRender[1].reserve(1 << 16);
+    _async.cacheBuild[0].reserve(1 << 16);
+    _async.cacheBuild[1].reserve(1 << 16);
 }
 
 auto TimePlotWindowManager::CreateSlot(string name) -> TimePlotSlotProxy
@@ -289,8 +296,37 @@ void TimePlotWindowManager::TickWindow()
                 wnd->bIsDisplayed = false;
             }
 
-            if (CondInvoke(ImPlot::BeginPlot(usprintf("%s##%p", wnd->title.c_str(), wnd.get()), {-1, -1}), ImPlot::EndPlot))
+            if (CondInvoke(ImPlot::BeginPlot(usprintf("%s###%p", wnd->title.c_str(), wnd.get()), {-1, -1}), ImPlot::EndPlot))
             {
+                // Invalidate cache if window layout has changed.
+                {
+                    auto limits = ImPlot::GetPlotLimits();
+                    auto finfo = &wnd->frameInfo;
+
+                    auto& [x1, x2] = finfo->rangeX;
+                    auto& [y1, y2] = finfo->rangeY;
+
+                    y1 = limits.Y.Min;
+                    y2 = limits.Y.Max;
+
+                    if (x1 != limits.X.Min)
+                    {
+                        wnd->bDirty = true;
+                        x1 = limits.X.Min;
+                    }
+                    if (x2 != limits.X.Max)
+                    {
+                        wnd->bDirty = true;
+                        x2 = limits.X.Max;
+                    }
+
+                    if (double w = ImPlot::GetPlotSize().x; finfo->displayPixelWidth != w)
+                    {
+                        wnd->bDirty = true;
+                        finfo->displayPixelWidth = w;
+                    }
+                }
+
                 for (auto slot : wnd->plotsThisFrame)
                 {
                     DrawPlotContent(slot);
@@ -302,12 +338,70 @@ void TimePlotWindowManager::TickWindow()
 
 void TimePlotWindowManager::DrawPlotContent(TimePlot::SlotData* slot)
 {
+    auto [i1, i2] = slot->cacheAxisRange;
+    auto& [rX, rY] = _cacheRender;
+
+    if (i2 - i1 == 0) { return; }
+
+    ImPlot::PushStyleColor(ImPlotCol_Line, slot->plotColor);
+    ImPlot::PlotLine(slot->name.c_str(), &rX[i1], &rY[i1], i2 - i1);
+
+    ImPlot::PopStyleColor();
 }
 
 void TimePlotWindowManager::_fnAsyncValidateCache()
 {
     // Perform caching
-    // TODO: To make auto-fit available, first and last point of data must be contained!
+    // To make auto-fit available, first and last point of data must be contained!
+    auto bx = _async.cacheBuild + 0;
+    auto by = _async.cacheBuild + 1;
+
+    bx->clear(), by->clear();
+    auto now = steady_clock::now();
+
+    // Iterate slots, cache plot window frame ranges
+    for (auto& slot : _async.targets)
+    {
+        auto slotCtx = &slot->async;
+        auto const& finfo = slotCtx->frameInfo;
+        auto& [i1, i2] = slotCtx->cacheAxisRange;
+        i1 = i2 = bx->size();
+
+        // sample / pixel
+        auto numSampleLeftL = size_t(finfo.displayPixelWidth);
+        auto allV = &slotCtx->allValues;
+        auto sbeg = allV->begin(), send = allV->end();
+
+        // Sample within given window range
+        auto [dmin, dmax] = finfo.rangeX;
+        auto xmin = now + duration_cast<steady_clock::duration>(1.s * dmin);
+        auto xmax = now + duration_cast<steady_clock::duration>(1.s * dmax);
+
+        if (numSampleLeftL == 0) { continue; }
+        if (sbeg == send) { continue; }
+
+        // Search lower bound from remaining contents
+        for (; sbeg != send && numSampleLeftL; --numSampleLeftL)
+        {
+            // Store cached value
+            bx->push_back(to_seconds(sbeg->timestamp - now));
+            by->push_back(sbeg->value);
+
+            // Determine next time-point by uniform division
+            xmin = xmin + (xmax - xmin) / numSampleLeftL;
+
+            // Binary search next node.
+            sbeg = std::lower_bound(sbeg + 1, send, xmin);
+        }
+
+        // Must push last element, to make autofit available.
+        // First element will automatically be added by above loop logic.
+        bx->push_back(to_seconds(allV->back().timestamp - now));
+        by->push_back(allV->back().value);
+
+        // Correct cache axis range
+        i2 = bx->size();
+    }
 
     // Request swap buffer on main thread.
     PostEventMainThread(bind(&TimePlotWindowManager::_fnMainThreadSwapBuffer, this));
@@ -317,6 +411,17 @@ void TimePlotWindowManager::_fnMainThreadSwapBuffer()
 {
     VerifyMainThread();
     _caching = false;
+
+    // Swap build/render buffer here.
+    swap(_cacheRender[0], _async.cacheBuild[0]);
+    swap(_cacheRender[1], _async.cacheBuild[1]);
+
+    // Swap slots ranges ...
+    for (auto& slot : _slots)
+    {
+        slot->cacheAxisRange[0] = slot->async.cacheAxisRange[0];
+        slot->cacheAxisRange[1] = slot->async.cacheAxisRange[1];
+    }
 }
 
 void TimePlotWindowManager::_fnTriggerAsyncJob()
@@ -354,10 +459,15 @@ void TimePlotWindowManager::_fnTriggerAsyncJob()
             async.allValues.enqueue_n(slot->pointsPendingUploaded.begin(), slot->pointsPendingUploaded.size());
 
             slot->pointsPendingUploaded.clear();
+            _async.targets.push_back(slot);
         }
     }
 
-    // TODO: Iterate windows, clear dirty flag
+    // Iterate windows, clear dirty flag
+    for (auto& wnd : _windows)
+    {
+        wnd->bDirty = false;
+    }
 
     // Trigger async job
     if (bHasAnyInvalidCache)
