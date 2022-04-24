@@ -307,7 +307,11 @@ void BasicPerfkitNetClient::tickHeartbeat()
     {
         NotifyToast{"Heartbeat failed"}.Error();
 
-        CloseSession();
+        if (++_heartbeatFailCount == 5)
+        {
+            CloseSession();
+        }
+
         return;
     }
 
@@ -323,6 +327,7 @@ void BasicPerfkitNetClient::tickHeartbeat()
 void BasicPerfkitNetClient::CloseSession()
 {
     _sessionAnchor.reset();
+    _heartbeatFailCount = 0;
 
     if (_hrpcHeartbeat) { _hrpcHeartbeat.abort(); }
     if (_hrpcLogin) { _hrpcLogin.abort(); }

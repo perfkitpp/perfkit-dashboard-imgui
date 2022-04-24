@@ -49,6 +49,7 @@ class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNe
 
     //
     poll_timer _timHeartbeat{1s};
+    int _heartbeatFailCount = 0;
 
     //
     service::session_info_t _sessionInfo;
