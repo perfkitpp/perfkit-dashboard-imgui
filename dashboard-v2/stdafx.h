@@ -15,10 +15,10 @@
 #include <cpph/futils.hxx>
 #include <perfkit/fwd.hpp>
 
-using perfkit::bind_front;
-using perfkit::bind_front_weak;
-using perfkit::function;
-using perfkit::futils::usprintf;
+using cpph::bind_front;
+using cpph::bind_front_weak;
+using cpph::function;
+using cpph::futils::usprintf;
 using namespace perfkit;
 
 using std::exchange;
@@ -176,4 +176,15 @@ Type_& RefAny(char const* format, Args_&&... args)
  */
 float DpiScale();
 
+/**
+ * Check if invoked from main thread
+ */
+void VerifyMainThread();
+
 #include "utils/Notify.hpp"
+#include "utils/TimePlotSlotProxy.hpp"
+
+/**
+ * Create time plot slot
+ */
+TimePlotSlotProxy CreateTimePlot(string name);

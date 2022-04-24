@@ -16,6 +16,7 @@
 #include "widgets/ConfigWindow.hpp"
 #include "widgets/TraceWindow.hpp"
 
+using namespace perfkit;
 namespace message = net::message;
 
 class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNetClient>,

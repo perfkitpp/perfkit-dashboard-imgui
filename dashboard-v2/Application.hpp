@@ -10,6 +10,8 @@
 #include <cpph/event.hxx>
 #include <cpph/utility/singleton.hxx>
 
+#include "widgets/TimePlot.hpp"
+
 namespace asio {
 class io_context;
 }
@@ -57,6 +59,9 @@ class Application
         char UriBuffer[1024] = {};
     } _addSessionModalState;
 
+    // Time plot window manager
+    TimePlotWindowManager _timePlot;
+
    public:
     static Application* Get();
 
@@ -76,6 +81,9 @@ class Application
 
     //! Save workspace
     void SaveWorkspaceMainThread() { saveWorkspace(); }
+
+    //! Get Timeplot Window Manager
+    auto TimePlotManager() { return &_timePlot; }
 
    private:
     void tickGraphicsMainThread();

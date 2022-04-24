@@ -12,7 +12,7 @@ set(
 
         utils/Notify.cpp
         utils/Misc.cpp
-        utils/TimePlot.cpp
+        utils/TimePlotSlotProxy.cpp
         utils/JsonEdit.cpp
 
         sessions/BasicPerfkitNetClient.cpp
@@ -21,6 +21,7 @@ set(
 
         widgets/ConfigWindow.cpp
         widgets/TraceWindow.cpp
+        widgets/TimePlot.cpp
 )
 
 #

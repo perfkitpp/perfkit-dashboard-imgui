@@ -3,7 +3,9 @@
 //
 
 #include "Application.hpp"
+#include "stdafx.h"
 
+#include <cassert>
 #include <memory>
 #include <thread>
 
@@ -77,6 +79,9 @@ void Application::TickMainThread()
 
     // Tick graphics
     tickGraphicsMainThread();
+
+    // Tick time plots
+    _timePlot.TickWindow();
 }
 
 void Application::PostMainThreadEvent(perfkit::function<void()> callable)
@@ -89,9 +94,21 @@ void Application::DispatchMainThreadEvent(perfkit::function<void()> callable)
     asio::dispatch(*_ioc, std::move(callable));
 }
 
+void VerifyMainThread()
+{
+    assert((default_singleton<std::thread::id, class Application>()) == std::this_thread::get_id());
+}
+
+TimePlotSlotProxy CreateTimePlot(string name)
+{
+    return Application::Get()->TimePlotManager()->CreateSlot(std::move(name));
+}
+
 Application::Application()
         : _ioc(std::make_unique<asio::io_context>())
 {
+    default_singleton<std::thread::id, class Application>() = std::this_thread::get_id();
+
     //
     // Register INI handler to restore previous workspace configuration file
     //
