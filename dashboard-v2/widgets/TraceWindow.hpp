@@ -27,6 +27,13 @@ class TraceWindow
 
         // [transient]
         steady_clock::time_point _updateAt = {};
+
+        // for plotting ...
+        TimePlotSlotProxy _hPlot;
+
+        // Flags
+        bool _bCildrenListPendingSort : 1;
+        bool _bPlotting : 1;
     };
 
     struct TracerContext
@@ -72,7 +79,7 @@ class TraceWindow
 
    private:
     void _fnOnNewTracer(proto::tracer_descriptor_t&);
-    void _fnOnValidateTracer(vector<uint64_t> &tracer_id);
+    void _fnOnValidateTracer(vector<uint64_t>& tracer_id);
     void _fnOnNewTraceNode(uint64_t, vector<proto::trace_info_t>&);
     void _fnOnTraceUpdate(uint64_t, vector<proto::trace_update_t>&);
 

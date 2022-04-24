@@ -4,6 +4,7 @@
 
 #include "TraceWindow.hpp"
 
+#include "cpph/chrono.hxx"
 #include "cpph/macros.hxx"
 #include "cpph/refl/object.hxx"
 #include "cpph/refl/rpc/rpc.hxx"
@@ -297,7 +298,8 @@ void widgets::TraceWindow::_recurseRootTraceNode(
         ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetColorU32(ImGuiCol_TextDisabled));
 
     // Draw node label
-    auto const bSkipChildren = not ImGui::TreeNodeEx(node->info.name.c_str(), nodeFlags);
+    bool const bSkipChildren = not ImGui::TreeNodeEx(node->info.name.c_str(), nodeFlags);
+    bool const bNodeToggleOpened = ImGui::IsItemToggledOpen();
     ImGui::PopStyleColor();
 
     bool const bShowContentTooltip = ImGui::IsItemHovered();
@@ -306,26 +308,62 @@ void widgets::TraceWindow::_recurseRootTraceNode(
 
     // Draw primitives
     auto dl = ImGui::GetWindowDrawList();
+    auto drawDot =
+            [&, callOrder = 0](ImU32 color = 0) mutable {
+                if (color)
+                {
+                    auto at = ImGui::GetCursorScreenPos();
+                    auto drawBoxSize = ImGui::CalcTextSize("  ");
+                    at.y += drawBoxSize.y / 2;
+                    at.x += drawBoxSize.x / 2;
+                    color &= 0x00ffffff;
+                    color |= bIsActiveNode ? 0xff000000 : 0x55000000;
+                    dl->AddCircleFilled(at, ImGui::GetFontSize() / 5.5, color);
 
+                    return ImGui::Selectable(
+                            usprintf("##SEL_%d", callOrder++),
+                            false,
+                            ImGuiSelectableFlags_AllowItemOverlap,
+                            drawBoxSize);
+                }
+                else
+                {
+                    ImGui::Text("  ");
+                    return false;
+                }
+            };
+
+    ImGui::SameLine();
     if (node->data.ref_subscr())
     {
-        ImGui::SameLine();
-        auto at = ImGui::GetCursorScreenPos();
-        at.y += ImGui::GetTextLineHeight() / 3;
-        dl->AddCircleFilled(at, ImGui::GetFontSize() / 6, bIsActiveNode ? 0xff00ff00 : 0x4400ff00);
-        ImGui::Spacing();
+        if (drawDot(0x00ff00))
+        {
+            bToggleSubsription = true;
+        }
+
+        if (ImGui::IsItemHovered()) { ImGui::SetTooltip("Click to unsubscribe."); }
+    }
+    else
+    {
+        drawDot();
     }
 
-    // TODO: Draw red dot on plot recording
-
-    if (bToggleSubsription)
+    ImGui::SameLine(0, 0);
+    if (node->_hPlot)
     {
-        // Toggle subscription state
-        proto::service::trace_control_t arg;
-        arg.subscribe = not node->data.ref_subscr();
+        // Draw red dot on plot recording
 
-        proto::service::trace_request_control(_host->RpcSession())
-                .notify(tracer->info.tracer_id, node->info.index, arg);
+        if (drawDot(node->_bPlotting ? 0x0000ff : 0x008888))
+        {
+            node->_hPlot.Expire();
+            node->_bPlotting = false;
+        }
+
+        if (ImGui::IsItemHovered()) { ImGui::SetTooltip("Click to delete plotting"); }
+    }
+    else
+    {
+        drawDot();
     }
 
     // Draw node value
@@ -362,17 +400,39 @@ void widgets::TraceWindow::_recurseRootTraceNode(
 
     if (bTogglePlotWindow)
     {
-        ImGui::Text("DDDDD");
+        if (not node->_hPlot)
+        {
+            node->_hPlot = CreateTimePlot(fmt::format("{}/{}", tracer->info.name, node->info.name));
+        }
+
+        node->_bPlotting = not node->_bPlotting;
+    }
+    else if (bToggleSubsription)
+    {
+        // Toggle subscription state
+        proto::service::trace_control_t arg;
+        arg.subscribe = not node->data.ref_subscr();
+
+        proto::service::trace_request_control(_host->RpcSession())
+                .notify(tracer->info.tracer_id, node->info.index, arg);
     }
 
     if (bSkipChildren) { return; }
 
-    CPPH_CALL_ON_EXIT(ImGui::TreePop());
+    if (bNodeToggleOpened && node->_bCildrenListPendingSort)
+    {
+        node->_bCildrenListPendingSort = false;
+
+        // TODO: Sort node's children by their fence, to make fresh nodes
+        //  precede obsolete ones.
+    }
 
     for (auto idx : node->children)
     {
-        _recurseRootTraceNode(tracer, tracer->nodes.at(idx).get());
+        _recurseRootTraceNode(tracer, tracer->nodes[idx].get());
     }
+
+    ImGui::TreePop();
 }
 
 void widgets::TraceWindow::_fnOnTraceUpdate(
@@ -406,12 +466,28 @@ void widgets::TraceWindow::_fnOnTraceUpdate(
                         assert(node->info.index == update.index);
                         node->data = update;
                         node->_updateAt = steady_clock::now();
+                        node->_bCildrenListPendingSort = true;
 
-                        // TODO: Plot link data push
+                        if (node->_bPlotting)
+                        {
+                            // Push data to plot if payload is convertible to double
+                            auto fnVisitor =
+                                    [node](auto&& value) {
+                                        using ValueType = decay_t<decltype(value)>;
+
+                                        if constexpr (is_convertible_v<ValueType, double>)
+                                        {
+                                            node->_hPlot.Commit(double(value));
+                                        }
+                                        if constexpr (is_same_v<ValueType, steady_clock::duration>)
+                                        {
+                                            node->_hPlot.Commit(to_seconds(value));
+                                        }
+                                    };
+
+                            std::visit(fnVisitor, node->data.payload);
+                        }
                     }
-
-                    // TODO: Sort all node's children by their fence, to make fresh nodes
-                    //  precede obsolete ones.
                 }
             });
 }
