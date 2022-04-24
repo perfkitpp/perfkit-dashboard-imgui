@@ -530,8 +530,17 @@ void TimePlotWindowManager::_fnTriggerAsyncJob()
             bHasAnyInvalidCache = true;
 
             auto& async = slot->async;
+            auto& allV = async.allValues;
+            auto& queued = slot->pointsPendingUploaded;
+
+            size_t constexpr MAX_ENTITY = 2'000'000;
+            if (allV.capacity() - allV.size() < queued.size() && allV.capacity() < MAX_ENTITY)
+            {
+                allV.reserve_shrink(min(MAX_ENTITY, allV.capacity() * 4));
+            }
+
             async.frameInfo = refWindow->frameInfo;
-            async.allValues.enqueue_n(slot->pointsPendingUploaded.begin(), slot->pointsPendingUploaded.size());
+            allV.enqueue_n(queued.begin(), queued.size());
 
             slot->pointsPendingUploaded.clear();
             _async.targets.push_back(slot);

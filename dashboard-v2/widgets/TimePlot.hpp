@@ -83,7 +83,7 @@ struct SlotData
     struct AsyncContext
     {
         // Uploaded from main thread
-        circular_queue<Point> allValues{50'000};
+        circular_queue<Point> allValues{1'000};
 
         // Target window info
         WindowFrameDescriptor frameInfo;
