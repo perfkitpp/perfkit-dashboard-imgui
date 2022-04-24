@@ -32,7 +32,7 @@ class WindowFrameDescriptor
     double rangeY[2] = {};
 
     // window_width / range
-    double displayDensityX = 0;
+    double displayPixelWidth = 0;
 };
 
 /**
@@ -43,6 +43,12 @@ struct SlotData
     // Is being destroied?
     // Will be disposed on next iteration.
     bool bMarkDestroied : 1;
+
+    // Target window changed ... should be recached !
+    bool bTargetWndChanged : 1;
+
+    // Focus is requests
+    bool bFocusRequested : 1;
 
     // Name of this node
     string name;
@@ -77,11 +83,20 @@ struct SlotData
 
 struct WindowContext
 {
+    // Window name
+    string title;
+
     //
     WindowFrameDescriptor frameInfo = {};
 
+    // Displaying ?
+    bool bIsDisplayed = false;
+
     // State has changed?
-    bool bDirty = false;
+    bool bDirty : 1;
+
+    // Request focus on next frame
+    bool bRequestFocus : 1;
 };
 
 }  // namespace TimePlot
@@ -126,6 +141,7 @@ class TimePlotWindowManager
 
     // List of window contexts
     set<shared_ptr<TimePlot::WindowContext>, std::owner_less<>> _windows;
+    size_t _wndCreateIndexer = 0;
 
    public:
     void TickWindow();
@@ -135,4 +151,7 @@ class TimePlotWindowManager
     void _fnTriggerAsyncJob();
     void _fnAsyncValidateCache();
     void _fnMainThreadSwapBuffer();
+
+   private:
+    auto _createNewPlotWindow() -> shared_ptr<TimePlot::WindowContext>;
 };

@@ -64,6 +64,9 @@ void TimePlotWindowManager::TickWindow()
     ImGui::SetNextWindowSize({640, 480}, ImGuiCond_Once);
     if (CPPH_CLEANUP(&End); Begin("Time Plot List", &_widget.bShowListPanel))
     {
+        /// Render window management menu
+
+        /// Render list of slots
         auto timeNow = steady_clock::now();
 
         for (auto& slot : _slots)
@@ -71,10 +74,16 @@ void TimePlotWindowManager::TickWindow()
             auto spinChars = "*|/-\\|/-"sv;
             bool bLatest = (timeNow - slot->timeLastUpload) < 1s;
             auto fnPopupID = [&] { return usprintf("##%p", slot.get()); };
+            bool bFocusRenderedWindow = slot->bFocusRequested;
+            slot->bFocusRequested = false;
 
             if (ImGui::Selectable(fnPopupID(), false, ImGuiSelectableFlags_AllowItemOverlap | ImGuiSelectableFlags_SpanAllColumns))
             {
-                OpenPopup(fnPopupID());
+                bFocusRenderedWindow = true;
+            }
+            else if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+            {
+                ImGui::OpenPopup(fnPopupID());
             }
 
             ImGui::PushStyleColor(ImGuiCol_Text, bLatest ? ColorRefs::FrontOkay : ColorRefs::BackOkay);
@@ -86,10 +95,67 @@ void TimePlotWindowManager::TickWindow()
             ImGui::SameLine();
             ImGui::TextUnformatted(slot->name.c_str());
 
+            if (auto wnd = slot->targetWindow.lock())
+            {
+                ImGui::PushStyleColor(ImGuiCol_Text, bLatest ? ColorRefs::FrontWarn : ColorRefs::BackWarn);
+                ImGui::SameLine();
+                ImGui::Text("| %s", wnd->title.c_str());
+                ImGui::PopStyleColor();
+
+                if (bFocusRenderedWindow) { wnd->bRequestFocus = true; }
+            }
+
             ImGui::PopStyleColor(2);
 
             if (CondInvoke(ImGui::BeginPopup(fnPopupID()), &EndPopup))
             {
+                if (CondInvoke(ImGui::BeginMenu("View On"), &ImGui::EndMenu))
+                {
+                    if (ImGui::MenuItem("+ Create New"))
+                    {
+                        // Create new menu, and set this slot to be drawn on given window.
+                        auto newWnd = _createNewPlotWindow();
+                        slot->targetWindow = newWnd;
+                        slot->bTargetWndChanged = true;
+                        newWnd->bIsDisplayed = true;
+                    }
+                    else if (not _windows.empty())
+                    {
+                        ImGui::Separator();
+
+                        for (auto& wnd : _windows)
+                        {
+                            if (ImGui::MenuItem(usprintf("%s##%p", wnd->title.c_str(), wnd.get())))
+                            {
+                                slot->targetWindow = wnd;
+                                slot->bTargetWndChanged = true;
+                            }
+                        }
+                    }
+                }
+
+                if (ImGui::MenuItem("Remove"))
+                {
+                    slot->bMarkDestroied = true;
+                }
+            }
+        }  // for (auto& slot : _slots)
+    }
+
+    /// Iterate each window, and display if needed.
+    for (auto& wnd : _windows)
+    {
+        if (not wnd->bIsDisplayed)
+        {
+            continue;
+        }
+
+        bool bKeepOpen = true;
+        if (CPPH_FINALLY(ImGui::End()); ImGui::Begin(usprintf("%s###%p", wnd->title.c_str(), wnd.get()), &bKeepOpen))
+        {
+            if (not bKeepOpen)
+            {
+                wnd->bIsDisplayed = false;
             }
         }
     }
@@ -98,6 +164,7 @@ void TimePlotWindowManager::TickWindow()
 void TimePlotWindowManager::_fnAsyncValidateCache()
 {
     // Perform caching
+    // TODO: To make auto-fit available, first and last point of data must be contained!
 
     // Request swap buffer on main thread.
     PostEventMainThread(bind(&TimePlotWindowManager::_fnMainThreadSwapBuffer, this));
@@ -133,7 +200,8 @@ void TimePlotWindowManager::_fnTriggerAsyncJob()
             auto refWindow = slot->targetWindow.lock();
             if (not refWindow) { continue; }  // Not being plotted.
 
-            bCacheInvalid |= refWindow->bDirty;
+            bCacheInvalid |= (bool)refWindow->bDirty;
+            bCacheInvalid |= (bool)slot->bTargetWndChanged;
 
             if (not bCacheInvalid) { continue; }
             bHasAnyInvalidCache = true;
@@ -154,4 +222,13 @@ void TimePlotWindowManager::_fnTriggerAsyncJob()
         _caching = true;
         _asyncWorker.post(bind(&TimePlotWindowManager::_fnAsyncValidateCache, this));
     }
+}
+
+auto TimePlotWindowManager::_createNewPlotWindow() -> shared_ptr<TimePlot::WindowContext>
+{
+    auto ptr = make_shared<TimePlot::WindowContext>();
+    ptr->title = fmt::format("Plot {}", ++_wndCreateIndexer);
+
+    _windows.insert(ptr);
+    return ptr;
 }
