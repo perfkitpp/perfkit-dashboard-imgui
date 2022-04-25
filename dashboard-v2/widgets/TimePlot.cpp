@@ -195,6 +195,14 @@ void TimePlotWindowManager::TickWindow()
                 bFocusRenderedWindow = true;
             }
 
+            if (ImGui::BeginDragDropSource())
+            {
+                size_t currentIndex = &slot - _slots.data();
+                ImGui::SetDragDropPayload("DND_PLOT_SLOT_INDEX", &currentIndex, sizeof currentIndex);
+                ImGui::TextUnformatted(slot->name.c_str());
+                ImGui::EndDragDropSource();
+            }
+
             if (ImGui::SameLine(), ImGui::ColorButton("Graph Color", slot->plotColor))
             {
                 ImGui::OpenPopup("##POPUP_COLOR");
@@ -381,6 +389,22 @@ void TimePlotWindowManager::TickWindow()
                 for (auto slot : wnd->plotsThisFrame)
                 {
                     DrawPlotContent(slot);
+                }
+            }
+
+            if (ImGui::BeginDragDropTarget())
+            {
+                if (auto payload = ImGui::AcceptDragDropPayload("DND_PLOT_SLOT_INDEX"))
+                {
+                    auto idx = *(size_t*)payload->Data;
+
+                    if (idx < _slots.size())
+                    {
+                        _slots[idx]->targetWindow = wnd;
+                        _slots[idx]->bTargetWndChanged = true;
+                    }
+
+                    ImGui::EndDragDropTarget();
                 }
             }
         }
