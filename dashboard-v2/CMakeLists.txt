@@ -18,6 +18,7 @@ set(
         sessions/BasicPerfkitNetClient.cpp
         sessions/BasicPerfkitNetClient-SessionBuilder.cpp
         sessions/PerfkitTcpRawClient.cpp
+        sessions/SessionDiscoverAgent.cpp
 
         widgets/ConfigWindow.cpp
         widgets/TraceWindow.cpp

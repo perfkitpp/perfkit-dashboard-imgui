@@ -167,6 +167,19 @@ Application::Application()
 
                 // Load Sessions
                 _sessions.clear();
+
+                //
+                {
+                    auto CreateSessionDiscoverAgent()->shared_ptr<ISession>;
+                    auto elem = &_sessions.emplace_back();
+                    elem->bTransient = true;
+                    elem->Key = "Discovered Sessions";
+                    elem->Type = ESessionType::None;
+                    elem->Ref = CreateSessionDiscoverAgent();
+
+                    elem->Ref->InitializeSession({});
+                }
+
                 for (auto& desc : *GConfig::Application::ArchivedSessions)
                 {
                     auto sess = RegisterSessionMainThread(desc.key, ESessionType(desc.type), desc.displayName);
@@ -191,6 +204,9 @@ Application::Application()
 
                 for (auto& sess : _sessions)
                 {
+                    if (sess.bTransient)
+                        continue;
+
                     auto arch = &archive.emplace_back();
                     arch->key = sess.Key;
                     arch->displayName = sess.CachedDisplayName;
@@ -299,7 +315,10 @@ void Application::drawSessionList(bool* bKeepOpen)
         bRenderContents &= ImGui::CollapsingHeader(textBuf, &bOpenStatus, headerFlag);
         ImGui::PopStyleColor();
 
-        if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) { sess.bShow = not sess.bShow; }
+        if (sess.Ref->CanOpenSession() and ImGui::IsItemClicked(ImGuiMouseButton_Right))
+        {
+            sess.bShow = not sess.bShow;
+        }
 
         if (CondInvoke(ImGui::BeginDragDropSource(ImGuiDragDropFlags_None), ImGui::EndDragDropSource))
         {
@@ -461,11 +480,10 @@ void Application::drawAddSessionMenu()
     }
 }
 
-shared_ptr<ISession>
-CreatePerfkitTcpRawClient();
+auto CreatePerfkitTcpRawClient() -> shared_ptr<ISession>;
 
 auto Application::RegisterSessionMainThread(
-        string keyString, ESessionType type, string_view optionalDefaultDisplayName)
+        string keyString, ESessionType type, string_view optionalDefaultDisplayName, bool bTransient)
         -> SessionNode*
 {
     if (isSessionExist(keyString, type))
@@ -503,6 +521,7 @@ auto Application::RegisterSessionMainThread(
     elem->Type = type;
     elem->Ref = std::move(session);
     elem->bShow = false;
+    elem->bTransient = bTransient;
 
     elem->Ref->InitializeSession(elem->Key);
     elem->Ref->FetchSessionDisplayName(&elem->CachedDisplayName);

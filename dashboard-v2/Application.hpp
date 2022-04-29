@@ -27,6 +27,7 @@ class Application
 
         bool bShow = false;
         bool bPendingClose = false;
+        bool bTransient = false;  // Save session to
 
         string CachedDisplayName;
     };
@@ -78,7 +79,8 @@ class Application
     SessionNode* RegisterSessionMainThread(
             string keyString,
             ESessionType type,
-            string_view optionalDefaultDisplayName = {});
+            string_view optionalDefaultDisplayName = {},
+            bool bTransient = false);
 
     //! Save workspace
     void SaveWorkspaceMainThread() { saveWorkspace(); }

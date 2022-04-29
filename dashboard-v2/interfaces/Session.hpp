@@ -43,4 +43,7 @@ class ISession
 
     //! Ticks this session. Called always regardless of rendering state.
     virtual void TickSession() {}
+
+    //! Check if session is open-able
+    virtual bool CanOpenSession() { return true; }
 };
