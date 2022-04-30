@@ -46,4 +46,7 @@ class ISession
 
     //! Check if session is open-able
     virtual bool CanOpenSession() { return true; }
+
+    //! Check if session is deletable
+    virtual bool CanDeleteSession() { return true; }
 };

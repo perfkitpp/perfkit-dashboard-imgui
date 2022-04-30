@@ -311,9 +311,11 @@ void Application::drawSessionList(bool* bKeepOpen)
         sprintf(textBuf, "%s###SLB-%s-%d",
                 sess.CachedDisplayName.c_str(), sess.Key.c_str(), sess.Type);
 
+        ImGui::PushStyleColor(ImGuiCol_Header, sess.bTransient ? 0xff311424 : ImGui::GetColorU32(ImGuiCol_Header));
         ImGui::PushStyleColor(ImGuiCol_Text, bIsSessionOpen ? 0xffffffff : 0xffbbbbbb);
-        bRenderContents &= ImGui::CollapsingHeader(textBuf, &bOpenStatus, headerFlag);
-        ImGui::PopStyleColor();
+        bool* openBtnPtr = bIsSessionOpen || sess.Ref->CanDeleteSession() ? &bOpenStatus : nullptr;
+        bRenderContents &= ImGui::CollapsingHeader(textBuf, openBtnPtr, headerFlag);
+        ImGui::PopStyleColor(2);
 
         if (sess.Ref->CanOpenSession() and ImGui::IsItemClicked(ImGuiMouseButton_Right))
         {

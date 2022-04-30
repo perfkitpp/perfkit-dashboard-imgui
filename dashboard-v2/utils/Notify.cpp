@@ -111,7 +111,6 @@ static class NotifyContext
 
                 auto entityHeight = height + (*iter)->stateHeightOffset;
                 ImVec2 nextPos(posVp.x - PaddingX, posVp.y - PaddingY - entityHeight);
-                SetNextWindowPos(nextPos, ImGuiCond_Always, ImVec2(1.f, 1.f));
 
                 if (entityHeight + toast->toastHeightCache > sizeVp.y)
                 {
@@ -136,6 +135,7 @@ static class NotifyContext
                 float opacity = std::min(1.f, std::min(timeFromSpawn / Transition, timeUntilDispose / Transition));
                 ImGui::PushStyleVar(ImGuiStyleVar_Alpha, opacity * (toast->stateHovering ? 1.f : 0.75f));
                 SetNextWindowBgAlpha(opacity * 0.8f);
+                SetNextWindowPos(nextPos, ImGuiCond_Always, ImVec2(1.f, 1.f));
 
                 CPPH_FINALLY(ImGui::PopStyleVar());
                 toast->stateHovering = false;

@@ -40,6 +40,7 @@ class SessionDiscoverAgent : public std::enable_shared_from_this<SessionDiscover
     bool ShouldRenderSessionListEntityContent() const override;
     void RenderSessionListEntityContent() override;
     bool CanOpenSession() override { return false; }
+    bool CanDeleteSession() override { return false; }
 
    private:
     void onRecvFindMe(asio::ip::udp::endpoint&, message::find_me_t&);

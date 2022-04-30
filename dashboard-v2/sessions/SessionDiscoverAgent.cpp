@@ -4,8 +4,10 @@
 
 #include "SessionDiscoverAgent.hpp"
 
+#include "Application.hpp"
 #include "cpph/refl/archive/json.hpp"
 #include "cpph/streambuf/view.hxx"
+#include "imgui.h"
 
 void SessionDiscoverAgent::FetchSessionDisplayName(std::string* string_1)
 {
@@ -42,7 +44,8 @@ void SessionDiscoverAgent::InitializeSession(const string& keyUri)
                     archive::json::reader reader{&buf};
                     reader >> find_me;
 
-                    ::PostEventMainThread(bind(&SessionDiscoverAgent::onRecvFindMe, this, _asyncRecv.endpoint, move(find_me)));
+                    ::PostEventMainThread(
+                            bind(&SessionDiscoverAgent::onRecvFindMe, this, _asyncRecv.endpoint, move(find_me)));
                 }
                 catch (std::exception&)
                 {
@@ -62,17 +65,67 @@ void SessionDiscoverAgent::InitializeSession(const string& keyUri)
 
 bool SessionDiscoverAgent::ShouldRenderSessionListEntityContent() const
 {
-    return ISession::ShouldRenderSessionListEntityContent();
+    return true;
 }
 
 void SessionDiscoverAgent::RenderSessionListEntityContent()
 {
-    ISession::RenderSessionListEntityContent();
+    if (not ImGui::BeginListBox("##DiscoverList", {-1, 100 * DpiScale()})) { return; }
+
+    // GC old sessions (5 seconds)
+    erase_if_each(_findMe, [](auto&& pair) { return steady_clock::now() - pair.second.latestRefresh > 15s; });
+
+    // Render selectables
+    for (auto& [ep, content] : _findMe)
+    {
+        ImGui::Bullet(), ImGui::SameLine();
+
+        bool bTryOpen = ImGui::Selectable(usfmt("{}##{}", content.payload.alias.c_str(), (void*)&ep));
+        ImGui::SameLine();
+        ImGui::TextDisabled("%s:%d", ep.address().to_string().c_str(), content.payload.port);
+
+        if (bTryOpen)
+        {
+            auto fnRegister = [ep = ep, content = content] {
+                ESessionType sessionType = ESessionType::TcpUnsafe;  // NOTE: Other type of sessions?
+                string keyStr = fmt::format("{}:{}", ep.address().to_string(), content.payload.port);
+
+                auto pNode = Application::Get()->RegisterSessionMainThread(
+                        std::move(keyStr), sessionType, content.payload.alias, true);
+
+                if (pNode)
+                {
+                    NotifyToast{"Registered discovered session"};
+                }
+                else
+                {
+                    NotifyToast{"Session is already registered"}.Wanrning();
+                }
+            };
+
+            // NOTE: Intentionally defer register invocation, to prevent session list modification
+            //        during range-based for loop, which makes a call to this
+            //        RenderSessionListEntityContent() function.
+            PostEventMainThread(std::move(fnRegister));
+        }
+    }
+
+    ImGui::EndListBox();
 }
 
 void SessionDiscoverAgent::onRecvFindMe(asio::ip::udp::endpoint& ep, message::find_me_t& tm)
 {
     // TODO: Add node
+    auto iter = _findMe.find(ep);
+    if (iter == _findMe.end())
+    {
+        NotifyToast{"New session discovered"}.String("{} ({}:{})", tm.alias, ep.address().to_string(), tm.port);
+        iter = _findMe.try_emplace(move(ep)).first;
+    }
+
+    auto& [endpoint, content] = *iter;
+    content.latestRefresh = steady_clock::now();
+    content.payload = std::move(tm);
 }
 
 auto CreateSessionDiscoverAgent() -> shared_ptr<ISession>
