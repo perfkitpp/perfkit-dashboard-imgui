@@ -311,7 +311,7 @@ void widgets::ConfigWindow::_recursiveConstructCategories(
     for (auto& entity : desc.entities)
     {
         auto [iter, bIsNew] = _allEntities.try_emplace(entity.config_key);
-        assert(bIsNew);
+        // TODO: WARN when not bIsNew
 
         rg->entityKeys.push_back(entity.config_key);
 

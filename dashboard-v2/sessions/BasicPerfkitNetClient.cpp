@@ -226,7 +226,6 @@ void BasicPerfkitNetClient::_onSessionCreate_(rpc::session_profile_view profile)
                  peer = profile->peer_name,
                  ttyContent = std::move(ttyContent),
                  anchor = anchor]() mutable {
-                    assert(not _sessionAnchor);
                     _rpc.reset();
                     _rpc = move(rpc);
 
