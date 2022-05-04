@@ -275,6 +275,14 @@ void widgets::ConfigWindow::_handleNewConfigClassMainThread(
     bFilterTargetDirty = true;
 }
 
+void widgets::ConfigWindow::_handleDeletedConfigClass(const string& key)
+{
+    if (auto ctx = _ctxs.find(key); ctx != _ctxs.end())
+    {
+        _cleanupRegistryContext(ctx->second);
+    }
+}
+
 void widgets::ConfigWindow::_handleConfigsUpdate(config_entity_update_t const& entityDesc)
 {
     if (auto* pair = perfkit::find_ptr(_allEntities, entityDesc.config_key))
@@ -311,7 +319,7 @@ void widgets::ConfigWindow::_recursiveConstructCategories(
     for (auto& entity : desc.entities)
     {
         auto [iter, bIsNew] = _allEntities.try_emplace(entity.config_key);
-        // TODO: WARN when not bIsNew
+        assert(bIsNew);
 
         rg->entityKeys.push_back(entity.config_key);
 
@@ -359,8 +367,10 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
         CategoryDescPtr category,
         bool bCollapsed)
 {
-    auto self = &rg.categoryContexts.at(category);
+    auto pairPtr = find_ptr(rg.categoryContexts, category);
+    if (not pairPtr) { return; }
     auto const& evt = gEvtThisFrame;
+    auto self = &pairPtr->second;
 
     auto const fnCheckFilter
             = ([](string_view key) -> optional<pair<int, int>> {

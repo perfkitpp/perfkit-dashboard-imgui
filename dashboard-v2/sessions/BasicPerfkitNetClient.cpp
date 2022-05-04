@@ -40,6 +40,8 @@ BasicPerfkitNetClient::BasicPerfkitNetClient()
                    [this](tty_output_t& h) { _ttyQueue.lock()->append(h.content); })
             .route(notify::new_config_category,
                    bind_front(&decltype(_wndConfig)::HandleNewConfigClass, &_wndConfig))
+            .route(notify::deleted_config_category,
+                   bind_front(&decltype(_wndConfig)::HandleDeletedConfigClass, &_wndConfig))
             .route(notify::config_entity_update,
                    bind_front(&decltype(_wndConfig)::HandleConfigUpdate, &_wndConfig))
             .route(notify::session_status,

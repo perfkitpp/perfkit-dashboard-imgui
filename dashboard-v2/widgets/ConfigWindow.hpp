@@ -180,9 +180,17 @@ class ConfigWindow
                 bind_front(&Self::_handleConfigsUpdate, this, entity));
     }
 
+    void HandleDeletedConfigClass(string const& key)
+    {
+        PostEventMainThreadWeak(
+                _host->SessionAnchor(),
+                bind_front(&Self::_handleDeletedConfigClass, this, key));
+    }
+
    private:
     void _handleNewConfigClassMainThread(uint64_t, string, CategoryDesc);
     void _handleConfigsUpdate(config_entity_update_t const& entity);
+    void _handleDeletedConfigClass(string const& key);
 
     void _cleanupRegistryContext(ConfigRegistryContext& rg);
     void _recursiveConstructCategories(ConfigRegistryContext* rg, CategoryDesc const& ref, ConfigCategoryContext* parent);
