@@ -555,7 +555,8 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
 
             ImGui::SameLine(0, 0);
             ImGui::TextColored({1, 1, 0, .7}, entity->_bIsDirty ? "*" : " ");
-            ImGui::SameLine(DpiScale() * 200);
+            ImGui::SameLine(0, 0);
+            ImGui::SameLine(max<float>(ImGui::GetCursorPosX(), DpiScale() * 200));
 
             bool bHasUpdate = false;
 
