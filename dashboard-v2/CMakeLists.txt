@@ -85,25 +85,41 @@ endif ()
 
 
 #
-# INSTALL SCRIPT
+# Resource configuration for debugging
 #
-set_target_properties(
-        ${PROJECT_NAME}
-
-        PROPERTIES
-        ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
-        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${PROJECT_NAME}"
-        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
-)
-
 configure_file(
         ${CMAKE_SOURCE_DIR}/misc/JetBrainsMono-Regular.ttf
-        ${CMAKE_BINARY_DIR}/${PROJECT_NAME}/rsrc/fonts/font-0.ttf
+        ${CMAKE_CURRENT_BINARY_DIR}/rsrc/fonts/font-0.ttf
         COPYONLY
 )
 
 configure_file(
         ${CMAKE_SOURCE_DIR}/misc/NanumGothic.ttf
-        ${CMAKE_BINARY_DIR}/${PROJECT_NAME}/rsrc/fonts/font-1.ttf
+        ${CMAKE_CURRENT_BINARY_DIR}/rsrc/fonts/font-1.ttf
         COPYONLY
 )
+
+#
+# Install configuration
+#
+install(
+        TARGETS ${PROJECT_NAME}
+        RUNTIME DESTINATION ${PROJECT_NAME}
+)
+
+install(
+        FILES $<TARGET_PDB_FILE:${PROJECT_NAME}>
+        OPTIONAL
+        DESTINATION ${PROJECT_NAME}
+)
+
+install(
+        DIRECTORY
+        ${CMAKE_CURRENT_BINARY_DIR}/rsrc
+
+        DESTINATION
+        ${PROJECT_NAME}
+)
+
+
+

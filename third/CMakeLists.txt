@@ -11,7 +11,8 @@ FetchContent_Declare(implot URL https://github.com/epezent/implot/archive/refs/h
 FetchContent_Populate(implot)
 
 FetchContent_Declare(glfw URL https://github.com/glfw/glfw/archive/refs/tags/3.3.7.tar.gz)
-FetchContent_MakeAvailable(glfw)
+FetchContent_Populate(glfw)
+add_subdirectory(${glfw_SOURCE_DIR} ${glfw_BINARY_DIR} EXCLUDE_FROM_ALL)
 
 target_sources(
         ${PROJECT_NAME}
