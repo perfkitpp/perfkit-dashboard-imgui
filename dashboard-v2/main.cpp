@@ -13,6 +13,7 @@
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #    include <GLES2/gl2.h>
 #endif
+
 #include <GLFW/glfw3.h>  // Will drag system OpenGL headers
 
 // [Win32] Our example includes a copy of glfw3.lib pre-compiled with VS2010 to maximize ease of testing and compatibility with old VS compilers.
@@ -38,6 +39,9 @@ static void glfw_error_callback(int error, const char* description)
 #ifdef _WIN32
 #    undef APIENTRY
 #    include <Windows.h>
+
+#    define GLFW_EXPOSE_NATIVE_WIN32
+#    include <GLFW/glfw3native.h>  // Will drag system OpenGL headers
 
 INT WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
                    PSTR lpCmdLine, INT nCmdShow)
@@ -79,6 +83,16 @@ int main(int, char**)
         return 1;
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);  // Enable vsync
+
+#ifdef _WIN32  // Set window icon
+    if (auto hwnd = ::glfwGetWin32Window(window))
+    {
+        auto rsrc = ::LoadIcon(GetModuleHandle(NULL), "IDI_ICON1");
+
+        SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)rsrc);
+        SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)rsrc);
+    }
+#endif
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();

@@ -1,10 +1,21 @@
 project(perfkit-dashboard-v2)
 
+
+#
+# EXECUTABLE
+#
+if (MSVC)
+    add_executable(${PROJECT_NAME} WIN32 ${${PROJECT_NAME}_SOURCES})
+    target_sources(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/rsrc/icon.rc)
+else ()
+    add_executable(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCES})
+endif ()
+
 #
 # SOURCES
 #
-set(
-        ${PROJECT_NAME}_SOURCES
+target_sources(
+        ${PROJECT_NAME} PRIVATE
 
         main.cpp
         Application.cpp
@@ -24,15 +35,6 @@ set(
         widgets/TraceWindow.cpp
         widgets/TimePlot.cpp
 )
-
-#
-# EXECUTABLE
-#
-if (MSVC)
-    add_executable(${PROJECT_NAME} WIN32 ${${PROJECT_NAME}_SOURCES})
-else ()
-    add_executable(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCES})
-endif ()
 
 #
 # DEPENDENCIES
