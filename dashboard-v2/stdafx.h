@@ -98,7 +98,7 @@ struct ConditionalFinalInvoke
 template <typename Callable, typename... Args_>
 auto CondInvokeImpl(bool condition, Callable callable, Args_&&... args)
 {
-    return detail::ConditionalFinalInvoke{condition, perfkit::bind_front(std::forward<Callable>(callable), std::forward<Args_>(args)...)};
+    return detail::ConditionalFinalInvoke{condition, cpph::bind_front(std::forward<Callable>(callable), std::forward<Args_>(args)...)};
 }
 }  // namespace perfkit::detail
 

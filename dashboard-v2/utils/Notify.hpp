@@ -28,7 +28,7 @@ class NotifyToast
         steady_clock::time_point Lifespan = steady_clock::now() + 5s;
         steady_clock::time_point Birth;
 
-        function<void()> OnForceClose = perfkit::default_function;
+        function<void()> OnForceClose = cpph::default_function;
 
         bool bInfinity = false;
         int stateIdAlloc = -1;

@@ -5,7 +5,6 @@
 #include "TimePlot.hpp"
 
 #include "Application.hpp"
-#include "cpph/helper/nlohmann_json_macros.hxx"
 #include "cpph/macros.hxx"
 #include "cpph/utility/chrono.hxx"
 #include "cpph/utility/cleanup.hxx"
@@ -24,7 +23,7 @@ PERFKIT_DECLARE_SUBCATEGORY(GConfig::Widgets)
         bool bIsDisplayed;
         bool bTimePlotMode;
 
-        CPPHEADERS_DEFINE_NLOHMANN_JSON_ARCHIVER(PlotWindow, key, title, bIsDisplayed, bTimePlotMode);
+        CPPH_REFL_DEFINE_OBJECT_inline_simple(key, title, bIsDisplayed, bTimePlotMode);
     };
 
     PERFKIT_CONFIGURE(TimePlotWindows, vector<PlotWindow>{}).confirm();

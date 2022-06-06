@@ -13,7 +13,6 @@
 #include <asio/io_context.hpp>
 #include <asio/post.hpp>
 #include <cpph/algorithm/std.hxx>
-#include <cpph/helper/nlohmann_json_macros.hxx>
 #include <cpph/macros.hxx>
 #include <cpph/utility/cleanup.hxx>
 #include <imgui.h>
@@ -46,11 +45,11 @@ PERFKIT_CATEGORY(GConfig)
             string displayName;
             bool bShow = false;
 
-            CPPHEADERS_DEFINE_NLOHMANN_JSON_ARCHIVER(SessionArchive, key, type, displayName, bShow);
+            CPPH_REFL_DEFINE_OBJECT_inline_simple(key, type, displayName, bShow);
         };
 
         PERFKIT_CONFIGURE(ArchivedSessions, vector<SessionArchive>{}).confirm();
-        PERFKIT_CONFIGURE(Numbers, std::map<string, double, std::less<>>{}).confirm();
+        PERFKIT_CONFIGURE(Numbers, (std::map<string, double, std::less<>>{})).confirm();
     }
 
     PERFKIT_SUBCATEGORY(Widgets) {}
@@ -543,7 +542,7 @@ bool Application::isSessionExist(std::string_view name, ESessionType type)
 
 void Application::loadWorkspace()
 {
-    if (not perfkit::configs::import_file(_workspacePath))
+    if (not perfkit::configs_import(_workspacePath))
     {
         NotifyToast{}.Error().String("Config path '{}' is not a valid file.", _workspacePath);
         return;
@@ -556,7 +555,7 @@ void Application::saveWorkspace()
 {
     OnDumpWorkspace.invoke();
 
-    perfkit::configs::export_to(_workspacePath);
+    perfkit::configs_export(_workspacePath);
 }
 
 void Application::tickSessions()
