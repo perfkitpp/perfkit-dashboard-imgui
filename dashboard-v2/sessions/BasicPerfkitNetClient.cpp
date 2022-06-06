@@ -316,13 +316,19 @@ void BasicPerfkitNetClient::tickHeartbeat()
         return;
     }
 
-    _hrpcHeartbeat = service::heartbeat(_rpc).async_request(
-            [](auto&& ec, auto content) {
-                if (ec)
-                    NotifyToast{"Heartbeat returned error"}
-                            .Error()
-                            .String(content);
-            });
+    try
+    {
+        _hrpcHeartbeat = service::heartbeat(_rpc).async_request(
+                [](auto&& ec, auto content) {
+                    if (ec)
+                        NotifyToast{"Heartbeat returned error"}
+                                .Error()
+                                .String(content);
+                });
+    }
+    catch (...)
+    {
+    }
 }
 
 void BasicPerfkitNetClient::CloseSession()
