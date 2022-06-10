@@ -8,6 +8,7 @@
 #include <nlohmann/json.hpp>
 
 #include "TextEditor.h"
+#include "cpph/memory/pool.hxx"
 #include "cpph/timer.hxx"
 #include "interfaces/RpcSessionOwner.hpp"
 #include "perfkit/extension/net/protocol.hpp"
@@ -95,7 +96,7 @@ class ConfigWindow
         vector<uint64_t> entityKeys;
 
         //! Config category descriptor
-        CategoryDesc rootCategoryDesc;
+        pool_ptr<CategoryDesc> rootCategoryDesc;
 
         //! Config contexts
         unordered_map<CategoryDescPtr, ConfigCategoryContext> categoryContexts;
@@ -144,6 +145,9 @@ class ConfigWindow
     //! All config entities
     unordered_map<uint64_t, ConfigEntityContext> _allEntities;
 
+    //! Recv pool
+    pool<CategoryDesc> _poolCatRecv;
+
    public:
     explicit ConfigWindow(IRpcSessionOwner* host) noexcept : _host(host) {}
 
@@ -166,29 +170,32 @@ class ConfigWindow
     //
     //              Event Handling
     //
-    void HandleNewConfigClass(uint64_t id, string const& key, CategoryDesc const& root)
+    void HandleNewConfigClass(uint64_t id, string const& key, CategoryDesc& root)
     {
+        auto ptr = _poolCatRecv.checkout();
+        swap(root, *ptr);
+
         PostEventMainThreadWeak(
                 _host->SessionAnchor(),
-                bind_front(&Self::_handleNewConfigClassMainThread, this, id, key, root));
+                bind(&Self::_handleNewConfigClassMainThread, this, id, key, move(ptr)));
     }
 
     void HandleConfigUpdate(config_entity_update_t const& entity)
     {
         PostEventMainThreadWeak(
                 _host->SessionAnchor(),
-                bind_front(&Self::_handleConfigsUpdate, this, entity));
+                bind(&Self::_handleConfigsUpdate, this, entity));
     }
 
     void HandleDeletedConfigClass(string const& key)
     {
         PostEventMainThreadWeak(
                 _host->SessionAnchor(),
-                bind_front(&Self::_handleDeletedConfigClass, this, key));
+                bind(&Self::_handleDeletedConfigClass, this, key));
     }
 
    private:
-    void _handleNewConfigClassMainThread(uint64_t, string, CategoryDesc);
+    void _handleNewConfigClassMainThread(uint64_t, string, pool_ptr<CategoryDesc>&);
     void _handleConfigsUpdate(config_entity_update_t const& entity);
     void _handleDeletedConfigClass(string const& key);
 

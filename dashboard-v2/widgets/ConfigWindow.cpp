@@ -92,12 +92,12 @@ void widgets::ConfigWindow::Render(bool* bKeepOpen)
             CPPH_TMPVAR = ImGui::ScopedChildWindow(usprintf("%s.REGION", _host->KeyString().c_str()));
 
             for (auto& [key, ctx] : _ctxs)
-                recursiveTickSubcategory(ctx, &ctx.rootCategoryDesc, not bRenderComponents);
+                recursiveTickSubcategory(ctx, ctx.rootCategoryDesc.get(), not bRenderComponents);
         }
         else
         {
             for (auto& [key, ctx] : _ctxs)
-                recursiveTickSubcategory(ctx, &ctx.rootCategoryDesc, not bRenderComponents);
+                recursiveTickSubcategory(ctx, ctx.rootCategoryDesc.get(), not bRenderComponents);
         }
     }
 }
@@ -243,7 +243,7 @@ void widgets::ConfigWindow::tryRenderEditorContext()
 }
 
 void widgets::ConfigWindow::_handleNewConfigClassMainThread(
-        uint64_t id, string key, CategoryDesc rootCategory)
+        uint64_t id, string key, pool_ptr<CategoryDesc>& rootCategory)
 {
     auto [iter, bIsNew] = _ctxs.try_emplace(std::move(key));
     if (not bIsNew)
@@ -261,7 +261,7 @@ void widgets::ConfigWindow::_handleNewConfigClassMainThread(
 
     try
     {
-        _recursiveConstructCategories(rg, rg->rootCategoryDesc, nullptr);
+        _recursiveConstructCategories(rg, *rg->rootCategoryDesc, nullptr);
     }
     catch (Json::parse_error& ec)
     {
@@ -326,7 +326,7 @@ void widgets::ConfigWindow::_recursiveConstructCategories(
         auto* data = &iter->second;
         data->configKey = entity.config_key;
         data->name = entity.name;
-        data->description = entity.description;
+        data->description = entity.description.str();
         data->_bHasUpdate = true;
 
         if (not entity.initial_value.empty())
