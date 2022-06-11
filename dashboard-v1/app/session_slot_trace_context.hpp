@@ -33,7 +33,7 @@
 #include <spdlog/spdlog.h>
 
 #include "classes/session_context.hpp"
-#include "cpph/circular_queue.hxx"
+#include "cpph/container/circular_queue.hxx"
 #include "cpph/format.hxx"
 #include "cpph/timer.hxx"
 #include "cpph/utility/ownership.hxx"

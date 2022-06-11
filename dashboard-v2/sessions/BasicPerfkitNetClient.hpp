@@ -4,7 +4,7 @@
 
 #pragma once
 #include <TextEditor.h>
-#include <cpph/circular_queue.hxx>
+#include <cpph/container/circular_queue.hxx>
 #include <cpph/refl/rpc/core.hxx>
 #include <cpph/refl/rpc/detail/service.hxx>
 #include <cpph/thread/locked.hxx>

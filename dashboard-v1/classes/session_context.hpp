@@ -27,8 +27,8 @@
 
 #include "if_session_connection.hpp"
 #include "messages.hpp"
-#include "cpph/array_view.hxx"
-#include "cpph/assert.hxx"
+#include "cpph/utility/array_view.hxx"
+
 #include "cpph/functional.hxx"
 #include "cpph/hasher.hxx"
 #include "cpph/thread/locked.hxx"
@@ -69,7 +69,7 @@ class session_context
     {
         if (fence)
         {
-            assert_(*fence <= _output_fence);
+            assert(*fence <= _output_fence);
 
             auto diff = _output_fence - *fence;
             diff      = std::min(diff, _output.size());
@@ -111,7 +111,7 @@ class session_context
                                        std::move(wrapped_handler))
                               .second;
 
-        assert_(is_new);
+        assert(is_new);
     }
 
     void _on_epoch(info_type& payload);

@@ -24,7 +24,7 @@
 
 #pragma once
 
-#include <cpph/circular_queue.hxx>
+#include <cpph/container/circular_queue.hxx>
 #include <cpph/format.hxx>
 #include <cpph/functional.hxx>
 #include <cpph/macros.hxx>

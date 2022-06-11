@@ -37,7 +37,7 @@
 
 #include "imgui_extension.h"
 #include "imgui.h"
-#include "cpph/algorithm.hxx"
+#include "cpphalgorithm/std.hxx"
 #include "cpph/utility/cleanup.hxx"
 #include "perfkit/configs.h"
 #include "perfkit/extension/net.hpp"

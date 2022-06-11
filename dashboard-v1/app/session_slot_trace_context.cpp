@@ -37,7 +37,7 @@
 #include <range/v3/view/transform.hpp>
 
 #include "imgui_internal.h"
-#include "cpph/algorithm.hxx"
+#include "cpphalgorithm/std.hxx"
 #include "cpph/counter.hxx"
 #include "cpph/macros.hxx"
 #include "cpph/utility/cleanup.hxx"
@@ -478,7 +478,7 @@ void session_slot_trace_context::_fetch_update_traces()
         _cur_class_id   = 0;
         _cur_has_update = false;
 
-        assert_(_node_stack.empty());
+        assert(_node_stack.empty());
     }
 }
 
