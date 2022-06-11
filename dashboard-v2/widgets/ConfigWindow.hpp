@@ -136,6 +136,9 @@ class ConfigWindow
    private:
     IRpcSessionOwner* _host;
 
+    //! Recv pool
+    pool<CategoryDesc> _poolCatRecv;
+
     //! List of config registry contexts.
     map<string, ConfigRegistryContext> _ctxs;
 
@@ -144,9 +147,6 @@ class ConfigWindow
 
     //! All config entities
     unordered_map<uint64_t, ConfigEntityContext> _allEntities;
-
-    //! Recv pool
-    pool<CategoryDesc> _poolCatRecv;
 
    public:
     explicit ConfigWindow(IRpcSessionOwner* host) noexcept : _host(host) {}
