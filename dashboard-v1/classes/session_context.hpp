@@ -25,13 +25,12 @@
 #pragma once
 #include <future>
 
+#include "cpph/thread/locked.hxx"
+#include "cpph/utility/array_view.hxx"
+#include "cpph/utility/functional.hxx"
+#include "cpph/utility/hasher.hxx"
 #include "if_session_connection.hpp"
 #include "messages.hpp"
-#include "cpph/utility/array_view.hxx"
-
-#include "cpph/functional.hxx"
-#include "cpph/hasher.hxx"
-#include "cpph/thread/locked.hxx"
 
 struct session_context_message_marshal_error : std::exception
 {

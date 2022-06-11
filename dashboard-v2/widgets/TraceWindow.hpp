@@ -4,7 +4,7 @@
 
 #pragma once
 #include "cpph/thread/locked.hxx"
-#include "cpph/timer.hxx"
+#include "cpph/utility/timer.hxx"
 #include "interfaces/RpcSessionOwner.hpp"
 #include "perfkit/extension/net/protocol.hpp"
 

@@ -36,12 +36,12 @@
 #include <range/v3/view/map.hpp>
 #include <range/v3/view/transform.hpp>
 
-#include "imgui_internal.h"
-#include "cpphalgorithm/std.hxx"
-#include "cpph/counter.hxx"
-#include "cpph/macros.hxx"
+#include "cpph/helper/macros.hxx"
 #include "cpph/utility/cleanup.hxx"
-#include "cpph/zip.hxx"
+#include "cpph/utility/counter.hxx"
+#include "cpph/utility/zip.hxx"
+#include "cpphalgorithm/std.hxx"
+#include "imgui_internal.h"
 
 namespace views = ranges::views;
 using namespace perfkit::utilities;

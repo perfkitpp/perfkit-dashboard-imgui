@@ -7,7 +7,7 @@
 #include <memory>
 #include <vector>
 
-#include <cpph/event.hxx>
+#include <cpph/utility/event.hxx>
 #include <cpph/utility/singleton.hxx>
 
 namespace asio {

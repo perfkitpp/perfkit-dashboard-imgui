@@ -5,7 +5,7 @@
 #include "TimePlot.hpp"
 
 #include "Application.hpp"
-#include "cpph/macros.hxx"
+#include "cpph/helper/macros.hxx"
 #include "cpph/utility/chrono.hxx"
 #include "cpph/utility/cleanup.hxx"
 #include "cpph/utility/random.hxx"

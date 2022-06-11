@@ -34,9 +34,9 @@
 
 #include "classes/session_context.hpp"
 #include "cpph/container/circular_queue.hxx"
-#include "cpph/format.hxx"
-#include "cpph/timer.hxx"
+#include "cpph/utility/format.hxx"
 #include "cpph/utility/ownership.hxx"
+#include "cpph/utility/timer.hxx"
 
 using namespace std::literals;
 

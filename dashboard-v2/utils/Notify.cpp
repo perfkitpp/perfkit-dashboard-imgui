@@ -8,9 +8,9 @@
 #include <map>
 #include <mutex>
 
-#include <cpph/futils.hxx>
-#include <cpph/macros.hxx>
+#include <cpph/helper/macros.hxx>
 #include <cpph/utility/cleanup.hxx>
+#include <cpph/utility/futils.hxx>
 #include <spdlog/spdlog.h>
 
 #include "Application.hpp"

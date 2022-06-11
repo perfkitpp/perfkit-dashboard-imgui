@@ -12,8 +12,8 @@
 #include <unordered_set>
 #include <vector>
 
-#include <cpph/functional.hxx>
-#include <cpph/futils.hxx>
+#include <cpph/utility/functional.hxx>
+#include <cpph/utility/futils.hxx>
 #include <perfkit/fwd.hpp>
 #include <spdlog/fmt/fmt.h>
 

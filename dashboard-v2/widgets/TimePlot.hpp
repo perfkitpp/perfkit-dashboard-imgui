@@ -5,7 +5,7 @@
 #pragma once
 #include "cpph/container/circular_queue.hxx"
 #include "cpph/thread/thread_pool.hxx"
-#include "cpph/timer.hxx"
+#include "cpph/utility/timer.hxx"
 #include "imgui.h"
 #include "utils/TimePlotSlotProxy.hpp"
 

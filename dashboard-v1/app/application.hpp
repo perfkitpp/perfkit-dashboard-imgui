@@ -27,7 +27,7 @@
 //
 
 #pragma once
-#include <cpph/functional.hxx>
+#include <cpph/utility/functional.hxx>
 #include <spdlog/fmt/bundled/format.h>
 
 namespace asio {

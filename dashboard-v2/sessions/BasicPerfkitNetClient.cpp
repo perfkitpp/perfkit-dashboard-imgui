@@ -6,7 +6,7 @@
 
 #include <asio/dispatch.hpp>
 #include <asio/post.hpp>
-#include <cpph/macros.hxx>
+#include <cpph/helper/macros.hxx>
 #include <cpph/refl/object.hxx>
 #include <cpph/refl/rpc/rpc.hxx>
 #include <cpph/refl/rpc/service.hxx>

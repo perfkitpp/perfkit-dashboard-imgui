@@ -5,9 +5,9 @@
 #include "JsonEdit.hpp"
 
 #include <cpph/algorithm/std.hxx>
-#include <cpph/counter.hxx>
-#include <cpph/macros.hxx>
+#include <cpph/helper/macros.hxx>
 #include <cpph/utility/cleanup.hxx>
+#include <cpph/utility/counter.hxx>
 #include <nlohmann/json.hpp>
 
 #include "TextEditor.h"

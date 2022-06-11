@@ -8,7 +8,7 @@
 #include <cpph/refl/rpc/core.hxx>
 #include <cpph/refl/rpc/detail/service.hxx>
 #include <cpph/thread/locked.hxx>
-#include <cpph/timer.hxx>
+#include <cpph/utility/timer.hxx>
 #include <perfkit/extension/net/protocol.hpp>
 
 #include "interfaces/RpcSessionOwner.hpp"

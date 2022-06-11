@@ -33,8 +33,8 @@
 #include <asio/post.hpp>
 #include <asio/read.hpp>
 #include <asio/write.hpp>
-#include <cpph/format.hxx>
-#include <cpph/macros.hxx>
+#include <cpph/helper/macros.hxx>
+#include <cpph/utility/format.hxx>
 #include <spdlog/spdlog.h>
 
 using namespace perfkit::literals;

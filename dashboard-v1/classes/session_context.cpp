@@ -27,9 +27,9 @@
 #include <spdlog/spdlog.h>
 
 #include "app/application.hpp"
-#include "messages.hpp"
 #include "cpph/algorithm/base64.hxx"
-#include "cpph/macros.hxx"
+#include "cpph/helper/macros.hxx"
+#include "messages.hpp"
 #include "picosha2.h"
 
 using namespace perfkit::terminal::net;

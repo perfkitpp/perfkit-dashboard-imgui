@@ -25,9 +25,9 @@
 #pragma once
 
 #include <cpph/container/circular_queue.hxx>
-#include <cpph/format.hxx>
-#include <cpph/functional.hxx>
-#include <cpph/macros.hxx>
+#include <cpph/helper/macros.hxx>
+#include <cpph/utility/format.hxx>
+#include <cpph/utility/functional.hxx>
 #include <cpph/utility/ownership.hxx>
 
 #include "TextEditor.h"
