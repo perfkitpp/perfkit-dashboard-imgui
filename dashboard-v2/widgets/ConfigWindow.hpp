@@ -25,7 +25,6 @@ class ConfigWindow
 {
     using Self = ConfigWindow;
     using Json = nlohmann::json;
-    using CategoryDescPtr = notify::config_category_t const*;
     using CategoryDesc = notify::config_category_t;
 
    public:
@@ -70,7 +69,7 @@ class ConfigWindow
     struct ConfigCategoryContext : FilterEntity
     {
         //! Self reference
-        CategoryDescPtr selfRef = nullptr;
+        CategoryDesc const* selfRef;
 
         //! Reference to parent
         ConfigCategoryContext* parentContext = nullptr;
@@ -96,10 +95,10 @@ class ConfigWindow
         vector<uint64_t> entityKeys;
 
         //! Config category descriptor
-        pool_ptr<CategoryDesc> rootCategoryDesc;
+        pool_ptr<CategoryDesc const> rootCategoryDesc;
 
         //! Config contexts
-        unordered_map<CategoryDescPtr, ConfigCategoryContext> categoryContexts;
+        unordered_map<uint64_t, ConfigCategoryContext> categoryContexts;
 
        public:
         template <typename Ty_>
@@ -163,7 +162,7 @@ class ConfigWindow
     // Try to render editor context of this frame.
     //
     void tryRenderEditorContext();
-    void recursiveTickSubcategory(ConfigRegistryContext& rg, CategoryDescPtr category, bool bCollapsed = false);
+    void recursiveTickSubcategory(ConfigRegistryContext& rg, CategoryDesc const& category, bool bCollapsed = false);
     void commitEntity(ConfigEntityContext*);
 
    public:
@@ -199,7 +198,7 @@ class ConfigWindow
     void _handleConfigsUpdate(config_entity_update_t const& entity);
     void _handleDeletedConfigClass(string const& key);
 
-    void _cleanupRegistryContext(ConfigRegistryContext& rg);
-    void _recursiveConstructCategories(ConfigRegistryContext* rg, CategoryDesc const& ref, ConfigCategoryContext* parent);
+    void _recursiveConstructCategories(ConfigRegistryContext* rg, CategoryDesc const& desc, ConfigCategoryContext* parent);
+    void _collectGarbage();
 };
 }  // namespace widgets

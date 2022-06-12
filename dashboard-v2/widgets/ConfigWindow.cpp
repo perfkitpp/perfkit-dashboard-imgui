@@ -8,6 +8,8 @@
 #include <cpph/refl/object.hxx>
 #include <cpph/refl/rpc/rpc.hxx>
 #include <cpph/utility/cleanup.hxx>
+#include <fmt/chrono.h>
+#include <spdlog/spdlog.h>
 
 #include "imgui_extension.h"
 
@@ -92,12 +94,12 @@ void widgets::ConfigWindow::Render(bool* bKeepOpen)
             CPPH_TMPVAR = ImGui::ScopedChildWindow(usprintf("%s.REGION", _host->KeyString().c_str()));
 
             for (auto& [key, ctx] : _ctxs)
-                recursiveTickSubcategory(ctx, ctx.rootCategoryDesc.get(), not bRenderComponents);
+                recursiveTickSubcategory(ctx, *ctx.rootCategoryDesc, not bRenderComponents);
         }
         else
         {
             for (auto& [key, ctx] : _ctxs)
-                recursiveTickSubcategory(ctx, ctx.rootCategoryDesc.get(), not bRenderComponents);
+                recursiveTickSubcategory(ctx, *ctx.rootCategoryDesc, not bRenderComponents);
         }
     }
 }
@@ -246,18 +248,11 @@ void widgets::ConfigWindow::_handleNewConfigClassMainThread(
         uint64_t id, string key, pool_ptr<CategoryDesc>& rootCategory)
 {
     auto [iter, bIsNew] = _ctxs.try_emplace(std::move(key));
-    if (not bIsNew)
-    {
-        // Skip entities which are simply republished
-        if (iter->second.id == id)
-            return;
-
-        _cleanupRegistryContext(iter->second);
-    }
 
     auto* rg = &iter->second;
     rg->id = id;
-    rg->rootCategoryDesc = std::move(rootCategory);
+    rg->rootCategoryDesc = move(rootCategory).constant();
+    rg->entityKeys.clear();
 
     try
     {
@@ -266,20 +261,19 @@ void widgets::ConfigWindow::_handleNewConfigClassMainThread(
     catch (Json::parse_error& ec)
     {
         NotifyToast{"Json Parse Error"}.Error().String(ec.what());
-        _cleanupRegistryContext(iter->second);
-
         _ctxs.erase(iter);
     }
 
     // Refresh filter if being applied
     bFilterTargetDirty = true;
+    _collectGarbage();
 }
 
 void widgets::ConfigWindow::_handleDeletedConfigClass(const string& key)
 {
     if (auto ctx = _ctxs.find(key); ctx != _ctxs.end())
     {
-        _cleanupRegistryContext(ctx->second);
+        _collectGarbage();
     }
 }
 
@@ -312,16 +306,16 @@ void widgets::ConfigWindow::_recursiveConstructCategories(
         CategoryDesc const& desc,
         ConfigCategoryContext* parent)
 {
-    auto category = &rg->categoryContexts[&desc];
+    auto category = &rg->categoryContexts[desc.category_id];
     category->selfRef = &desc;
     category->parentContext = parent;
 
     for (auto& entity : desc.entities)
     {
-        auto [iter, bIsNew] = _allEntities.try_emplace(entity.config_key);
-        assert(bIsNew);
-
         rg->entityKeys.push_back(entity.config_key);
+
+        auto [iter, bIsNew] = _allEntities.try_emplace(entity.config_key);
+        if (not bIsNew) { continue; }
 
         auto* data = &iter->second;
         data->configKey = entity.config_key;
@@ -341,33 +335,23 @@ void widgets::ConfigWindow::_recursiveConstructCategories(
     }
 
     for (auto& subcategory : desc.subcategories)
+    {
         _recursiveConstructCategories(rg, subcategory, category);
-}
-
-void widgets::ConfigWindow::_cleanupRegistryContext(ConfigRegistryContext& rg)
-{
-    // 1. Unregister all entity contexts
-    for (auto key : rg.entityKeys)
-        _allEntities.erase(key);
-
-    // 2. Cleanup registry contents
-    rg = {};
+    }
 }
 
 void widgets::ConfigWindow::ClearContexts()
 {
-    for (auto& [name, ctx] : _ctxs)
-        _cleanupRegistryContext(ctx);
-
     _ctxs.clear();
+    _collectGarbage();
 }
 
 void widgets::ConfigWindow::recursiveTickSubcategory(
         ConfigRegistryContext& rg,
-        CategoryDescPtr category,
+        CategoryDesc const& category,
         bool bCollapsed)
 {
-    auto pairPtr = find_ptr(rg.categoryContexts, category);
+    auto pairPtr = find_ptr(rg.categoryContexts, category.category_id);
     if (not pairPtr) { return; }
     auto const& evt = gEvtThisFrame;
     auto self = &pairPtr->second;
@@ -435,7 +419,7 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
         self->bFilterHitChild = false;
         self->bFilterHitSelf = false;
 
-        auto hitResult = fnCheckFilter(category->name);
+        auto hitResult = fnCheckFilter(category.name);
         if (hitResult)
         {
             self->bFilterHitSelf = true;
@@ -444,7 +428,7 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
             self->bFilterHitChild = false;
         }
 
-        for (auto& entityDesc : category->entities)
+        for (auto& entityDesc : category.entities)
         {
             auto entity = &_allEntities.at(entityDesc.config_key);
 
@@ -472,21 +456,21 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
     if (not bCollapsed)
     {
         ImGui::SetNextItemOpen(bShouldOpen);
-        bTreeIsOpen = ImGui::TreeNodeEx(usprintf("##%p", category), ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_SpanFullWidth);
+        bTreeIsOpen = ImGui::TreeNodeEx(usprintf("##%p", category.category_id), ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_SpanFullWidth);
         if (ImGui::IsItemToggledOpen()) { self->bBaseOpen = not self->bBaseOpen; }
 
         ImGui::SameLine(0, 0);
-        fnRenderFilteredLabel(category->name, *self);
+        fnRenderFilteredLabel(category.name, *self);
     }
 
-    for (auto& subCategory : category->subcategories)
+    for (auto& subCategory : category.subcategories)
     {
-        recursiveTickSubcategory(rg, &subCategory, not bTreeIsOpen);
+        recursiveTickSubcategory(rg, subCategory, not bTreeIsOpen);
     }
 
     if (bTreeIsOpen)
     {
-        for (auto& entityDesc : category->entities)
+        for (auto& entityDesc : category.entities)
         {
             auto entity = &_allEntities.at(entityDesc.config_key);
             if (evt.bShouldApplyFilter && not entity->bFilterHitSelf) { continue; }
@@ -624,4 +608,53 @@ void widgets::ConfigWindow::commitEntity(widgets::ConfigWindow::ConfigEntityCont
     Json::to_msgpack(entity->value, nlohmann::detail::output_adapter<char>(update.content_next));
 
     service::update_config_entity(_host->RpcSession()).notify(update);
+}
+
+void widgets::ConfigWindow::_collectGarbage()
+{
+    static pool<unordered_map<uint64_t, size_t>> _refCntPool;
+    stopwatch time;
+
+    auto entityRefCnts = _refCntPool.checkout();
+    entityRefCnts->clear();
+    entityRefCnts->reserve(_allEntities.size());
+
+    size_t nErasedCategory = 0;
+    size_t nErasedEntity = 0;
+
+    for (auto& [key, CPPH_TMP] : _allEntities)
+        (*entityRefCnts)[key] = 0;
+
+    for (auto& [CPPH_TMP, ctx] : _ctxs)
+    {
+        for (auto entityKey : ctx.entityKeys)
+            entityRefCnts->at(entityKey)++;
+
+        auto catRefCnts = _refCntPool.checkout();
+        catRefCnts->clear();
+        catRefCnts->reserve(ctx.categoryContexts.size());
+
+        for (auto& [key, CPPH_TMP] : ctx.categoryContexts)
+            (*catRefCnts)[key] = 0;
+
+        // Recursively collect use counts
+        y_combinator{[&](auto&& recurse, CategoryDesc const& node) -> void {
+            catRefCnts->at(node.category_id)++;
+
+            for (auto& subc : node.subcategories)
+                recurse(subc);
+        }}(*ctx.rootCategoryDesc);
+
+        for (auto [categoryId, useCount] : *catRefCnts)
+            if (useCount == 0)
+                nErasedCategory += ctx.categoryContexts.erase(categoryId);
+    }
+
+    for (auto [entityId, useCount] : *entityRefCnts)
+        if (useCount == 0)
+            nErasedEntity += _allEntities.erase(entityId);
+
+    SPDLOG_DEBUG(
+            "[{}] ConfigWindow: {} categories, {} entities collected during GC. ({:.6})",
+            _host->DisplayString(), nErasedCategory, nErasedEntity, time.elapsed());
 }
