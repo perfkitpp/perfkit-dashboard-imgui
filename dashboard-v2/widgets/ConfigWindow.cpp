@@ -366,7 +366,7 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
                   auto const& evt = gEvtThisFrame;
 
                   auto pos = buf1.find(evt.filterContent);
-                  if (pos == key.npos)
+                  if (pos == string_view::npos)
                       return {};
                   else
                       return make_pair(int(pos), int(pos + evt.filterContent.size()));
@@ -441,7 +441,8 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
             }
             else
             {
-                entity->bFilterHitSelf = false;
+                entity->bFilterHitSelf = self->bFilterHitSelf;
+                entity->FilterCharsRange = {};
             }
         }
     }
@@ -449,7 +450,7 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
     if (evt.bExpandAll) { self->bBaseOpen = true; }
     if (evt.bCollapseAll) { self->bBaseOpen = false; }
 
-    bCollapsed = bCollapsed || evt.bShouldApplyFilter && not self->bFilterHitChild;
+    bCollapsed = bCollapsed || evt.bShouldApplyFilter && (not self->bFilterHitChild && not self->bFilterHitSelf);
     bool const bShouldOpen = (self->bBaseOpen || evt.bShouldApplyFilter && self->bFilterHitChild) && not bCollapsed;
     bool bTreeIsOpen = false;
 
