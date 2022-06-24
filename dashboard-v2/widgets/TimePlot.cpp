@@ -349,11 +349,11 @@ void TimePlotWindowManager::TickWindow()
                 // TODO: Make legend drag-droppable
                 if (wnd->frameInfo.bTimeBuildMode)
                 {
-                    ImPlot::SetupAxis(ImAxis_X1, nullptr, ImPlotAxisFlags_Time);
+                    ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
                 }
                 else
                 {
-                    ImPlot::SetupAxis(ImAxis_X1, nullptr, 0);
+                    ImPlot::SetupAxisScale(ImAxis_X1, 0);
                 }
 
                 // Invalidate cache if window layout has changed.
