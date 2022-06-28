@@ -96,7 +96,10 @@ bool ImGui::SingleLineJsonEdit(
         ImGui::SetNextItemWidth(-1.f);
 
         if (ImGui::InputText("##TEDIT", str, ImGuiInputTextFlags_EnterReturnsTrue))
+        {
             ImGui::SetKeyboardFocusHere(-1);
+            bValueChanged = true;
+        }
     }
     else
     {
