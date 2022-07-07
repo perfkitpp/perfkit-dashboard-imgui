@@ -33,7 +33,7 @@ class JsonEditor
     ~JsonEditor();
 
     void Reset(Json&& object, Json const* min = {}, Json const* max = {});
-    void Render(void* id);
+    void Render(void* id, float heightOverride = 0);
 
     auto FlagsThisFrame() const -> EditorStateFlag { return _flags; }
     void ClearDirtyFlag() { _flags = {}; }

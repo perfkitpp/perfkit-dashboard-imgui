@@ -128,27 +128,28 @@ struct JsonEditor::Impl
     void* editingID = nullptr;
 };
 
-void JsonEditor::Render(void* id)
+void JsonEditor::Render(void* id, float heightOverride)
 {
     ImGui::PushID(id);
     CPPH_FINALLY(ImGui::PopID());
 
     if (_self->bRawEditMode)
     {
-        _self->rawEditor.Render("##EditJson", {}, false);
+        if (heightOverride == -1)
+        {
+            heightOverride = ImGui::GetTextLineHeight() * (_self->rawEditor.GetTotalLines() + 1);
+            heightOverride = std::min(heightOverride, 400 * DpiScale());
+        }
+
+        _self->rawEditor.Render("##EditJson", {0, heightOverride}, false);
         _flags.bIsDirty = _flags.bIsDirty || _self->rawEditor.IsTextChanged();
     }
     else
     {
-        if (ImGui::BeginChild("ChildWindow", {}))
-        {
-            renderRecurse(
-                    &_self->editing,
-                    _self->min ? &*_self->min : nullptr,
-                    _self->max ? &*_self->max : nullptr);
-        }
-
-        ImGui::EndChild();
+        renderRecurse(
+                &_self->editing,
+                _self->min ? &*_self->min : nullptr,
+                _self->max ? &*_self->max : nullptr);
     }
 }
 
