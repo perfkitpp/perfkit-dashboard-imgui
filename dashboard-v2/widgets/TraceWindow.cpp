@@ -125,6 +125,8 @@ void widgets::TraceWindow::Render(bool* bKeepOpen)
             ImGui::PopID();
         }
     }
+
+    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 300 * DpiScale());
 }
 
 void widgets::TraceWindow::Tick()
@@ -283,7 +285,7 @@ static ImU32 VisitPayloadEntity(string* out, bool const& value)
 void widgets::TraceWindow::_recurseRootTraceNode(
         TracerContext* tracer, TraceNodeContext* node)
 {
-    auto nodeFlags = ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_SpanFullWidth;
+    auto nodeFlags = ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_SpanFullWidth | ImGuiTreeNodeFlags_DefaultOpen;
 
     if (node->children.empty())
         nodeFlags |= ImGuiTreeNodeFlags_Leaf;
@@ -302,7 +304,7 @@ void widgets::TraceWindow::_recurseRootTraceNode(
     bool const bNodeToggleOpened = ImGui::IsItemToggledOpen();
     ImGui::PopStyleColor();
 
-    bool const bShowContentTooltip = ImGui::IsItemHovered();
+    //    bool const bShowContentTooltip = ImGui::IsItemHovered();
     bool bToggleSubsription = ImGui::IsItemClicked(ImGuiMouseButton_Right);
     bool bTogglePlotWindow = ImGui::IsItemClicked() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left);
 
