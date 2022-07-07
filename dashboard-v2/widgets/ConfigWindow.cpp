@@ -102,34 +102,39 @@ void widgets::ConfigWindow::Render(bool* bKeepOpen)
                 recursiveTickSubcategory(ctx, *ctx.rootCategoryDesc, not bRenderComponents);
         }
     }
+
+    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 600 * DpiScale());
 }
 
 void widgets::ConfigWindow::Tick()
 {
     /// Render editor context
-    tryRenderEditorContext();
+    //    tryRenderEditorContext();
 }
 
 void widgets::ConfigWindow::tryRenderEditorContext()
 {
     auto& _ctx = globalEditContext;
 
-    if (_ctx.ownerRef.lock().get() != this) { return; }
+    if (_ctx.ownerRef.lock().get() != this)
+    {
+        if (_ctx._editingRef) { _ctx._editingRef = nullptr; }
+        return;
+    }
+
     if (std::exchange(_ctx._bReloadFrame, false)) { return; }
     if (std::exchange(_ctx._frameCountFence, gFrameIndex) == gFrameIndex) { return; }
 
-    auto entity = &*_ctx.entityRef.lock();
+    auto entity = _ctx.entityRef.lock().get();
 
     /// Render editor window
-    CPPH_FINALLY(ImGui::End());
+    auto childWndKey = CPPH_ALLOCA_CSTR((string_view)usprintf("edit: %s%c###CONFEDIT", entity->name.c_str(), entity->_bIsDirty ? '*' : ' '));
+    // CPPH_FINALLY(ImGui::EndChildAutoHeight(childWndKey));
 
-    bool bWndKeepOpen = true;
-    bool bContinue = ImGui::Begin(
-            usprintf("edit: %s%c###CONFEDIT", entity->name.c_str(), entity->_bIsDirty ? '*' : ' '),
-            &bWndKeepOpen, ImGuiWindowFlags_MenuBar);
-
-    if (not bWndKeepOpen) { _ctx.ownerRef = {}, _ctx._editingRef = {}; }
-    if (not bWndKeepOpen || not bContinue) { return; }
+    ImGui::Separator();
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, 0xff121212);
+    ImGui::BeginChildAutoHeight(childWndKey, 0, true, ImGuiWindowFlags_MenuBar);
+    // ImGui::BeginChild(childWndKey, {0, 500 * DpiScale()}, true, ImGuiWindowFlags_MenuBar);
 
     bool bDoReload = false;
     if (exchange(_ctx._editingRef, entity) != entity)
@@ -158,10 +163,11 @@ void widgets::ConfigWindow::tryRenderEditorContext()
         bDoReload |= ImGui::IsKeyDown(ImGuiKey_LeftCtrl) && ImGui::IsKeyPressed(ImGuiKey_R);
 
         ImGui::PushStyleColor(ImGuiCol_Text, ColorRefs::FrontWarn);
-        bDoReload |= entity->_bHasUpdateForEditor && ImGui::SmallButton("Reload! (^R)");
+        bDoReload |= entity->_bHasUpdateForEditor && (ImGui::Spacing(), ImGui::MenuItem("Reload! (^R)"));
         ImGui::PopStyleColor();
     }
 
+    ImGui::Spacing();
     if (bDoReload)
     {
         Json *minPtr = {}, *maxPtr = {};
@@ -176,14 +182,13 @@ void widgets::ConfigWindow::tryRenderEditorContext()
     bool bCommitValue = _ctx.bDirty && entity->_bUpdateOnEdit;
     bool const bIsOneOf = not entity->optOneOf.empty() && entity->optOneOf.is_array();
 
-    ImGui::BeginChild("##Editor", {0, _ctx._editAreaMinusOffset}, true);
-
     if (bIsOneOf)
     {
         // Render 'oneof' selector
         auto curValue = entity->value.dump();
+        auto height = ImGui::GetFrameHeight() * entity->optOneOf.size();
 
-        if (CondInvoke(ImGui::BeginListBox("##OneOfSelector", {-1, -1}), &ImGui::EndListBox))
+        if (CondInvoke(ImGui::BeginListBox("##OneOfSelector", {-1, height}), &ImGui::EndListBox))
         {
             for (auto& elem : entity->optOneOf)
             {
@@ -210,26 +215,23 @@ void widgets::ConfigWindow::tryRenderEditorContext()
     else
     {
         // Edit json content
-        _ctx.editor.Render(&_ctx);
+        _ctx.editor.Render(&_ctx, -1);
         _ctx.bDirty |= (bool)_ctx.editor.FlagsThisFrame().bIsDirty;
         _ctx.editor.ClearDirtyFlag();
     }
 
-    ImGui::EndChild();
-
-    if (not bCommitValue && _ctx.bDirty && not entity->_bUpdateOnEdit)
+    if (/*not bCommitValue && _ctx.bDirty && */ not entity->_bUpdateOnEdit)
     {
-        auto ptStart = ImGui::GetCursorPosY();
-        ImGui::PushStatefulColors(ImGuiCol_Button, ColorRefs::BackOkay);
+        ImGui::Spacing(), ImGui::Spacing();
+
+        auto bDisableCommit = bCommitValue || not _ctx.bDirty;
+        ImGui::PushStatefulColors(ImGuiCol_Button, not bDisableCommit ? ColorRefs::BackOkay : ColorRefs::Disabled);
         CPPH_FINALLY(ImGui::PopStatefulColors());
 
+        if (bDisableCommit) { ImGui::BeginDisabled(); }
         bCommitValue |= ImGui::IsKeyDown(ImGuiKey_LeftCtrl) && ImGui::IsKeyPressed(ImGuiKey_S);
         bCommitValue |= ImGui::Button("Commit (^S)", {-1, 0});
-        _ctx._editAreaMinusOffset = ptStart - ImGui::GetCursorPosY();
-    }
-    else
-    {
-        _ctx._editAreaMinusOffset = 0;
+        if (bDisableCommit) { ImGui::EndDisabled(); }
     }
 
     if (bCommitValue)
@@ -242,6 +244,11 @@ void widgets::ConfigWindow::tryRenderEditorContext()
         _ctx.bDirty = false;
         commitEntity(entity);
     }
+
+    // ImGui::EndChild();
+    ImGui::EndChildAutoHeight(childWndKey);
+    ImGui::PopStyleColor();
+    ImGui::Separator();
 }
 
 void widgets::ConfigWindow::_handleNewConfigClassMainThread(
@@ -507,8 +514,17 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
 
             if (bIsItemClicked)
             {
-                globalEditContext.ownerRef = rg.WrapPtr(this);
-                globalEditContext.entityRef = rg.WrapPtr(entity);
+                if (globalEditContext._editingRef == entity)
+                {
+                    globalEditContext.entityRef.reset();
+                    globalEditContext.ownerRef.reset();
+                }
+                else
+                {
+                    globalEditContext.ownerRef = rg.WrapPtr(this);
+                    globalEditContext.entityRef = rg.WrapPtr(entity);
+                }
+                tryRenderEditorContext();
             }
 
             if (bIsItemHovered)
@@ -587,7 +603,13 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
                 {
                     globalEditContext.ownerRef = rg.WrapPtr(this);
                     globalEditContext.entityRef = rg.WrapPtr(entity);
+                    tryRenderEditorContext();
                 }
+            }
+
+            if (globalEditContext._editingRef == entity)
+            {
+                tryRenderEditorContext();
             }
 
             if (bHasUpdate)

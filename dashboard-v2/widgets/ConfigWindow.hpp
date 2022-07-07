@@ -128,7 +128,6 @@ class ConfigWindow
 
         //! [transient]
         size_t _frameCountFence = 0;
-        float _editAreaMinusOffset = 0;
         bool _bReloadFrame = false;
     };
 
