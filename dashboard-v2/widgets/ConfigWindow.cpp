@@ -33,6 +33,7 @@ void widgets::ConfigWindow::Render(bool* bKeepOpen)
     /// Render tools -> expand all, collapse all, filter, etc ...
     static size_t _latestFrameCount = 0;
     bool const bShouldRenderStaticComponents = std::exchange(_latestFrameCount, gFrameIndex) != gFrameIndex;
+    ImGui::SetScrollX(0);
 
     if (bShouldRenderStaticComponents)
     {
@@ -92,6 +93,7 @@ void widgets::ConfigWindow::Render(bool* bKeepOpen)
         if (bRenderComponents)
         {
             CPPH_TMPVAR = ImGui::ScopedChildWindow(usprintf("%s.REGION", _host->KeyString().c_str()));
+            ImGui::SetScrollX(0);
 
             for (auto& [key, ctx] : _ctxs)
                 recursiveTickSubcategory(ctx, *ctx.rootCategoryDesc, not bRenderComponents);
