@@ -588,6 +588,14 @@ void Application::tickSessions()
 
         ImGui::PopStyleColor(bDrawGreenHeader * 4);
     }
+
+    if (auto wnd = ImGui::FindWindowByName("configs"); wnd && ImGui::GetCurrentContext()->FrameCount == wnd->LastFrameActive)
+    {
+        if (CPPH_FINALLY(ImGui::End()); ImGui::Begin("configs"))
+        {
+            ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 600 * DpiScale());
+        }
+    }
 }
 
 //

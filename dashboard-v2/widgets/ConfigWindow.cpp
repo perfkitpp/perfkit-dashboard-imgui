@@ -104,8 +104,6 @@ void widgets::ConfigWindow::Render(bool* bKeepOpen)
                 recursiveTickSubcategory(ctx, *ctx.rootCategoryDesc, not bRenderComponents);
         }
     }
-
-    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 600 * DpiScale());
 }
 
 void widgets::ConfigWindow::Tick()
