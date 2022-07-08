@@ -132,7 +132,8 @@ void widgets::ConfigWindow::tryRenderEditorContext()
     // CPPH_FINALLY(ImGui::EndChildAutoHeight(childWndKey));
 
     ImGui::Separator();
-    ImGui::PushStyleColor(ImGuiCol_ChildBg, 0xff121212);
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, 0xff343434);
+    ImGui::PushStyleColor(ImGuiCol_MenuBarBg, 0xff292929);
     ImGui::BeginChildAutoHeight(childWndKey, 0, true, ImGuiWindowFlags_MenuBar);
     // ImGui::BeginChild(childWndKey, {0, 500 * DpiScale()}, true, ImGuiWindowFlags_MenuBar);
 
@@ -145,7 +146,8 @@ void widgets::ConfigWindow::tryRenderEditorContext()
 
     if (CondInvoke(ImGui::BeginMenuBar(), ImGui::EndMenuBar))
     {
-        ImGui::Checkbox("Update on edit", &entity->_bUpdateOnEdit);
+        ImGui::MenuItem("Update on edit", nullptr, &entity->_bUpdateOnEdit);
+        ImGui::Separator();
 
         if (entity->optOneOf.empty())
         {
@@ -153,7 +155,7 @@ void widgets::ConfigWindow::tryRenderEditorContext()
                     = ImGui::IsKeyDown(ImGuiKey_LeftCtrl)
                    && ImGui::IsKeyPressed(ImGuiKey_E);
 
-            if (ImGui::Checkbox("Edit in raw (^E)", &entity->_bEditInRaw) || bToggleEditInRaw)
+            if (ImGui::MenuItem("Edit in raw (^E)", nullptr, &entity->_bEditInRaw) || bToggleEditInRaw)
             {
                 if (bToggleEditInRaw) { entity->_bEditInRaw = !entity->_bEditInRaw; }
                 _ctx.editor.RawEditMode(&entity->_bEditInRaw);
@@ -167,7 +169,6 @@ void widgets::ConfigWindow::tryRenderEditorContext()
         ImGui::PopStyleColor();
     }
 
-    ImGui::Spacing();
     if (bDoReload)
     {
         Json *minPtr = {}, *maxPtr = {};
@@ -247,7 +248,7 @@ void widgets::ConfigWindow::tryRenderEditorContext()
 
     // ImGui::EndChild();
     ImGui::EndChildAutoHeight(childWndKey);
-    ImGui::PopStyleColor();
+    ImGui::PopStyleColor(2);
     ImGui::Separator();
 }
 
