@@ -12,17 +12,17 @@ class EventProcedureImpl : public rpc::if_event_proc
     cpph::thread_pool _eq_hdl{1, 20 << 10};
 
    public:
-    void post_rpc_completion(function<void()>&& fn) override
+    void post_rpc_completion(ufunction<void()>&& fn) override
     {
         _eq_rpc.post(std::move(fn));
     }
 
-    void post_handler_callback(function<void()>&& fn) override
+    void post_handler_callback(ufunction<void()>&& fn) override
     {
         _eq_hdl.post(std::move(fn));
     }
 
-    void post_internal_message(function<void()>&& fn) override
+    void post_internal_message(ufunction<void()>&& fn) override
     {
         asio::post(std::move(fn));
     }

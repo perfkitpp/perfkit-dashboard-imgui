@@ -29,7 +29,7 @@ static auto PersistentNumberStorage()
     return &_storage;
 }
 
-void PostAsyncEvent(function<void()> evt)
+void PostAsyncEvent(ufunction<void()> evt)
 {
     asio::post(std::move(evt));
 }
@@ -86,12 +86,12 @@ void Application::TickMainThread()
     _timePlot->TickWindow();
 }
 
-void Application::PostMainThreadEvent(perfkit::function<void()> callable)
+void Application::PostMainThreadEvent(perfkit::ufunction<void()> callable)
 {
     asio::post(*_ioc, std::move(callable));
 }
 
-void Application::DispatchMainThreadEvent(perfkit::function<void()> callable)
+void Application::DispatchMainThreadEvent(perfkit::ufunction<void()> callable)
 {
     asio::dispatch(*_ioc, std::move(callable));
 }

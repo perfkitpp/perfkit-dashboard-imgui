@@ -19,7 +19,7 @@
 
 using cpph::bind_front;
 using cpph::bind_front_weak;
-using cpph::function;
+using cpph::ufunction;
 using cpph::futils::usprintf;
 using namespace perfkit;
 
@@ -107,9 +107,9 @@ auto CondInvokeImpl(bool condition, Callable callable, Args_&&... args)
 #define CondInvokeBody(CondExpr, ...) ::detail::CondInvokeImpl(CondExpr, __VA_ARGS__)
 #define CondInvoke(CondExpr, ...)     auto INTERNAL_PDASH_CONCAT(_pdash_intennal_, __LINE__) = CondInvokeBody(CondExpr, __VA_ARGS__)
 
-void DispatchEventMainThread(function<void()>);
-void PostEventMainThread(function<void()>);
-void PostAsyncEvent(function<void()>);
+void DispatchEventMainThread(ufunction<void()>);
+void PostEventMainThread(ufunction<void()>);
+void PostAsyncEvent(ufunction<void()>);
 
 template <class Owner_, typename Callable_>
 void PostEventMainThreadWeak(Owner_&& weakPtr, Callable_&& callable)

@@ -176,7 +176,7 @@ asio::io_context& ioc_net()
     return _context.ioc_net;
 }
 
-void post_event(perfkit::function<void()> evt)
+void post_event(perfkit::ufunction<void()> evt)
 {
     asio::post(_context.ioc_evt, std::move(evt));
 }

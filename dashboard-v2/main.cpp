@@ -289,12 +289,12 @@ int main(int, char**)
     return 0;
 }
 
-void DispatchEventMainThread(function<void()> fn)
+void DispatchEventMainThread(ufunction<void()> fn)
 {
     gApp->PostMainThreadEvent(std::move(fn));
 }
 
-void PostEventMainThread(function<void()> fn)
+void PostEventMainThread(ufunction<void()> fn)
 {
     gApp->DispatchMainThreadEvent(std::move(fn));
 }

@@ -123,7 +123,7 @@ class session_context
     void _on_trace(messages::outgoing::traces const& payload);
 
    public:
-    perfkit::function<void(session_state_type const&)>
+    perfkit::ufunction<void(session_state_type const&)>
             on_session_state_update{perfkit::default_function};
 
    private:
@@ -140,7 +140,7 @@ class session_context
 
     std::unordered_map<
             uint64_t,
-            perfkit::function<void(nlohmann::json const&)>>
+            perfkit::ufunction<void(nlohmann::json const&)>>
             _handlers;
 
     std::map<std::string, config_type, std::less<>>

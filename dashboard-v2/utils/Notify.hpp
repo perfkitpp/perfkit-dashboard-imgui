@@ -24,11 +24,11 @@ class NotifyToast
     struct Content
     {
         NotifySeverity Severity = NotifySeverity::Info;
-        vector<function<bool()>> ContentDecos;  // returns true if toast should be closed
+        vector<ufunction<bool()>> ContentDecos;  // returns true if toast should be closed
         steady_clock::time_point Lifespan = steady_clock::now() + 5s;
         steady_clock::time_point Birth;
 
-        function<void()> OnForceClose = cpph::default_function;
+        ufunction<void()> OnForceClose = cpph::default_function;
 
         bool bInfinity = false;
         int stateIdAlloc = -1;
@@ -64,7 +64,7 @@ class NotifyToast
     ~NotifyToast();
 
    public:
-    NotifyToast&& OnForceClose(function<void()> fn) && { return _body->OnForceClose = std::move(fn), _self(); }
+    NotifyToast&& OnForceClose(ufunction<void()> fn) && { return _body->OnForceClose = std::move(fn), _self(); }
 
     NotifyToast&& Severity(NotifySeverity value) && { return _body->Severity = value, _self(); }
     NotifyToast&& Trivial() && { return std::move(*this).Severity(NotifySeverity::Trivial); }
@@ -88,10 +88,10 @@ class NotifyToast
 
     NotifyToast&& Title(string content) &&;
 
-    NotifyToast&& Button(function<void()> handler, string label = "Okay") &&;
-    NotifyToast&& ButtonYesNo(function<void()> onYes, function<void()> onNo, string labelYes = "Yes", string labelNo = "No") &&;
+    NotifyToast&& Button(ufunction<void()> handler, string label = "Okay") &&;
+    NotifyToast&& ButtonYesNo(ufunction<void()> onYes, ufunction<void()> onNo, string labelYes = "Yes", string labelNo = "No") &&;
 
-    NotifyToast&& Custom(function<bool()> handler) &&;
+    NotifyToast&& Custom(ufunction<bool()> handler) &&;
 
     template <typename Duration_>
     NotifyToast&& Lifespan(Duration_&& dur) &&

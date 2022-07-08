@@ -60,7 +60,7 @@ void push_message(message_level level, Str_ format, Args_&&... args)
 
 asio::io_context& ioc_net();
 
-void post_event(perfkit::function<void()> evt);
+void post_event(perfkit::ufunction<void()> evt);
 
 }  // namespace application
 

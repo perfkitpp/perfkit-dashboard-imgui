@@ -279,7 +279,7 @@ NotifyToast&& NotifyToast::String(string content) &&
     return _self();
 }
 
-NotifyToast&& NotifyToast::Button(function<void()> handler, string label) &&
+NotifyToast&& NotifyToast::Button(ufunction<void()> handler, string label) &&
 {
     _body->ContentDecos.emplace_back(
             [handler = std::move(handler), label = std::move(label)] {
@@ -303,7 +303,7 @@ NotifyToast::~NotifyToast()
     gNoti.Commit(std::move(*this));
 }
 
-NotifyToast&& NotifyToast::Custom(function<bool()> handler) &&
+NotifyToast&& NotifyToast::Custom(ufunction<bool()> handler) &&
 {
     _body->ContentDecos.emplace_back(std::move(handler));
     return _self();

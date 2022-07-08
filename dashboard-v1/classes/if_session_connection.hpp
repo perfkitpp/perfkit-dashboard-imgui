@@ -42,7 +42,7 @@ class if_session_connection
    public:
     virtual ~if_session_connection() = default;
 
-    std::function<void(std::string_view, nlohmann::json const&)>
+    std::ufunction<void(std::string_view, nlohmann::json const&)>
             received_message_handler;
 
     virtual void send_message(

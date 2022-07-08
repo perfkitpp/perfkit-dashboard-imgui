@@ -105,10 +105,10 @@ class Application
    public:
     //! Allows posting events from different thread
     //! \param callable
-    void PostMainThreadEvent(perfkit::function<void()> callable);
+    void PostMainThreadEvent(perfkit::ufunction<void()> callable);
 
     //! Dispatch
-    void DispatchMainThreadEvent(perfkit::function<void()> callable);
+    void DispatchMainThreadEvent(perfkit::ufunction<void()> callable);
 };
 
 constexpr auto gApp = perfkit::singleton_t<Application>{};
