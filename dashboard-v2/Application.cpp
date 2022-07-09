@@ -3,7 +3,6 @@
 //
 
 #include "Application.hpp"
-#include "stdafx.h"
 
 #include <cassert>
 #include <memory>
@@ -21,6 +20,7 @@
 #include <perfkit/configs.h>
 
 #include "interfaces/Session.hpp"
+#include "stdafx.h"
 #include "widgets/TimePlot.hpp"
 
 static auto PersistentNumberStorage()
@@ -38,8 +38,7 @@ PERFKIT_CATEGORY(GConfig)
 {
     PERFKIT_SUBCATEGORY(Application)
     {
-        struct SessionArchive
-        {
+        struct SessionArchive {
             string key;
             int type = 0;
             string displayName;
@@ -131,8 +130,7 @@ Application::Application()
                   if (not p) { return; }
 
                   auto self = (Application*)h->UserData;
-                  if (strncmp(data, "WorkspaceFile", strlen("WorkspaceFile")) == 0)
-                  {
+                  if (strncmp(data, "WorkspaceFile", strlen("WorkspaceFile")) == 0) {
                       self->_workspacePath.resize(1024);
                       sscanf(data, "WorkspaceFile=%s", self->_workspacePath.data());
                       self->_workspacePath.resize(strlen(self->_workspacePath.c_str()));
@@ -179,8 +177,7 @@ Application::Application()
                     elem->Ref->InitializeSession({});
                 }
 
-                for (auto& desc : *GConfig::Application::ArchivedSessions)
-                {
+                for (auto& desc : *GConfig::Application::ArchivedSessions) {
                     auto sess = RegisterSessionMainThread(desc.key, ESessionType(desc.type), desc.displayName);
                     sess->bShow = desc.bShow;
                 }
@@ -201,8 +198,7 @@ Application::Application()
                 std::vector<GConfig::Application::SessionArchive> archive;
                 archive.reserve(_sessions.size());
 
-                for (auto& sess : _sessions)
-                {
+                for (auto& sess : _sessions) {
                     if (sess.bTransient)
                         continue;
 
@@ -232,8 +228,7 @@ void Application::drawMenuContents()
     if (not ImGui::BeginMainMenuBar()) { return; }
     CPPH_FINALLY(ImGui::EndMainMenuBar());
 
-    if (CondInvoke(ImGui::BeginMenu("File"), &ImGui::EndMenu))
-    {
+    if (CondInvoke(ImGui::BeginMenu("File"), &ImGui::EndMenu)) {
         if (ImGui::MenuItem("Save workspace"))
             saveWorkspace();
         if (ImGui::MenuItem("Save workspace as"))
@@ -242,8 +237,7 @@ void Application::drawMenuContents()
             NotifyToast{}.Fatal().String("Not Implemented: " __FILE__ ":{}", __LINE__);
     }
 
-    if (CondInvoke(ImGui::BeginMenu("View"), &ImGui::EndMenu))
-    {
+    if (CondInvoke(ImGui::BeginMenu("View"), &ImGui::EndMenu)) {
         ImGui::MenuItem("Sessions", "Ctrl+H", &_bDrawSessionList);
 
         ImGui::Separator();
@@ -253,13 +247,11 @@ void Application::drawMenuContents()
         ImGui::MenuItem("Demo", NULL, &_bShowDemo);
     }
 
-    if (CondInvoke(ImGui::BeginMenu("Configure"), &ImGui::EndMenu))
-    {
+    if (CondInvoke(ImGui::BeginMenu("Configure"), &ImGui::EndMenu)) {
         if (CondInvoke(ImGui::BeginMenu("Add Session..."), &ImGui::EndMenu))
             drawAddSessionMenu();
 
-        if (CondInvoke(ImGui::BeginMenu("Scale"), &ImGui::EndMenu))
-        {
+        if (CondInvoke(ImGui::BeginMenu("Scale"), &ImGui::EndMenu)) {
             ImGui::SetNextItemWidth(150 * ImGui::GetIO().FontGlobalScale);
             ImGui::SliderFloat("##Scale", &ImGui::GetIO().FontGlobalScale, 1, 2, "Scale: %4.2f");
         }
@@ -282,8 +274,7 @@ void Application::drawSessionList(bool* bKeepOpen)
     char textBuf[256];
     auto dragDropSwap{optional<pair<int64_t, int64_t>>{}};
 
-    for (auto iter = _sessions.begin(); iter != _sessions.end();)
-    {
+    for (auto iter = _sessions.begin(); iter != _sessions.end();) {
         auto& sess = *iter;
         sess.Ref->FetchSessionDisplayName(&sess.CachedDisplayName);
 
@@ -297,13 +288,10 @@ void Application::drawSessionList(bool* bKeepOpen)
         sess.bPendingClose = sess.bPendingClose && bIsSessionOpen;
         bool bRenderContents = sess.Ref->ShouldRenderSessionListEntityContent();
 
-        if (not bRenderContents)
-        {
+        if (not bRenderContents) {
             headerFlag |= ImGuiTreeNodeFlags_Bullet;
             ImGui::PushStatefulColorsUni(ImGuiCol_Header, baseColor);
-        }
-        else
-        {
+        } else {
             ImGui::PushStatefulColors(ImGuiCol_Header, baseColor);
         }
 
@@ -316,22 +304,18 @@ void Application::drawSessionList(bool* bKeepOpen)
         bRenderContents &= ImGui::CollapsingHeader(textBuf, openBtnPtr, headerFlag);
         ImGui::PopStyleColor(2);
 
-        if (sess.Ref->CanOpenSession() and ImGui::IsItemClicked(ImGuiMouseButton_Right))
-        {
+        if (sess.Ref->CanOpenSession() and ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
             sess.bShow = not sess.bShow;
         }
 
-        if (CondInvoke(ImGui::BeginDragDropSource(ImGuiDragDropFlags_None), ImGui::EndDragDropSource))
-        {
+        if (CondInvoke(ImGui::BeginDragDropSource(ImGuiDragDropFlags_None), ImGui::EndDragDropSource)) {
             auto index = iter - _sessions.begin();
             ImGui::SetDragDropPayload("DND_PAYLOAD_SESSION_LIST_SWAP", &index, sizeof index);
             ImGui::Text("%s [%s]", sess.CachedDisplayName.c_str(), sess.Key.c_str());
         }
 
-        if (CondInvoke(ImGui::BeginDragDropTarget(), ImGui::EndDragDropTarget))
-        {
-            if (auto payload = ImGui::AcceptDragDropPayload("DND_PAYLOAD_SESSION_LIST_SWAP"))
-            {
+        if (CondInvoke(ImGui::BeginDragDropTarget(), ImGui::EndDragDropTarget)) {
+            if (auto payload = ImGui::AcceptDragDropPayload("DND_PAYLOAD_SESSION_LIST_SWAP")) {
                 auto index = iter - _sessions.begin();
                 auto source = *(decltype(index)*)payload->Data;
 
@@ -339,14 +323,12 @@ void Application::drawSessionList(bool* bKeepOpen)
             }
         }
 
-        if (bIsSessionOpen)
-        {
+        if (bIsSessionOpen) {
             ImGui::SameLine();
             ImGui::TextColored({0, 1, 0, 1}, " [%c]", "-\\|/"[int(ImGui::GetTime() / 0.33) % 4]);
         }
 
-        if (sess.bShow)
-        {
+        if (sess.bShow) {
             ImGui::SameLine();
             ImGui::TextColored({1, 1, 0, 1}, "[*]");
         }
@@ -354,43 +336,35 @@ void Application::drawSessionList(bool* bKeepOpen)
         ImGui::SameLine();
         ImGui::TextColored({.5f, .5f, .5f, 1.f}, "%s", sess.Key.c_str());
 
-        if (bRenderContents)
-        {
+        if (bRenderContents) {
             sprintf(textBuf, "%s##CHLD-%s-%d", sess.CachedDisplayName.c_str(), sess.Key.c_str(), sess.Type);
             ImGui::PushStyleColor(ImGuiCol_ChildBg, ImGui::GetStyleColorVec4(ImGuiCol_ChildBg) - ImVec4{.1, .1, .1, .0});
             CPPH_FINALLY(ImGui::PopStyleColor());
 
-            if (CPPH_TMPVAR = ImGui::ScopedChildWindow(textBuf))
-            {
+            if (CPPH_TMPVAR = ImGui::ScopedChildWindow(textBuf)) {
                 sess.Ref->RenderSessionListEntityContent();
             }
         }
 
         sprintf(textBuf, "Unregister##%s-%d", sess.Key.c_str(), sess.Type);
-        if (not bOpenStatus)
-        {
-            if (bIsSessionOpen && not sess.bPendingClose)
-            {
+        if (not bOpenStatus) {
+            if (bIsSessionOpen && not sess.bPendingClose) {
                 // If session was originally open, try close session.
                 sess.Ref->CloseSession();
                 sess.bPendingClose = true;
 
                 NotifyToast("Session Closed").String("{}@{}", sess.CachedDisplayName, sess.Key);
-            }
-            else
-            {
+            } else {
                 // Otherwise, popup modal for deleting this session
                 ImGui::OpenPopup(textBuf);
             }
         }
 
-        if (CondInvoke(ImGui::BeginPopup(textBuf), ImGui::EndPopup))
-        {
+        if (CondInvoke(ImGui::BeginPopup(textBuf), ImGui::EndPopup)) {
             sess.bPendingClose = false;
 
             ImGui::Text("Are you sure to unregister this session?");
-            if (ImGui::Button("Yes"))
-            {
+            if (ImGui::Button("Yes")) {
                 auto name = iter->Key;
 
                 iter = _sessions.erase(iter);
@@ -402,8 +376,7 @@ void Application::drawSessionList(bool* bKeepOpen)
             }
 
             ImGui::SameLine();
-            if (ImGui::Button("No"))
-            {
+            if (ImGui::Button("No")) {
                 ImGui::CloseCurrentPopup();
             }
         }
@@ -411,8 +384,7 @@ void Application::drawSessionList(bool* bKeepOpen)
         ++iter;
     }
 
-    if (dragDropSwap && (dragDropSwap->first < _sessions.size() && dragDropSwap->second < _sessions.size()))
-    {
+    if (dragDropSwap && (dragDropSwap->first < _sessions.size() && dragDropSwap->second < _sessions.size())) {
         auto [from, to] = *dragDropSwap;
         auto temp = move(_sessions[from]);
         _sessions.erase(_sessions.begin() + from);
@@ -427,13 +399,10 @@ void Application::drawAddSessionMenu()
 
     static_assert(std::size(ItemNames) == int(ESessionType::ENUM_MAX_VALUE));
 
-    if (CondInvoke(ImGui::BeginCombo("Session Type", ItemNames[int(state->Selected)]), &ImGui::EndCombo))
-    {
-        for (int i = 1; i < int(ESessionType::ENUM_MAX_VALUE); ++i)
-        {
+    if (CondInvoke(ImGui::BeginCombo("Session Type", ItemNames[int(state->Selected)]), &ImGui::EndCombo)) {
+        for (int i = 1; i < int(ESessionType::ENUM_MAX_VALUE); ++i) {
             bool bIsSelected = (i == int(state->Selected));
-            if (ImGui::Selectable(ItemNames[i], bIsSelected))
-            {
+            if (ImGui::Selectable(ItemNames[i], bIsSelected)) {
                 state->Selected = ESessionType(i);
                 state->bActivateButton = 0 < strlen(state->UriBuffer);
                 state->bSetNextFocusToInput = true;
@@ -447,22 +416,17 @@ void Application::drawAddSessionMenu()
     if (state->Selected == ESessionType::None) { return; }
 
     // Draw URI input box
-    if (state->bSetNextFocusToInput)
-    {
+    if (state->bSetNextFocusToInput) {
         state->bSetNextFocusToInput = false;
         ImGui::SetKeyboardFocusHere();
     }
 
-    if (ImGui::InputText("URI", state->UriBuffer, sizeof state->UriBuffer, ImGuiInputTextFlags_AutoSelectAll))
-    {
+    if (ImGui::InputText("URI", state->UriBuffer, sizeof state->UriBuffer, ImGuiInputTextFlags_AutoSelectAll)) {
         std::string_view uri = state->UriBuffer;
 
-        if (uri.empty() || isSessionExist(uri, state->Selected))
-        {
+        if (uri.empty() || isSessionExist(uri, state->Selected)) {
             state->bActivateButton = false;
-        }
-        else
-        {
+        } else {
             state->bActivateButton = true;
         }
     }
@@ -472,8 +436,7 @@ void Application::drawAddSessionMenu()
     // Expose add session button only when conditions are valid
     ImGui::Spacing();
 
-    if ((ImGui::Button("Create", {-1, 0}) || ImGui::IsKeyPressed(ImGuiKey_Enter, false)))
-    {
+    if ((ImGui::Button("Create", {-1, 0}) || ImGui::IsKeyPressed(ImGuiKey_Enter, false))) {
         RegisterSessionMainThread(state->UriBuffer, state->Selected);
         ImGui::MarkIniSettingsDirty();
         state->bActivateButton = false;
@@ -487,8 +450,7 @@ auto Application::RegisterSessionMainThread(
         string keyString, ESessionType type, string_view optionalDefaultDisplayName, bool bTransient)
         -> SessionNode*
 {
-    if (isSessionExist(keyString, type))
-    {
+    if (isSessionExist(keyString, type)) {
         NotifyToast{"Session Creation Failed"}
                 .Error()
                 .String("Session key {} already exist", keyString);
@@ -497,8 +459,7 @@ auto Application::RegisterSessionMainThread(
 
     shared_ptr<ISession> session;
 
-    switch (type)
-    {
+    switch (type) {
         case ESessionType::TcpUnsafe:
             session = CreatePerfkitTcpRawClient();
             break;
@@ -507,8 +468,7 @@ auto Application::RegisterSessionMainThread(
             break;
     }
 
-    if (not session)
-    {
+    if (not session) {
         NotifyToast{"Session Creation Failed"}
                 .Error()
                 .String("URI [{}]: Given session type is not implemented yet ...", keyString);
@@ -542,8 +502,7 @@ bool Application::isSessionExist(std::string_view name, ESessionType type)
 
 void Application::loadWorkspace()
 {
-    if (not perfkit::configs_import(_workspacePath))
-    {
+    if (not perfkit::configs_import(_workspacePath)) {
         NotifyToast{}.Error().String("Config path '{}' is not a valid file.", _workspacePath);
         return;
     }
@@ -560,8 +519,7 @@ void Application::saveWorkspace()
 
 void Application::tickSessions()
 {
-    for (auto& sess : _sessions)
-    {
+    for (auto& sess : _sessions) {
         sess.Ref->TickSession();
         if (not sess.bShow) { continue; }
 
@@ -572,8 +530,7 @@ void Application::tickSessions()
                                 sess.Type);
 
         bool const bDrawGreenHeader = sess.Ref->IsSessionOpen();
-        if (bDrawGreenHeader)
-        {
+        if (bDrawGreenHeader) {
             ImGui::PushStyleColor(ImGuiCol_TabActive, 0xff'257d47);
             ImGui::PushStyleColor(ImGuiCol_Tab, 0xff'124312);
             ImGui::PushStyleColor(ImGuiCol_TabUnfocusedActive, 0xff'155d17);
@@ -581,18 +538,15 @@ void Application::tickSessions()
         }
 
         ImGui::SetNextWindowSize({640, 480}, ImGuiCond_Once);
-        if (CPPH_FINALLY(ImGui::End()); ImGui::Begin(nameStr, &sess.bShow))
-        {
+        if (CPPH_FINALLY(ImGui::End()); ImGui::Begin(nameStr, &sess.bShow)) {
             sess.Ref->RenderTickSession();
         }
 
         ImGui::PopStyleColor(bDrawGreenHeader * 4);
     }
 
-    if (auto wnd = ImGui::FindWindowByName("configs"); wnd && ImGui::GetCurrentContext()->FrameCount == wnd->LastFrameActive)
-    {
-        if (CPPH_FINALLY(ImGui::End()); ImGui::Begin("configs"))
-        {
+    if (auto wnd = ImGui::FindWindowByName("configs"); wnd && ImGui::GetCurrentContext()->FrameCount == wnd->LastFrameActive) {
+        if (CPPH_FINALLY(ImGui::End()); ImGui::Begin("configs")) {
             ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 600 * DpiScale());
         }
     }

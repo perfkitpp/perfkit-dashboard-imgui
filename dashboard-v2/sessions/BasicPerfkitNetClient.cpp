@@ -112,13 +112,10 @@ void BasicPerfkitNetClient::RenderTickSession()
         auto fnWrapCheckbox =
                 [&](const char* label, bool* ptr) {
                     CPPH_FINALLY(ImGui::PopStyleColor(2));
-                    if (*ptr)
-                    {
+                    if (*ptr) {
                         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
                         ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
-                    }
-                    else
-                    {
+                    } else {
                         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_Button));
                         ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_Button));
                     }
@@ -134,36 +131,29 @@ void BasicPerfkitNetClient::RenderTickSession()
     }
 
     if (bOpenSessionInfoHeader)
-        if (CPPH_TMPVAR{ImGui::ScopedChildWindow{"SummaryGroup"}})
-        {
+        if (CPPH_TMPVAR{ImGui::ScopedChildWindow{"SummaryGroup"}}) {
             auto bRenderEntityContent = ShouldRenderSessionListEntityContent();
             auto width = ImGui::GetContentRegionAvail().x * 3 / 5 * (bRenderEntityContent);
-            if (CPPH_TMPVAR{ImGui::ScopedChildWindow{"SessionState", width, false}})
-            {
+            if (CPPH_TMPVAR{ImGui::ScopedChildWindow{"SessionState", width, false}}) {
                 ImGui::BulletText("Stats");
                 ImGui::Separator();
 
                 drawSessionStateBox();
             }
 
-            if (bRenderEntityContent)
-            {
+            if (bRenderEntityContent) {
                 ImGui::SameLine();
                 ImGui::PushStyleColor(ImGuiCol_ChildBg, 0xff121212);
-                if (CPPH_TMPVAR{ImGui::ScopedChildWindow{"ConnectionInfo"}})
-                {
+                if (CPPH_TMPVAR{ImGui::ScopedChildWindow{"ConnectionInfo"}}) {
                     ImGui::PopStyleColor();
                     RenderSessionListEntityContent();
-                }
-                else
-                {
+                } else {
                     ImGui::PopStyleColor();
                 }
             }
         }
 
-    if (not bKeepConnection)
-    {
+    if (not bKeepConnection) {
         CloseSession();
     }
 
@@ -173,8 +163,7 @@ void BasicPerfkitNetClient::RenderTickSession()
                           IsSessionOpen() && ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows),
                           &ImGui::PopStyleColor, 1);
 
-                  if (bDrawBorder)
-                  {
+                  if (bDrawBorder) {
                       ImGui::PushStyleColor(ImGuiCol_Border, 0xff'117712);
                   }
 
@@ -216,11 +205,9 @@ void BasicPerfkitNetClient::TickSession()
     _wndTrace.Tick();
     _wndGraphics.Tick();
 
-    if (_uiState.bConfigOpen)
-    {
+    if (_uiState.bConfigOpen) {
         ImGui::SetNextWindowSize({240, 320}, ImGuiCond_Once);
-        if (CPPH_FINALLY(ImGui::End()); ImGui::Begin("configs", nullptr, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_AlwaysVerticalScrollbar))
-        {
+        if (CPPH_FINALLY(ImGui::End()); ImGui::Begin("configs", nullptr, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_AlwaysVerticalScrollbar)) {
             _wndConfig.Render(&_uiState.bConfigOpen);
         }
     }
@@ -231,8 +218,7 @@ void BasicPerfkitNetClient::_onSessionCreate_(rpc::session_profile_view profile)
     auto anchor = make_shared<nullptr_t>();
     NotifyToast("Rpc Session Created").String(profile->peer_name);
 
-    try
-    {
+    try {
         auto rpc = profile->w_self.lock();
 
         auto sesionInfo = decltype(service::session_info)::return_type{};
@@ -282,9 +268,7 @@ void BasicPerfkitNetClient::_onSessionCreate_(rpc::session_profile_view profile)
                                 str.append(ttyContent.content);
                             });
                 });
-    }
-    catch (rpc::request_exception& ec)
-    {
+    } catch (rpc::request_exception& ec) {
         NotifyToast{"Rpc invocation failed"}.Error().String(ec.what());
         return;
     }
@@ -325,20 +309,17 @@ void BasicPerfkitNetClient::tickHeartbeat()
     if (not _rpc) { return; }
     if (not _timHeartbeat.check_sparse()) { return; }
 
-    if (_hrpcHeartbeat && not _hrpcHeartbeat.wait(0ms))
-    {
+    if (_hrpcHeartbeat && not _hrpcHeartbeat.wait(0ms)) {
         NotifyToast{"Heartbeat failed"}.Error();
 
-        if (++_heartbeatFailCount == 5)
-        {
+        if (++_heartbeatFailCount == 5) {
             CloseSession();
         }
 
         return;
     }
 
-    try
-    {
+    try {
         _hrpcHeartbeat = service::heartbeat(_rpc).async_request(
                 [](auto&& ec, auto content) {
                     if (ec)
@@ -346,9 +327,7 @@ void BasicPerfkitNetClient::tickHeartbeat()
                                 .Error()
                                 .String(content);
                 });
-    }
-    catch (...)
-    {
+    } catch (...) {
     }
 }
 
@@ -368,8 +347,7 @@ void BasicPerfkitNetClient::CloseSession()
 
 void BasicPerfkitNetClient::drawTTY()
 {
-    struct TtyContext
-    {
+    struct TtyContext {
         poll_timer timColorize{250ms};
         bool bScrollLock = false;
         int colorizeFence = 0;
@@ -395,8 +373,7 @@ void BasicPerfkitNetClient::drawTTY()
     });
 
     // When line exceeds maximum allowance ...
-    if (auto ntot = _tty.GetTotalLines(); ntot > 17999)
-    {
+    if (auto ntot = _tty.GetTotalLines(); ntot > 17999) {
         auto lines = _tty.GetTextLines();
         lines.erase(lines.begin(), lines.begin() + 7999);
 
@@ -408,16 +385,14 @@ void BasicPerfkitNetClient::drawTTY()
     // Apply colorization
     // Limited number of lines can be colorized at once
     if (_.timColorize.check_sparse())
-        if (auto ntot = _tty.GetTotalLines(); ntot != _.colorizeFence)
-        {
+        if (auto ntot = _tty.GetTotalLines(); ntot != _.colorizeFence) {
             _.colorizeFence = std::max(_.colorizeFence, ntot - 128);
             _tty.ForceColorize(_.colorizeFence - 1, -128);
             _.colorizeFence = _tty.GetTotalLines();
         }
 
     // Scroll Lock
-    if (bFrameHasInput && not _.bScrollLock)
-    {
+    if (bFrameHasInput && not _.bScrollLock) {
         _tty.MoveBottom();
         _tty.MoveEnd();
         auto xscrl = ImGui::GetScrollX();
@@ -433,13 +408,11 @@ void BasicPerfkitNetClient::drawTTY()
     {
         auto beginCursorPos = ImGui::GetCursorPosY();
 
-        if (CPPH_TMPVAR{ImGui::ScopedChildWindow{"ConfPanel"}})
-        {
+        if (CPPH_TMPVAR{ImGui::ScopedChildWindow{"ConfPanel"}}) {
             ImGui::Checkbox("Scroll Lock", &_.bScrollLock);
             ImGui::SameLine();
 
-            if (ImGui::Button(" clear "))
-            {
+            if (ImGui::Button(" clear ")) {
                 _.colorizeFence = 0;
                 _tty.SetReadOnly(false);
                 _tty.SelectAll();
@@ -459,21 +432,17 @@ void BasicPerfkitNetClient::drawTTY()
                         auto& _ = *(TtyContext*)cbData->UserData;
                         int historyCursorDelta = 0;
 
-                        switch (cbData->EventFlag)
-                        {
-                            case ImGuiInputTextFlags_CallbackHistory:
-                            {
+                        switch (cbData->EventFlag) {
+                            case ImGuiInputTextFlags_CallbackHistory: {
                                 historyCursorDelta += (cbData->EventKey == ImGuiKey_UpArrow);
                                 historyCursorDelta -= (cbData->EventKey == ImGuiKey_DownArrow);
 
-                                if (historyCursorDelta != 0)
-                                {
+                                if (historyCursorDelta != 0) {
                                     _.cmdHistoryCursor = std::clamp<int>(
                                             _.cmdHistoryCursor + historyCursorDelta,
                                             0, _.cmdHistory.size());
 
-                                    if (auto iter = _.cmdHistory.end() - _.cmdHistoryCursor; iter != _.cmdHistory.end())
-                                    {
+                                    if (auto iter = _.cmdHistory.end() - _.cmdHistoryCursor; iter != _.cmdHistory.end()) {
                                         cbData->DeleteChars(0, cbData->BufTextLen);
                                         cbData->InsertChars(0, iter->c_str());
                                     }
@@ -496,12 +465,10 @@ void BasicPerfkitNetClient::drawTTY()
                     sizeof _.cmdBuf,
                     inputFlags, fnTextCallback, &_);
 
-            if (bEnterPressed)
-            {
+            if (bEnterPressed) {
                 ImGui::SetKeyboardFocusHere(-1);
             }
-            if (_rpc && bEnterPressed)
-            {
+            if (_rpc && bEnterPressed) {
                 string cmd = _.cmdBuf;
                 _.cmdBuf[0] = 0;  // Clear command buffer.
 
@@ -509,8 +476,7 @@ void BasicPerfkitNetClient::drawTTY()
                 message::service::invoke_command(_rpc).notify(cmd);
 
                 // Push command content to history queue
-                if (not cmd.empty() && (_.cmdHistory.empty() || _.cmdHistory.back() != cmd))
-                {
+                if (not cmd.empty() && (_.cmdHistory.empty() || _.cmdHistory.back() != cmd)) {
                     _.cmdHistory.emplace_back(std::move(cmd));
                 }
                 _.cmdHistoryCursor = 0;
@@ -528,14 +494,10 @@ bool BasicPerfkitNetClient::ShouldRenderSessionListEntityContent() const
 
 void BasicPerfkitNetClient::RenderSessionListEntityContent()
 {
-    if (not IsSessionOpen())
-    {
+    if (not IsSessionOpen()) {
         RenderSessionOpenPrompt();
-    }
-    else if (_authLevel == message::auth_level_t::unauthorized)
-    {
-        if (not _hrpcLogin)
-        {
+    } else if (_authLevel == message::auth_level_t::unauthorized) {
+        if (not _hrpcLogin) {
             // Draw login prompt
             static char buf[256];
 
@@ -545,8 +507,7 @@ void BasicPerfkitNetClient::RenderSessionListEntityContent()
             ImGui::InputText(usprintf("##PW.%p", this), buf, sizeof buf);
 
             ImGui::Spacing();
-            if (ImGui::Button(usprintf("LOGIN##%p", this), {-1, 0}))
-            {
+            if (ImGui::Button(usprintf("LOGIN##%p", this), {-1, 0})) {
                 auto fnOnLogin
                         = [this] {
                               service::request_republish_registries(_rpc).notify();
@@ -554,17 +515,14 @@ void BasicPerfkitNetClient::RenderSessionListEntityContent()
 
                 auto fnOnRpcComplete
                         = [this, fnOnLogin](auto&& ec, auto content) {
-                              if (ec)
-                              {
+                              if (ec) {
                                   NotifyToast{"[{}]\nLogin Failed", _key}
                                           .String(ec.message())
                                           .Error();
 
                                   PostEventMainThreadWeak(
                                           weak_from_this(), [=] { _hrpcLogin.reset(); });
-                              }
-                              else
-                              {
+                              } else {
                                   NotifyToast{"[{}]\nLogin Successful", _key}
                                           .String("You have {} access", _authLevel == message::auth_level_t::admin_access ? "admin" : "basic");
                                   PostEventMainThreadWeak(
@@ -572,8 +530,7 @@ void BasicPerfkitNetClient::RenderSessionListEntityContent()
                               }
                           };
 
-                if (not _rpc)
-                {
+                if (not _rpc) {
                     CloseSession();
                     return;
                 }
@@ -589,15 +546,11 @@ void BasicPerfkitNetClient::RenderSessionListEntityContent()
                         .Custom([this] { return _hrpcLogin; })
                         .OnForceClose([this] { _hrpcLogin.abort(); });
             }
-        }
-        else
-        {
+        } else {
             // Draw logging in ... content
             ImGui::Text("Logging in ...");
         }
-    }
-    else
-    {
+    } else {
         ImGui::AlignTextToFramePadding();
         ImGui::Text("Config"), ImGui::SameLine();
         ImGui::ToggleButton("ToggleConfig", &_uiState.bConfigOpen);
@@ -616,8 +569,7 @@ void BasicPerfkitNetClient::RenderSessionListEntityContent()
 
 void BasicPerfkitNetClient::drawSessionStateBox()
 {
-    if (_authLevel < net::message::auth_level_t::basic_access)
-    {
+    if (_authLevel < net::message::auth_level_t::basic_access) {
         ImGui::TextDisabled("-- DISABLED --");
         return;
     }

@@ -23,17 +23,13 @@ void xterm_leap_escape(TextEditor* edit, std::string_view content)
     auto is_read_only = edit->IsReadOnly();
     edit->SetReadOnly(false);
 
-    for (; not content.empty() && index < content.size(); ++index)
-    {
-        if (is_escape && content[index] == 'm')
-        {
+    for (; not content.empty() && index < content.size(); ++index) {
+        if (is_escape && content[index] == 'm') {
             content = content.substr(index + 1);
             index = 0;
 
             is_escape = false;
-        }
-        else if (content[index] == '\033')
-        {
+        } else if (content[index] == '\033') {
             is_escape = true;
 
             buffer = content.substr(0, index);
@@ -45,8 +41,7 @@ void xterm_leap_escape(TextEditor* edit, std::string_view content)
         }
     }
 
-    if (not content.empty())
-    {
+    if (not content.empty()) {
         buffer = content;
         edit->AppendTextAtEnd(buffer.c_str());
     }

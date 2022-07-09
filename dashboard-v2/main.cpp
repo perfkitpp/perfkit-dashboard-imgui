@@ -26,9 +26,8 @@
 static size_t gFrameIndexImpl = 0;
 size_t const& gFrameIndex = gFrameIndexImpl;
 
-#include "stdafx.h"
-
 #include "Application.hpp"
+#include "stdafx.h"
 #include "utils/Notify.hpp"
 
 static void glfw_error_callback(int error, const char* description)
@@ -85,8 +84,7 @@ int main(int, char**)
     glfwSwapInterval(1);  // Enable vsync
 
 #ifdef _WIN32  // Set window icon
-    if (auto hwnd = ::glfwGetWin32Window(window))
-    {
+    if (auto hwnd = ::glfwGetWin32Window(window)) {
         auto rsrc = ::LoadIcon(GetModuleHandle(NULL), "IDI_ICON1");
 
         SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)rsrc);
@@ -112,8 +110,7 @@ int main(int, char**)
 
     // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
     ImGuiStyle& style = ImGui::GetStyle();
-    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-    {
+    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
         style.WindowRounding = 0.0f;
         style.Colors[ImGuiCol_WindowBg].w = 1.0f;
     }
@@ -226,8 +223,7 @@ int main(int, char**)
     ImPlot::CreateContext();
 
     // Main loop
-    while (!glfwWindowShouldClose(window))
-    {
+    while (!glfwWindowShouldClose(window)) {
         ++gFrameIndexImpl;
 
         // Poll and handle events (inputs, window resize, etc.)
@@ -263,8 +259,7 @@ int main(int, char**)
         // Update and Render additional Platform Windows
         // (Platform functions may change the current OpenGL context, so we save/restore it to make it easier to paste this code elsewhere.
         //  For this specific demo app we could also call glfwMakeContextCurrent(window) directly)
-        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-        {
+        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
             GLFWwindow* backup_current_context = glfwGetCurrentContext();
             ImGui::UpdatePlatformWindows();
             ImGui::RenderPlatformWindowsDefault();
@@ -311,8 +306,7 @@ static Type_* LookUpRegistryVar(string_view key)
     static Storage _storage;
     auto iter = _storage.find(key);
 
-    if (iter == _storage.end())
-    {
+    if (iter == _storage.end()) {
         iter = _storage.try_emplace(std::string{key}, Type_{}).first;
     }
 
@@ -354,8 +348,7 @@ std::any& detail::GetAny(string_view key)
 
     auto iter = _storage.find(key);
 
-    if (iter == _storage.end())
-    {
+    if (iter == _storage.end()) {
         iter = _storage.try_emplace(std::string{key}).first;
     }
 

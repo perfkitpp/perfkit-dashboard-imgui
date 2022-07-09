@@ -10,8 +10,7 @@
 
 class PerfkitTcpRawClient : public BasicPerfkitNetClient
 {
-    enum class EConnectionState
-    {
+    enum class EConnectionState {
         Offline,
         Connecting,
         OnlineReadOnly,

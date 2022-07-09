@@ -23,8 +23,7 @@ void SessionDiscoverAgent::InitializeSession(const string& keyUri)
     _sockDiscover.set_option(udp::socket::broadcast{true});
     _sockDiscover.bind(epBroad);
 
-    enum
-    {
+    enum {
         BUFSIZE = 1024
     };
 
@@ -37,8 +36,7 @@ void SessionDiscoverAgent::InitializeSession(const string& keyUri)
                 if (not _lock_) { return; }
 
                 // Push it to discovered list.
-                try
-                {
+                try {
                     message::find_me_t find_me;
                     streambuf::view buf{{_asyncRecv.buffer, nRecv}};
                     archive::json::reader reader{&buf};
@@ -46,9 +44,7 @@ void SessionDiscoverAgent::InitializeSession(const string& keyUri)
 
                     ::PostEventMainThread(
                             bind(&SessionDiscoverAgent::onRecvFindMe, this, _asyncRecv.endpoint, move(find_me)));
-                }
-                catch (std::exception&)
-                {
+                } catch (std::exception&) {
                 }
 
                 _sockDiscover.async_receive_from(
@@ -76,16 +72,14 @@ void SessionDiscoverAgent::RenderSessionListEntityContent()
     erase_if_each(_findMe, [](auto&& pair) { return steady_clock::now() - pair.second.latestRefresh > 15s; });
 
     // Render selectables
-    for (auto& [ep, content] : _findMe)
-    {
+    for (auto& [ep, content] : _findMe) {
         ImGui::Bullet(), ImGui::SameLine();
 
         bool bTryOpen = ImGui::Selectable(usfmt("{}##{}", content.payload.alias.c_str(), (void*)&ep));
         ImGui::SameLine();
         ImGui::TextDisabled("%s:%d", ep.address().to_string().c_str(), content.payload.port);
 
-        if (bTryOpen)
-        {
+        if (bTryOpen) {
             auto fnRegister = [ep = ep, content = content] {
                 ESessionType sessionType = ESessionType::TcpUnsafe;  // NOTE: Other type of sessions?
                 string keyStr = fmt::format("{}:{}", ep.address().to_string(), content.payload.port);
@@ -93,12 +87,9 @@ void SessionDiscoverAgent::RenderSessionListEntityContent()
                 auto pNode = Application::Get()->RegisterSessionMainThread(
                         std::move(keyStr), sessionType, content.payload.alias, true);
 
-                if (pNode)
-                {
+                if (pNode) {
                     NotifyToast{"Registered discovered session"};
-                }
-                else
-                {
+                } else {
                     NotifyToast{"Session is already registered"}.Wanrning();
                 }
             };
@@ -117,8 +108,7 @@ void SessionDiscoverAgent::onRecvFindMe(asio::ip::udp::endpoint& ep, message::fi
 {
     // TODO: Add node
     auto iter = _findMe.find(ep);
-    if (iter == _findMe.end())
-    {
+    if (iter == _findMe.end()) {
         NotifyToast{"New session discovered"}.String("{} ({}:{})", tm.alias, ep.address().to_string(), tm.port);
         iter = _findMe.try_emplace(move(ep)).first;
     }

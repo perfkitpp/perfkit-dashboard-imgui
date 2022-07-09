@@ -56,8 +56,7 @@ using std::chrono::steady_clock;
 extern size_t const& gFrameIndex;
 
 namespace ColorRefs {
-enum : uint32_t
-{
+enum : uint32_t {
     Enabled = 0xffffffff,
     Disabled = 0x88ffffff,
 
@@ -81,8 +80,7 @@ using namespace std::literals;
 
 namespace perfkit::detail {
 template <typename Callable_>
-struct ConditionalFinalInvoke
-{
+struct ConditionalFinalInvoke {
     bool cond;
     Callable_ callable;
 
@@ -167,8 +165,7 @@ Type_& RefAny(char const* format, Args_&&... args)
     auto& any = detail::GetAny(detail::MkStrView(format, std::forward<Args_>(args)...));
     auto result = std::any_cast<Type_>(&any);
 
-    if (not result)
-    {
+    if (not result) {
         any = Type_{};
         result = std::any_cast<Type_>(&any);
     }

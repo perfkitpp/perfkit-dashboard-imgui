@@ -6,8 +6,7 @@
 
 void Application::tickGraphicsMainThread()
 {
-    if (std::exchange(_workspacePathChanged, false))
-    {
+    if (std::exchange(_workspacePathChanged, false)) {
         glfwSetWindowTitle(
                 glfwGetCurrentContext(),
                 fmt::format("Perfkit Dashboard V2 - {}", _workspacePath).c_str());

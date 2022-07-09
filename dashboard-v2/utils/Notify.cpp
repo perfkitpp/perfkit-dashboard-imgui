@@ -46,8 +46,7 @@ static class NotifyContext
         }
 
         // Make all pending toasts current
-        while (not newToasts.empty())
-        {
+        while (not newToasts.empty()) {
             auto iter = newToasts.begin();
             auto& ptoast = *iter;
             ptoast->stateHeightOffset = 44;
@@ -99,8 +98,7 @@ static class NotifyContext
             auto const deltaTime = ImGui::GetIO().DeltaTime;
             auto const heightDecVal = 80.f * deltaTime;
 
-            for (auto iter = _toasts.begin(); iter != _toasts.end();)
-            {
+            for (auto iter = _toasts.begin(); iter != _toasts.end();) {
                 auto& toast = *iter;
 
                 {
@@ -112,15 +110,13 @@ static class NotifyContext
                 auto entityHeight = height + (*iter)->stateHeightOffset;
                 ImVec2 nextPos(posVp.x - PaddingX, posVp.y - PaddingY - entityHeight);
 
-                if (entityHeight + toast->toastHeightCache > sizeVp.y)
-                {
+                if (entityHeight + toast->toastHeightCache > sizeVp.y) {
                     bExpireAtLeastOne = true;
                     ++iter;
                     break;
                 }
 
-                switch (toast->Severity)
-                {
+                switch (toast->Severity) {
                     case NotifySeverity::Trivial: PushStyleColor(ImGuiCol_Border, 0xff'cccccc); break;
                     case NotifySeverity::Info: PushStyleColor(ImGuiCol_Border, 0xff'44ff44); break;
                     case NotifySeverity::Warning: PushStyleColor(ImGuiCol_Border, 0xff'22ffff); break;
@@ -154,31 +150,26 @@ static class NotifyContext
 
                 // Close condition
                 bool bCloseToast = not bKeepOpen;
-                if (IsWindowHovered())
-                {
+                if (IsWindowHovered()) {
                     toast->stateHovering = true;
 
-                    if (IsMouseDoubleClicked(ImGuiMouseButton_Left))
-                    {
+                    if (IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
                         toast->OnForceClose();
                         bCloseToast = true;
                     }
                 }
 
                 // Render all decorations
-                for (auto& deco : toast->ContentDecos)
-                {
+                for (auto& deco : toast->ContentDecos) {
                     bCloseToast |= not deco();
                 }
 
                 // If given toast is erased ...
-                if (bCloseToast)
-                {
+                if (bCloseToast) {
                     preEraseToast(iter);
 
                     auto [it, end] = _timeouts.equal_range(toast->Lifespan);
-                    if (it != end)
-                    {
+                    if (it != end) {
                         for (; it->second != iter; ++it) {}
                         _timeouts.erase(it);
                     }
@@ -192,8 +183,7 @@ static class NotifyContext
             }
         }
 
-        if (bExpireAtLeastOne && not _timeouts.empty())
-        {
+        if (bExpireAtLeastOne && not _timeouts.empty()) {
             auto it = _timeouts.begin();
             for (auto iter = it->second; ++iter != _toasts.end();)
                 (**iter).stateHeightOffset -= (**it->second).toastHeightCache;
@@ -208,8 +198,7 @@ static class NotifyContext
             auto now = steady_clock::now();
             auto end = _timeouts.upper_bound(now);
 
-            for (auto& [_, iter] : perfkit::make_iterable(_timeouts.begin(), end))
-            {
+            for (auto& [_, iter] : perfkit::make_iterable(_timeouts.begin(), end)) {
                 preEraseToast(iter);
                 _toasts.erase(iter);
             }
@@ -244,8 +233,7 @@ static class NotifyContext
 static spdlog::level::level_enum
 toSpdlogLevel(NotifySeverity value)
 {
-    switch (value)
-    {
+    switch (value) {
         case NotifySeverity::Trivial:
             return spdlog::level::debug;
 
@@ -283,13 +271,10 @@ NotifyToast&& NotifyToast::Button(ufunction<void()> handler, string label) &&
 {
     _body->ContentDecos.emplace_back(
             [handler = std::move(handler), label = std::move(label)] {
-                if (ImGui::Button(label.c_str()))
-                {
+                if (ImGui::Button(label.c_str())) {
                     handler();
                     return false;
-                }
-                else
-                {
+                } else {
                     return true;
                 }
             });
@@ -317,8 +302,7 @@ NotifyToast&& NotifyToast::Title(string content) &&
             [severity = &_body->Severity, content = std::move(content)] {
                 using namespace ImGui;
 
-                switch (*severity)
-                {
+                switch (*severity) {
                     case NotifySeverity::Trivial: PushStyleColor(ImGuiCol_Text, 0xff'cccccc); break;
                     case NotifySeverity::Info: PushStyleColor(ImGuiCol_Text, 0xff'44dd44); break;
                     case NotifySeverity::Warning: PushStyleColor(ImGuiCol_Text, 0xff'22ffff); break;

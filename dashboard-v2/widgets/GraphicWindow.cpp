@@ -5,6 +5,7 @@
 #include "GraphicWindow.hpp"
 
 #include "graphics/GraphicContext.hpp"
+#include "imgui.h"
 #include "imgui_impl_opengl3_loader.h"
 
 void widgets::GraphicWindow::Tick()
@@ -14,6 +15,8 @@ void widgets::GraphicWindow::Tick()
 
 void widgets::GraphicWindow::Render()
 {
+    if (not _context) {
+    }
 }
 
 widgets::GraphicWindow::GraphicWindow(IRpcSessionOwner* host) : _host(host) {}

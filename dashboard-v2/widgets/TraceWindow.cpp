@@ -32,8 +32,7 @@ void widgets::TraceWindow::Render()
     _cachedTpNow = steady_clock::now();
 
     // Render traces recursively
-    for (auto& tracer : _tracers)
-    {
+    for (auto& tracer : _tracers) {
         if (tracer.bIsTracingCached)
             ImGui::PushStyleColor(ImGuiCol_Header, ColorRefs::BackOkayDim);
         else
@@ -63,8 +62,7 @@ void widgets::TraceWindow::Render()
             auto delta = uint64_t(alpha * (tracer.fence - tracer._fencePrev)) % (groundLen * 3);
             tracer._updateGap += ImGui::GetIO().DeltaTime;
 
-            for (int i = 0; i <= delta; ++i)
-            {
+            for (int i = 0; i <= delta; ++i) {
                 starPos = (tracer.fence + i) % (groundLen * 2);
                 starAt = starPos < groundLen ? starPos : groundLen - (starPos % groundLen);
                 spinText[starAt + 1] = '-';
@@ -100,19 +98,16 @@ void widgets::TraceWindow::Render()
         if (not bVisibleCross)
             ImGui::OpenPopup("CONF");
 
-        if (ImGui::IsPopupOpen("CONF") && ImGui::BeginPopup("CONF"))
-        {
+        if (ImGui::IsPopupOpen("CONF") && ImGui::BeginPopup("CONF")) {
             CPPH_FINALLY(ImGui::EndPopup());
 
             auto requestIntervalMs = float(tracer.tmNextPublish.interval_sec().count() * 1e3);
-            if (ImGui::SliderFloat("Intervals", &requestIntervalMs, 1, 1000, "%6.0f ms"))
-            {
+            if (ImGui::SliderFloat("Intervals", &requestIntervalMs, 1, 1000, "%6.0f ms")) {
                 tracer.tmNextPublish.reset(requestIntervalMs * 1.ms);
             }
         }
 
-        for (auto idx : tracer.rootNodeIndices)
-        {
+        for (auto idx : tracer.rootNodeIndices) {
             auto root = tracer.nodes[idx].get();
 
             ImGui::PushID(root);
@@ -126,18 +121,15 @@ void widgets::TraceWindow::Render()
 
 void widgets::TraceWindow::Tick()
 {
-    if (_host->SessionAnchor().expired())
-    {
+    if (_host->SessionAnchor().expired()) {
         _tracers.clear();
         return;
     }
 
     /// Publish subscribe request periodically.
     // This operation is performed regardless of window visibility.
-    for (auto& tracer : _tracers)
-    {
-        if (tracer.bIsTracingCached && tracer.tmNextPublish.check_sparse() && tracer._waitExpiry < _cachedTpNow)
-        {
+    for (auto& tracer : _tracers) {
+        if (tracer.bIsTracingCached && tracer.tmNextPublish.check_sparse() && tracer._waitExpiry < _cachedTpNow) {
             tracer._waitExpiry = steady_clock::now() + 5s;
             proto::service::trace_request_update(_host->RpcSession()).notify(tracer.info.tracer_id);
         }
@@ -186,18 +178,15 @@ void widgets::TraceWindow::_fnOnNewTraceNode(uint64_t tracer_id, vector<proto::t
     // Send message
     PostEventMainThreadWeak(
             _host->SessionAnchor(), [this, tracer_id, nodes] {
-                if (auto tracer = _findTracer(tracer_id))
-                {
+                if (auto tracer = _findTracer(tracer_id)) {
                     auto curNodes = &tracer->nodes;
 
                     // Reserve space
-                    if (auto maxIdx = nodes.back().index; curNodes->size() <= maxIdx)
-                    {
+                    if (auto maxIdx = nodes.back().index; curNodes->size() <= maxIdx) {
                         curNodes->resize(maxIdx + 1);
                     }
 
-                    for (auto& newNode : nodes)
-                    {
+                    for (auto& newNode : nodes) {
                         // Create new node
                         auto& curNode = curNodes->at(newNode.index);
                         if (curNode != nullptr) { continue; }
@@ -205,13 +194,10 @@ void widgets::TraceWindow::_fnOnNewTraceNode(uint64_t tracer_id, vector<proto::t
                         curNode = make_unique<TraceNodeContext>();
                         curNode->info = newNode;
 
-                        if (newNode.parent_index == -1)
-                        {
+                        if (newNode.parent_index == -1) {
                             // Add to root if it has no parent
                             tracer->rootNodeIndices.push_back(newNode.index);
-                        }
-                        else
-                        {
+                        } else {
                             // Otherwise, erase from list ... mostly below operation is pointless.
                             auto rIter = remove(tracer->rootNodeIndices, newNode.index);
                             tracer->rootNodeIndices.erase(rIter, tracer->rootNodeIndices.end());
@@ -307,8 +293,7 @@ void widgets::TraceWindow::_recurseRootTraceNode(
     auto dl = ImGui::GetWindowDrawList();
     auto drawDot =
             [&, callOrder = 0](ImU32 color = 0) mutable {
-                if (color)
-                {
+                if (color) {
                     auto at = ImGui::GetCursorScreenPos();
                     auto drawBoxSize = ImGui::CalcTextSize("  ");
                     at.y += drawBoxSize.y / 2;
@@ -322,42 +307,33 @@ void widgets::TraceWindow::_recurseRootTraceNode(
                             false,
                             ImGuiSelectableFlags_AllowItemOverlap,
                             drawBoxSize);
-                }
-                else
-                {
+                } else {
                     ImGui::Text("  ");
                     return false;
                 }
             };
 
     ImGui::SameLine();
-    if (node->data.ref_subscr())
-    {
-        if (drawDot(0x00ff00))
-        {
+    if (node->data.ref_subscr()) {
+        if (drawDot(0x00ff00)) {
             bToggleSubsription = true;
         }
 
         if (ImGui::IsItemHovered()) { ImGui::SetTooltip("Click to unsubscribe."); }
-    }
-    else
-    {
+    } else {
         drawDot();
     }
 
     ImGui::SameLine(0, 0);
-    if (node->_hPlot)
-    {
+    if (node->_hPlot) {
         // Draw red dot on plot recording
 
-        if (drawDot(node->_bPlotting ? 0x0000ff : 0x00ffff))
-        {
+        if (drawDot(node->_bPlotting ? 0x0000ff : 0x00ffff)) {
             node->_hPlot.Expire();
             node->_bPlotting = false;
         }
 
-        if (bIsActiveNode && node->_bPlotting)
-        {
+        if (bIsActiveNode && node->_bPlotting) {
             ImGui::SameLine();
             ImGui::PushStyleColor(ImGuiCol_Text, ColorRefs::FrontError);
             ImGui::TextUnformatted("REC");
@@ -365,9 +341,7 @@ void widgets::TraceWindow::_recurseRootTraceNode(
         }
 
         if (ImGui::IsItemHovered()) { ImGui::SetTooltip("Click to delete plotting"); }
-    }
-    else
-    {
+    } else {
         drawDot();
     }
 
@@ -391,8 +365,7 @@ void widgets::TraceWindow::_recurseRootTraceNode(
 
         ImGui::TextUnformatted(builder.data(), builder.data() + builder.size());
 
-        if (bDrawValueToolTip)
-        {
+        if (bDrawValueToolTip) {
             ImGui::BeginTooltip();
             ImGui::PushTextWrapPos(DpiScale() * 480);
             ImGui::TextUnformatted(builder.data(), builder.data() + builder.size());
@@ -403,25 +376,19 @@ void widgets::TraceWindow::_recurseRootTraceNode(
         ImGui::PopStyleColor();
     }
 
-    if (bTogglePlotWindow)
-    {
-        if (not node->_hPlot)
-        {
+    if (bTogglePlotWindow) {
+        if (not node->_hPlot) {
             string hostName;
             hostName.reserve(64);
 
             auto cursor = node;
 
-            for (;;)
-            {
-                if (cursor->info.parent_index != -1)
-                {
+            for (;;) {
+                if (cursor->info.parent_index != -1) {
                     cursor = tracer->nodes[cursor->info.parent_index].get();
                     hostName.append(cursor->info.name.rbegin(), cursor->info.name.rend());
                     hostName += '.';
-                }
-                else
-                {
+                } else {
                     break;
                 }
             }
@@ -433,9 +400,7 @@ void widgets::TraceWindow::_recurseRootTraceNode(
         }
 
         node->_bPlotting = not node->_bPlotting;
-    }
-    else if (bToggleSubsription)
-    {
+    } else if (bToggleSubsription) {
         // Toggle subscription state
         proto::service::trace_control_t arg;
         arg.subscribe = not node->data.ref_subscr();
@@ -446,16 +411,14 @@ void widgets::TraceWindow::_recurseRootTraceNode(
 
     if (bSkipChildren) { return; }
 
-    if (bNodeToggleOpened && node->_bCildrenListPendingSort)
-    {
+    if (bNodeToggleOpened && node->_bCildrenListPendingSort) {
         node->_bCildrenListPendingSort = false;
 
         // TODO: Sort node's children by their fence, to make fresh nodes
         //  precede obsolete ones.
     }
 
-    for (auto idx : node->children)
-    {
+    for (auto idx : node->children) {
         _recurseRootTraceNode(tracer, tracer->nodes[idx].get());
     }
 
@@ -467,8 +430,7 @@ void widgets::TraceWindow::_fnOnTraceUpdate(
 {
     PostEventMainThreadWeak(
             _host->SessionAnchor(), [this, tracer_id, updates] {
-                if (auto tracer = _findTracer(tracer_id))
-                {
+                if (auto tracer = _findTracer(tracer_id)) {
                     tracer->_actualDeltaUpdateSec = float(tracer->_tmActualDeltaUpdate.elapsed().count());
                     tracer->_tmActualDeltaUpdate.reset();
 
@@ -480,8 +442,7 @@ void widgets::TraceWindow::_fnOnTraceUpdate(
 
                     auto nodes = &tracer->nodes;
 
-                    for (auto& update : updates)
-                    {
+                    for (auto& update : updates) {
                         // Update fence
                         tracer->fence = max(tracer->fence, uint64_t(update.fence_value));
 
@@ -495,23 +456,17 @@ void widgets::TraceWindow::_fnOnTraceUpdate(
                         node->_updateAt = steady_clock::now();
                         node->_bCildrenListPendingSort = true;
 
-                        if (node->_bPlotting)
-                        {
+                        if (node->_bPlotting) {
                             // Push data to plot if payload is convertible to double
                             auto fnVisitor =
                                     [node](auto&& value) {
                                         using ValueType = decay_t<decltype(value)>;
 
-                                        if constexpr (is_convertible_v<ValueType, double>)
-                                        {
+                                        if constexpr (is_convertible_v<ValueType, double>) {
                                             node->_hPlot.Commit(double(value));
-                                        }
-                                        else if constexpr (is_same_v<ValueType, steady_clock::duration>)
-                                        {
+                                        } else if constexpr (is_same_v<ValueType, steady_clock::duration>) {
                                             node->_hPlot.Commit(to_seconds(value));
-                                        }
-                                        else
-                                        {
+                                        } else {
                                             node->_hPlot.Expire();
                                             node->_bPlotting = false;
                                         }

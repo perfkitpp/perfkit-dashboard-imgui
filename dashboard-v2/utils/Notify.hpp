@@ -7,8 +7,7 @@
 
 #include <spdlog/fmt/fmt.h>
 
-enum class NotifySeverity
-{
+enum class NotifySeverity {
     Trivial,
     Info,
     Warning,
@@ -21,8 +20,7 @@ class NotifyToast
     friend class NotifyContext;
 
    public:
-    struct Content
-    {
+    struct Content {
         NotifySeverity Severity = NotifySeverity::Info;
         vector<ufunction<bool()>> ContentDecos;  // returns true if toast should be closed
         steady_clock::time_point Lifespan = steady_clock::now() + 5s;

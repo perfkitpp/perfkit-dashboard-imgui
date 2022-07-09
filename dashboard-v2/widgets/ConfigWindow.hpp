@@ -32,8 +32,7 @@ class ConfigWindow
     //              Config Type Definitions
     //
 
-    struct FilterEntity
-    {
+    struct FilterEntity {
         //! Indicates this entity contains filter string
         bool bFilterHitSelf = false;
 
@@ -41,8 +40,7 @@ class ConfigWindow
         pair<int, int> FilterCharsRange = {};
     };
 
-    struct ConfigEntityContext : FilterEntity
-    {
+    struct ConfigEntityContext : FilterEntity {
         uint64_t configKey;
         Json value;
 
@@ -66,8 +64,7 @@ class ConfigWindow
         bool _bUpdateOnEdit = false;
     };
 
-    struct ConfigCategoryContext : FilterEntity
-    {
+    struct ConfigCategoryContext : FilterEntity {
         //! Self reference
         CategoryDesc const* selfRef;
 
@@ -81,8 +78,7 @@ class ConfigWindow
         bool bFilterHitChild = false;
     };
 
-    struct ConfigRegistryContext
-    {
+    struct ConfigRegistryContext {
        private:
         //! Anchor for lifecycle management
         shared_ptr<void> _anchor = make_shared<nullptr_t>();
@@ -108,8 +104,7 @@ class ConfigWindow
         }
     };
 
-    struct EditContext
-    {
+    struct EditContext {
         //! Reference to owner. Uses control block of registry context, which releases
         //!  ownership automatically on registry context cleanup.
         weak_ptr<ConfigWindow> ownerRef;

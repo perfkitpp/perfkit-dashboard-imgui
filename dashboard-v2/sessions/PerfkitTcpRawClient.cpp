@@ -22,11 +22,9 @@ void PerfkitTcpRawClient::InitializeSession(const string& keyUri)
 
 void PerfkitTcpRawClient::RenderSessionOpenPrompt()
 {
-    switch (_state)
-    {
+    switch (_state) {
         case EConnectionState::Offline:
-            if (ImGui::Button(usprintf("Connect##%s", _uri.c_str()), {-1, 0}))
-            {
+            if (ImGui::Button(usprintf("Connect##%s", _uri.c_str()), {-1, 0})) {
                 _sockPtrConnecting.store(nullptr);
 
                 _state = EConnectionState::Connecting;
@@ -94,19 +92,15 @@ void PerfkitTcpRawClient::startConnection()
     string address;
     int port;
 
-    if (auto pos = uri.find_last_of(':'); pos == uri.npos)
-    {
+    if (auto pos = uri.find_last_of(':'); pos == uri.npos) {
         NotifyToast{"Invalid URI"}.Error().String("Colon not found '{}'", uri);
         fnTransitTo(EConnectionState::Offline);
         return;
-    }
-    else
-    {
+    } else {
         address = string{uri.substr(0, pos)};
         auto portStr = uri.substr(pos + 1);
         auto convResult = std::from_chars(portStr.data(), portStr.data() + portStr.size(), port);
-        if (convResult.ec != std::errc{} || port > 65535)
-        {
+        if (convResult.ec != std::errc{} || port > 65535) {
             NotifyToast{"Invalid URI"}.Error().String("Port number parsing failed: {}", portStr);
             fnTransitTo(EConnectionState::Offline);
             return;
@@ -115,13 +109,10 @@ void PerfkitTcpRawClient::startConnection()
 
     asio::ip::address addr;
 
-    try
-    {
+    try {
         addr = asio::ip::make_address(address);
         // TODO: If failed to retrieve address, try resolve host via http
-    }
-    catch (asio::system_error& ec)
-    {
+    } catch (asio::system_error& ec) {
         NotifyToast{"Connection Failed"}
                 .Error()
                 .String("Retriving IP failed - '{}'", address)
@@ -133,8 +124,7 @@ void PerfkitTcpRawClient::startConnection()
     _endpoint = {addr, uint16_t(port)};
     fnUpdateMessage("Connecting to [{}:{}]...", _endpoint.address().to_string(), _endpoint.port());
 
-    try
-    {
+    try {
         tcp::socket sock{_exec};
         sock.open(_endpoint.protocol());
 
@@ -148,14 +138,10 @@ void PerfkitTcpRawClient::startConnection()
 
         auto conn = make_unique<rpc::asio_stream<tcp>>(std::move(sock));
         this->NotifyNewConnection(std::move(conn));
-    }
-    catch (asio::system_error& ec)
-    {
+    } catch (asio::system_error& ec) {
         NotifyToast{"Connection Failed"}.Error().String(">> ERROR {}", ec.code().value());
         fnTransitTo(EConnectionState::Offline);
-    }
-    catch (std::exception& ec)
-    {
+    } catch (std::exception& ec) {
         NotifyToast{"Connection Aborted"}.Error().String(">> ERROR {}", ec.what());
     }
 }

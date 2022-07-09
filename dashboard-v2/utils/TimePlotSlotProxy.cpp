@@ -10,12 +10,9 @@ void TimePlotSlotProxy::Commit(double d)
 {
     VerifyMainThread();
 
-    if (not _body)
-    {
+    if (not _body) {
         return;
-    }
-    else if (_body->bMarkDestroied)
-    {
+    } else if (_body->bMarkDestroied) {
         _body.reset();
         return;
     }
@@ -44,8 +41,7 @@ void TimePlotSlotProxy::EnableUserRemove(bool value)
 {
     VerifyMainThread();
 
-    if (_body)
-    {
+    if (_body) {
         _body->bDisableUserRemove = not value;
     }
 }

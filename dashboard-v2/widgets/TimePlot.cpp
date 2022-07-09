@@ -16,8 +16,7 @@
 
 PERFKIT_DECLARE_SUBCATEGORY(GConfig::Widgets)
 {
-    struct PlotWindow
-    {
+    struct PlotWindow {
         string key;
         string title;
         bool bIsDisplayed;
@@ -35,8 +34,7 @@ TimePlotWindowManager::TimePlotWindowManager()
             [this] {
                 auto& list = GConfig::Widgets::TimePlotWindows.ref();
 
-                for (auto& l : list)
-                {
+                for (auto& l : list) {
                     auto newWnd = _createNewPlotWindow(l.key);
                     newWnd->title = l.title;
                     newWnd->bIsDisplayed = l.bIsDisplayed;
@@ -52,8 +50,7 @@ TimePlotWindowManager::TimePlotWindowManager()
                 vector<GConfig::Widgets::PlotWindow> wnds;
                 wnds.reserve(_windows.size());
 
-                for (auto& wnd : _windows)
-                {
+                for (auto& wnd : _windows) {
                     auto& elem = wnds.emplace_back();
                     elem.key = wnd->key;
                     elem.title = wnd->title;
@@ -112,16 +109,13 @@ void TimePlotWindowManager::TickWindow()
     /// Validate cache
     bool const bAsyncJobTriggerFrame = not _caching && _timerCacheTrig.check();
     bool const bCacheReceivedThisFrame = exchange(_cacheRecvFrame, false);
-    if (bAsyncJobTriggerFrame)
-    {
+    if (bAsyncJobTriggerFrame) {
         _fnTriggerAsyncJob();
     }
 
     /// Render MenuBar
-    if (CondInvoke(BeginMainMenuBar(), &EndMainMenuBar))
-    {
-        if (CondInvoke(BeginMenu("View"), &EndMenu))
-        {
+    if (CondInvoke(BeginMainMenuBar(), &EndMainMenuBar)) {
+        if (CondInvoke(BeginMenu("View"), &EndMenu)) {
             Separator();
             MenuItem("Time Plots", NULL, &_widget.bShowListPanel);
         }
@@ -133,33 +127,24 @@ void TimePlotWindowManager::TickWindow()
         return;
 
     ImGui::SetNextWindowSize({640, 480}, ImGuiCond_Once);
-    if (CPPH_CLEANUP(&End); Begin("Time Plot List", &_widget.bShowListPanel, ImGuiWindowFlags_MenuBar))
-    {
+    if (CPPH_CLEANUP(&End); Begin("Time Plot List", &_widget.bShowListPanel, ImGuiWindowFlags_MenuBar)) {
         /// Render window management menu
-        if (CondInvoke(ImGui::BeginMenuBar(), &ImGui::EndMenuBar))
-        {
-            if (CondInvoke(ImGui::BeginMenu("Windows"), &ImGui::EndMenu))
-            {
-                if (ImGui::MenuItem("+ Create New"))
-                {
+        if (CondInvoke(ImGui::BeginMenuBar(), &ImGui::EndMenuBar)) {
+            if (CondInvoke(ImGui::BeginMenu("Windows"), &ImGui::EndMenu)) {
+                if (ImGui::MenuItem("+ Create New")) {
                     _createNewPlotWindow();
-                }
-                else if (not _windows.empty())
-                {
+                } else if (not _windows.empty()) {
                     ImGui::Separator();
-                    for (auto iter = _windows.begin(); iter != _windows.end();)
-                    {
+                    for (auto iter = _windows.begin(); iter != _windows.end();) {
                         auto& wnd = *iter;
-                        if (CondInvoke(ImGui::BeginMenu(usfmt("{}###{}", wnd->title, wnd->key)), &ImGui::EndMenu))
-                        {
+                        if (CondInvoke(ImGui::BeginMenu(usfmt("{}###{}", wnd->title, wnd->key)), &ImGui::EndMenu)) {
                             ImGui::Checkbox("Visiblity", &wnd->bIsDisplayed);
                             ImGui::SameLine();
                             ImGui::SetCursorPosX(ImGui::GetContentRegionMax().x - 80 * DpiScale());
                             bool bEraseWnd = ImGui::Button("delete", {-1, 0});
                             ImGui::InputText("Title", wnd->title);
 
-                            if (bEraseWnd)
-                            {
+                            if (bEraseWnd) {
                                 iter = _windows.erase(iter);
                                 continue;
                             }
@@ -174,8 +159,7 @@ void TimePlotWindowManager::TickWindow()
         /// Render list of slots
         auto timeNow = steady_clock::now();
 
-        for (auto& slot : _slots)
-        {
+        for (auto& slot : _slots) {
             auto spinChars = "*|/-\\|/-"sv;
             bool bLatest = (timeNow - slot->timeLastUpload) < 1s;
             bool bFocusRenderedWindow = slot->bFocusRequested;
@@ -185,25 +169,20 @@ void TimePlotWindowManager::TickWindow()
             CPPH_CLEANUP(&ImGui::PopID);
 
             ImGui::AlignTextToFramePadding();
-            if (ImGui::Selectable("##POPUP_SEL", false, ImGuiSelectableFlags_AllowItemOverlap | ImGuiSelectableFlags_SpanAllColumns))
-            {
+            if (ImGui::Selectable("##POPUP_SEL", false, ImGuiSelectableFlags_AllowItemOverlap | ImGuiSelectableFlags_SpanAllColumns)) {
                 ImGui::OpenPopup("##POPUP_SEL");
-            }
-            else if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
-            {
+            } else if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
                 bFocusRenderedWindow = true;
             }
 
-            if (ImGui::BeginDragDropSource())
-            {
+            if (ImGui::BeginDragDropSource()) {
                 size_t currentIndex = &slot - _slots.data();
                 ImGui::SetDragDropPayload("DND_PLOT_SLOT_INDEX", &currentIndex, sizeof currentIndex);
                 ImGui::TextUnformatted(slot->name.c_str());
                 ImGui::EndDragDropSource();
             }
 
-            if (ImGui::SameLine(), ImGui::ColorButton("Graph Color", slot->plotColor))
-            {
+            if (ImGui::SameLine(), ImGui::ColorButton("Graph Color", slot->plotColor)) {
                 ImGui::OpenPopup("##POPUP_COLOR");
             }
 
@@ -212,8 +191,7 @@ void TimePlotWindowManager::TickWindow()
             ImGui::Text("[%c]", spinChars[slot->uploadSequence % spinChars.size()]);
             ImGui::SameLine();
 
-            if (auto wnd = slot->targetWindow.lock())
-            {
+            if (auto wnd = slot->targetWindow.lock()) {
                 ImGui::PushStyleColor(ImGuiCol_Text, bLatest ? ColorRefs::FrontWarn : ColorRefs::BackWarn);
                 ImGui::SameLine();
                 ImGui::Text("%s |", wnd->title.c_str());
@@ -228,35 +206,25 @@ void TimePlotWindowManager::TickWindow()
 
             ImGui::PopStyleColor(2);
 
-            if (CondInvoke(ImGui::BeginPopup("##POPUP_SEL"), &EndPopup))
-            {
-                if (not slot->bDisableUserRemove && ImGui::MenuItem("Remove"))
-                {
+            if (CondInvoke(ImGui::BeginPopup("##POPUP_SEL"), &EndPopup)) {
+                if (not slot->bDisableUserRemove && ImGui::MenuItem("Remove")) {
                     slot->bFocusRequested = true;
                 }
 
-                if (CondInvoke(ImGui::BeginMenu("View On"), &ImGui::EndMenu))
-                {
-                    if (ImGui::MenuItem("+ Create New"))
-                    {
+                if (CondInvoke(ImGui::BeginMenu("View On"), &ImGui::EndMenu)) {
+                    if (ImGui::MenuItem("+ Create New")) {
                         // Create new menu, and set this slot to be drawn on given window.
                         auto newWnd = _createNewPlotWindow();
                         slot->targetWindow = newWnd;
                         slot->bTargetWndChanged = true;
                         newWnd->bIsDisplayed = true;
-                    }
-                    else if (ImGui::MenuItem("Hide"))
-                    {
+                    } else if (ImGui::MenuItem("Hide")) {
                         slot->targetWindow = {};
-                    }
-                    else if (not _windows.empty())
-                    {
+                    } else if (not _windows.empty()) {
                         ImGui::Separator();
 
-                        for (auto& wnd : _windows)
-                        {
-                            if (ImGui::MenuItem(usprintf("%s##%p", wnd->title.c_str(), wnd.get())))
-                            {
+                        for (auto& wnd : _windows) {
+                            if (ImGui::MenuItem(usprintf("%s##%p", wnd->title.c_str(), wnd.get()))) {
                                 slot->targetWindow = wnd;
                                 slot->bTargetWndChanged = true;
                                 wnd->bIsDisplayed = true;
@@ -265,14 +233,12 @@ void TimePlotWindowManager::TickWindow()
                     }
                 }
 
-                if (ImGui::MenuItem("Remove"))
-                {
+                if (ImGui::MenuItem("Remove")) {
                     slot->bMarkDestroied = true;
                 }
             }
 
-            if (CondInvoke(ImGui::BeginPopup("##POPUP_COLOR"), &ImGui::EndPopup))
-            {
+            if (CondInvoke(ImGui::BeginPopup("##POPUP_COLOR"), &ImGui::EndPopup)) {
                 ImGui::SetColorEditOptions(ImGuiColorEditFlags_PickerHueWheel);
 
                 ImGui::ColorPicker4("Plot Color", (float*)&slot->plotColor);
@@ -281,53 +247,44 @@ void TimePlotWindowManager::TickWindow()
     }
 
     /// Make plot list
-    for (auto& slot : _slots)
-    {
+    for (auto& slot : _slots) {
         if (slot->bMarkDestroied) { continue; }
 
-        if (auto wnd = slot->targetWindow.lock())
-        {
+        if (auto wnd = slot->targetWindow.lock()) {
             if (not wnd->bIsDisplayed) { continue; }
             wnd->plotsThisFrame.push_back(slot.get());
         }
     }
 
     decltype(1.s) deltaTime;
-    if (bCacheReceivedThisFrame)
-    {
+    if (bCacheReceivedThisFrame) {
         deltaTime = _tmTimeplotDelta.elapsed();
         _tmTimeplotDelta.reset();
     }
 
     /// Iterate each window, and display if needed.
-    for (auto& wnd : _windows)
-    {
+    for (auto& wnd : _windows) {
         CPPH_FINALLY(wnd->plotsThisFrame.clear());
 
-        if (not wnd->bIsDisplayed)
-        {
+        if (not wnd->bIsDisplayed) {
             continue;
         }
 
-        if (wnd->bRequestFocus)
-        {
+        if (wnd->bRequestFocus) {
             wnd->bRequestFocus = false;
             // TODO: Focus here
         }
 
         bool bKeepOpen = true;
         ImGui::SetNextWindowSize({640, 480}, ImGuiCond_Once);
-        if (CPPH_FINALLY(ImGui::End()); ImGui::Begin(usprintf("%s###%s", wnd->title.c_str(), wnd->key.c_str()), &bKeepOpen, ImGuiWindowFlags_MenuBar))
-        {
-            if (not bKeepOpen)
-            {
+        if (CPPH_FINALLY(ImGui::End()); ImGui::Begin(usprintf("%s###%s", wnd->title.c_str(), wnd->key.c_str()), &bKeepOpen, ImGuiWindowFlags_MenuBar)) {
+            if (not bKeepOpen) {
                 wnd->bIsDisplayed = false;
             }
 
             bool& bIsTimeBuildMode = wnd->frameInfo.bTimeBuildMode;
 
-            if (CondInvoke(ImGui::BeginMenuBar(), &ImGui::EndMenuBar))
-            {
+            if (CondInvoke(ImGui::BeginMenuBar(), &ImGui::EndMenuBar)) {
                 ImGui::AlignTextToFramePadding();
 
                 ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x / 2);
@@ -336,10 +293,8 @@ void TimePlotWindowManager::TickWindow()
                 ImGui::Checkbox(usprintf("%s###CHKBOX", wnd->bFollowGraphMovement ? "Follow Plot" : "Fix Plot"), &wnd->bFollowGraphMovement);
             }
 
-            if (CondInvoke(ImPlot::BeginPlot(usprintf("###%p", wnd->title.c_str(), wnd.get()), {-1, -1}), ImPlot::EndPlot))
-            {
-                if (bCacheReceivedThisFrame && (bIsTimeBuildMode == wnd->bFollowGraphMovement))
-                {
+            if (CondInvoke(ImPlot::BeginPlot(usprintf("###%p", wnd->title.c_str(), wnd.get()), {-1, -1}), ImPlot::EndPlot)) {
+                if (bCacheReceivedThisFrame && (bIsTimeBuildMode == wnd->bFollowGraphMovement)) {
                     auto [x, y] = wnd->frameInfo.rangeX;
                     auto dt = deltaTime.count();
                     if (not wnd->frameInfo.bTimeBuildMode) { dt = -dt; }
@@ -347,12 +302,9 @@ void TimePlotWindowManager::TickWindow()
                 }
 
                 // TODO: Make legend drag-droppable
-                if (wnd->frameInfo.bTimeBuildMode)
-                {
+                if (wnd->frameInfo.bTimeBuildMode) {
                     ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
-                }
-                else
-                {
+                } else {
                     ImPlot::SetupAxisScale(ImAxis_X1, 0);
                 }
 
@@ -367,38 +319,31 @@ void TimePlotWindowManager::TickWindow()
                     y1 = limits.Y.Min;
                     y2 = limits.Y.Max;
 
-                    if (abs(x1 - limits.X.Min) > 1e-6)
-                    {
+                    if (abs(x1 - limits.X.Min) > 1e-6) {
                         wnd->bDirty = true;
                         x1 = limits.X.Min;
                     }
-                    if (abs(x2 - limits.X.Max) > 1e-6)
-                    {
+                    if (abs(x2 - limits.X.Max) > 1e-6) {
                         wnd->bDirty = true;
                         x2 = limits.X.Max;
                     }
 
-                    if (double w = ImPlot::GetPlotSize().x; abs(finfo->displayPixelWidth - w) > 1e-6)
-                    {
+                    if (double w = ImPlot::GetPlotSize().x; abs(finfo->displayPixelWidth - w) > 1e-6) {
                         wnd->bDirty = true;
                         finfo->displayPixelWidth = w;
                     }
                 }
 
-                for (auto slot : wnd->plotsThisFrame)
-                {
+                for (auto slot : wnd->plotsThisFrame) {
                     DrawPlotContent(slot);
                 }
             }
 
-            if (ImGui::BeginDragDropTarget())
-            {
-                if (auto payload = ImGui::AcceptDragDropPayload("DND_PLOT_SLOT_INDEX"))
-                {
+            if (ImGui::BeginDragDropTarget()) {
+                if (auto payload = ImGui::AcceptDragDropPayload("DND_PLOT_SLOT_INDEX")) {
                     auto idx = *(size_t*)payload->Data;
 
-                    if (idx < _slots.size())
-                    {
+                    if (idx < _slots.size()) {
                         _slots[idx]->targetWindow = wnd;
                         _slots[idx]->bTargetWndChanged = true;
                     }
@@ -438,8 +383,7 @@ void TimePlotWindowManager::_fnAsyncValidateCache()
     auto tzone = duration_cast<steady_clock::duration>(timezone_offset());
 
     // Iterate slots, cache plot window frame ranges
-    for (auto& slot : _async.targets)
-    {
+    for (auto& slot : _async.targets) {
         auto slotCtx = &slot->async;
         auto const& finfo = slotCtx->frameInfo;
         auto const bTimeBuild = finfo.bTimeBuildMode;
@@ -455,13 +399,10 @@ void TimePlotWindowManager::_fnAsyncValidateCache()
         auto [dmin, dmax] = finfo.rangeX;
         steady_clock::time_point xmin, xmax;
 
-        if (bTimeBuild)
-        {
+        if (bTimeBuild) {
             xmin = steady_clock::time_point{} + duration_cast<system_clock::duration>(1.s * dmin) - sysNowD + nowD - tzone;
             xmax = steady_clock::time_point{} + duration_cast<system_clock::duration>(1.s * dmax) - sysNowD + nowD - tzone;
-        }
-        else
-        {
+        } else {
             xmin = now + duration_cast<steady_clock::duration>(1.s * dmin);
             xmax = now + duration_cast<steady_clock::duration>(1.s * dmax);
         }
@@ -474,8 +415,7 @@ void TimePlotWindowManager::_fnAsyncValidateCache()
         if (sbeg == send) { continue; }
 
         // Search lower bound from remaining contents
-        for (; sbeg != send && numSampleLeftL; --numSampleLeftL)
-        {
+        for (; sbeg != send && numSampleLeftL; --numSampleLeftL) {
             // Store cached value
             by->push_back(sbeg->value);
 
@@ -519,8 +459,7 @@ void TimePlotWindowManager::_fnMainThreadSwapBuffer()
     swap(_cacheRender[1], _async.cacheBuild[1]);
 
     // Swap slots ranges ...
-    for (auto& slot : _slots)
-    {
+    for (auto& slot : _slots) {
         slot->cacheAxisRange[0] = slot->async.cacheAxisRange[0];
         slot->cacheAxisRange[1] = slot->async.cacheAxisRange[1];
     }
@@ -533,14 +472,10 @@ void TimePlotWindowManager::_fnTriggerAsyncJob()
     bool bHasAnyInvalidCache = false;
     _async.targets.clear();
 
-    for (auto iter = _slots.begin(); iter != _slots.end();)
-    {
-        if ((**iter).bMarkDestroied)
-        {
+    for (auto iter = _slots.begin(); iter != _slots.end();) {
+        if ((**iter).bMarkDestroied) {
             iter = _slots.erase(iter);
-        }
-        else
-        {
+        } else {
             auto& slot = *iter;
             CPPH_FINALLY(++iter);
 
@@ -561,8 +496,7 @@ void TimePlotWindowManager::_fnTriggerAsyncJob()
             auto& queued = slot->pointsPendingUploaded;
 
             size_t constexpr MAX_ENTITY = 2'000'000;
-            if (allV.capacity() - allV.size() < queued.size() && allV.capacity() < MAX_ENTITY)
-            {
+            if (allV.capacity() - allV.size() < queued.size() && allV.capacity() < MAX_ENTITY) {
                 allV.reserve_shrink(min(MAX_ENTITY, allV.capacity() * 4));
             }
 
@@ -575,14 +509,12 @@ void TimePlotWindowManager::_fnTriggerAsyncJob()
     }
 
     // Iterate windows, clear dirty flag
-    for (auto& wnd : _windows)
-    {
+    for (auto& wnd : _windows) {
         wnd->bDirty = false;
     }
 
     // Trigger async job
-    if (bHasAnyInvalidCache)
-    {
+    if (bHasAnyInvalidCache) {
         _caching = true;
         _asyncWorker.post(bind(&TimePlotWindowManager::_fnAsyncValidateCache, this));
     }
@@ -590,8 +522,7 @@ void TimePlotWindowManager::_fnTriggerAsyncJob()
 
 auto TimePlotWindowManager::_createNewPlotWindow(string key) -> shared_ptr<TimePlot::WindowContext>
 {
-    if (key.empty())
-    {
+    if (key.empty()) {
         key.resize(8);
         generate_random_characters(key.begin(), 8, std::random_device{});
     }

@@ -16,8 +16,7 @@ class WindowContext;
 /**
  * Indicates single dot on plot
  */
-struct Point
-{
+struct Point {
     steady_clock::time_point timestamp = {};
     double value = 0;
 
@@ -32,8 +31,7 @@ struct Point
  *
  * Once plotting window's frame moves,
  */
-struct WindowFrameDescriptor
-{
+struct WindowFrameDescriptor {
     double rangeX[2] = {};
     double rangeY[2] = {};
 
@@ -47,8 +45,7 @@ struct WindowFrameDescriptor
 /**
  * Contains plotting context
  */
-struct SlotData
-{
+struct SlotData {
     // Is being destroied?
     // Will be disposed on next iteration.
     bool bMarkDestroied : 1;
@@ -80,8 +77,7 @@ struct SlotData
     // Plotting color
     ImVec4 plotColor = {};
 
-    struct AsyncContext
-    {
+    struct AsyncContext {
         // Uploaded from main thread
         circular_queue<Point> allValues{1'000};
 
@@ -96,8 +92,7 @@ struct SlotData
     SlotData() noexcept : bMarkDestroied(false) {}
 };
 
-struct WindowContext
-{
+struct WindowContext {
     // Hash. Used to generate window.
     string key;
 
@@ -142,8 +137,7 @@ class TimePlotWindowManager
 
     // Async cache context
     // Only accessible from async thread
-    struct AsyncContext
-    {
+    struct AsyncContext {
         // List of cache targets
         vector<shared_ptr<TimePlot::SlotData>> targets;
 
@@ -158,8 +152,7 @@ class TimePlotWindowManager
     poll_timer _timerCacheTrig = {100ms};
 
     // Widget context
-    struct WidgetContext
-    {
+    struct WidgetContext {
         // Show main panel ?
         bool bShowListPanel = false;
     } _widget;

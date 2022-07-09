@@ -10,13 +10,12 @@
 class JsonEditor
 {
    public:
-    struct EditorStateFlag
-    {
-        bool bIsDirty : 1;
-        bool bIsFocused : 1;
+    struct EditorStateFlag {
+        bool bIsDirty      : 1;
+        bool bIsFocused    : 1;
 
         bool bEvtLostFocus : 1;
-        bool bEvtCtrlS : 1;
+        bool bEvtCtrlS     : 1;
     };
 
    private:

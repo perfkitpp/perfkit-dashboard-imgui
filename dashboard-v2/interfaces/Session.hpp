@@ -5,8 +5,7 @@
 #pragma once
 #include <string>
 
-enum class ESessionType
-{
+enum class ESessionType {
     None = 0,
     TcpUnsafe = 1,
     TcpSsl = 2,

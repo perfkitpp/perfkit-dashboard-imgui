@@ -35,13 +35,11 @@ void widgets::ConfigWindow::Render(bool* bKeepOpen)
     bool const bShouldRenderStaticComponents = std::exchange(_latestFrameCount, gFrameIndex) != gFrameIndex;
     ImGui::SetScrollX(0);
 
-    if (bShouldRenderStaticComponents)
-    {
+    if (bShouldRenderStaticComponents) {
         gEvtThisFrame = {};
 
         /// Render toolbar
-        if (CondInvoke(ImGui::BeginMenuBar(), ImGui::EndMenuBar))
-        {
+        if (CondInvoke(ImGui::BeginMenuBar(), ImGui::EndMenuBar)) {
             static char _filterContentBuf[256];
 
             /// 'Search' mini window
@@ -49,15 +47,13 @@ void widgets::ConfigWindow::Render(bool* bKeepOpen)
             /// ESCAPE clears filter buffer.
             ImGui::SetNextItemWidth(-60);
             if (ImGui::InputTextWithHint("##FilterLabel", "Filter", _filterContentBuf, sizeof _filterContentBuf)
-                || exchange(bFilterTargetDirty, false))
-            {
+                || exchange(bFilterTargetDirty, false)) {
                 gEvtThisFrame.bHasFilterUpdate = true;
                 gEvtThisFrame.filterContent = _filterContentBuf;
                 for (auto i = 0; i < gEvtThisFrame.filterContent.size(); ++i) { _filterContentBuf[i] = tolower(_filterContentBuf[i]); }
             }
 
-            if (ImGui::IsItemDeactivated() && ImGui::IsKeyPressed(ImGuiKey_Escape, false))
-            {
+            if (ImGui::IsItemDeactivated() && ImGui::IsKeyPressed(ImGuiKey_Escape, false)) {
                 _filterContentBuf[0] = 0;
                 ImGui::SetKeyboardFocusHere(-1);
                 gEvtThisFrame.bHasFilterUpdate = false;
@@ -88,18 +84,14 @@ void widgets::ConfigWindow::Render(bool* bKeepOpen)
 
     ImGui::PopStyleVar(not bSessionAlive);
 
-    if (bSessionAlive)
-    {
-        if (bRenderComponents)
-        {
+    if (bSessionAlive) {
+        if (bRenderComponents) {
             CPPH_TMPVAR = ImGui::ScopedChildWindow(usprintf("%s.REGION", _host->KeyString().c_str()));
             ImGui::SetScrollX(0);
 
             for (auto& [key, ctx] : _ctxs)
                 recursiveTickSubcategory(ctx, *ctx.rootCategoryDesc, not bRenderComponents);
-        }
-        else
-        {
+        } else {
             for (auto& [key, ctx] : _ctxs)
                 recursiveTickSubcategory(ctx, *ctx.rootCategoryDesc, not bRenderComponents);
         }
@@ -116,8 +108,7 @@ void widgets::ConfigWindow::tryRenderEditorContext()
 {
     auto& _ctx = globalEditContext;
 
-    if (_ctx.ownerRef.lock().get() != this)
-    {
+    if (_ctx.ownerRef.lock().get() != this) {
         if (_ctx._editingRef) { _ctx._editingRef = nullptr; }
         return;
     }
@@ -138,25 +129,21 @@ void widgets::ConfigWindow::tryRenderEditorContext()
     // ImGui::BeginChild(childWndKey, {0, 500 * DpiScale()}, true, ImGuiWindowFlags_MenuBar);
 
     bool bDoReload = false;
-    if (exchange(_ctx._editingRef, entity) != entity)
-    {
+    if (exchange(_ctx._editingRef, entity) != entity) {
         _ctx._bReloadFrame = true;
         bDoReload = true;
     }
 
-    if (CondInvoke(ImGui::BeginMenuBar(), ImGui::EndMenuBar))
-    {
+    if (CondInvoke(ImGui::BeginMenuBar(), ImGui::EndMenuBar)) {
         ImGui::MenuItem("Update on edit", nullptr, &entity->_bUpdateOnEdit);
         ImGui::Separator();
 
-        if (entity->optOneOf.empty())
-        {
+        if (entity->optOneOf.empty()) {
             auto const bToggleEditInRaw
                     = ImGui::IsKeyDown(ImGuiKey_LeftCtrl)
                    && ImGui::IsKeyPressed(ImGuiKey_E);
 
-            if (ImGui::MenuItem("Edit in raw (^E)", nullptr, &entity->_bEditInRaw) || bToggleEditInRaw)
-            {
+            if (ImGui::MenuItem("Edit in raw (^E)", nullptr, &entity->_bEditInRaw) || bToggleEditInRaw) {
                 if (bToggleEditInRaw) { entity->_bEditInRaw = !entity->_bEditInRaw; }
                 _ctx.editor.RawEditMode(&entity->_bEditInRaw);
             }
@@ -169,8 +156,7 @@ void widgets::ConfigWindow::tryRenderEditorContext()
         ImGui::PopStyleColor();
     }
 
-    if (bDoReload)
-    {
+    if (bDoReload) {
         Json *minPtr = {}, *maxPtr = {};
         if (not entity->optMin.empty()) { minPtr = &entity->optMin; }
         if (not entity->optMax.empty()) { maxPtr = &entity->optMax; }
@@ -183,21 +169,17 @@ void widgets::ConfigWindow::tryRenderEditorContext()
     bool bCommitValue = _ctx.bDirty && entity->_bUpdateOnEdit;
     bool const bIsOneOf = not entity->optOneOf.empty() && entity->optOneOf.is_array();
 
-    if (bIsOneOf)
-    {
+    if (bIsOneOf) {
         // Render 'oneof' selector
         auto curValue = entity->value.dump();
         auto height = ImGui::GetFrameHeight() * entity->optOneOf.size();
 
-        if (CondInvoke(ImGui::BeginListBox("##OneOfSelector", {-1, height}), &ImGui::EndListBox))
-        {
-            for (auto& elem : entity->optOneOf)
-            {
+        if (CondInvoke(ImGui::BeginListBox("##OneOfSelector", {-1, height}), &ImGui::EndListBox)) {
+            for (auto& elem : entity->optOneOf) {
                 auto contentStr = elem.dump();
                 bool const bIsSelected = contentStr == curValue;
 
-                if (bIsSelected)
-                {
+                if (bIsSelected) {
                     ImGui::PushStyleColor(ImGuiCol_Text, ColorRefs::FrontWarn);
                     ImGui::Text("*");
                     ImGui::SameLine();
@@ -205,24 +187,20 @@ void widgets::ConfigWindow::tryRenderEditorContext()
                 bool const bIsClicked = ImGui::Selectable(contentStr.c_str());
                 ImGui::PopStyleColor(bIsSelected);
 
-                if (bIsClicked)
-                {
+                if (bIsClicked) {
                     entity->value = elem;
                     _ctx.bDirty = true;
                 }
             }
         }
-    }
-    else
-    {
+    } else {
         // Edit json content
         _ctx.editor.Render(&_ctx, -1);
         _ctx.bDirty |= (bool)_ctx.editor.FlagsThisFrame().bIsDirty;
         _ctx.editor.ClearDirtyFlag();
     }
 
-    if (/*not bCommitValue && _ctx.bDirty && */ not entity->_bUpdateOnEdit)
-    {
+    if (/*not bCommitValue && _ctx.bDirty && */ not entity->_bUpdateOnEdit) {
         ImGui::Spacing(), ImGui::Spacing();
 
         auto bDisableCommit = bCommitValue || not _ctx.bDirty;
@@ -235,10 +213,8 @@ void widgets::ConfigWindow::tryRenderEditorContext()
         if (bDisableCommit) { ImGui::EndDisabled(); }
     }
 
-    if (bCommitValue)
-    {
-        if (not bIsOneOf)
-        {
+    if (bCommitValue) {
+        if (not bIsOneOf) {
             _ctx.editor.RetrieveEditing(&entity->value);
         }
 
@@ -262,12 +238,9 @@ void widgets::ConfigWindow::_handleNewConfigClassMainThread(
     rg->rootCategoryDesc = move(rootCategory).constant();
     rg->entityKeys.clear();
 
-    try
-    {
+    try {
         _recursiveConstructCategories(rg, *rg->rootCategoryDesc, nullptr);
-    }
-    catch (Json::parse_error& ec)
-    {
+    } catch (Json::parse_error& ec) {
         NotifyToast{"Json Parse Error"}.Error().String(ec.what());
         _ctxs.erase(iter);
     }
@@ -279,31 +252,24 @@ void widgets::ConfigWindow::_handleNewConfigClassMainThread(
 
 void widgets::ConfigWindow::_handleDeletedConfigClass(const string& key)
 {
-    if (auto ctx = _ctxs.find(key); ctx != _ctxs.end())
-    {
+    if (auto ctx = _ctxs.find(key); ctx != _ctxs.end()) {
         _collectGarbage();
     }
 }
 
 void widgets::ConfigWindow::_handleConfigsUpdate(config_entity_update_t const& entityDesc)
 {
-    if (auto* pair = perfkit::find_ptr(_allEntities, entityDesc.config_key))
-    {
+    if (auto* pair = perfkit::find_ptr(_allEntities, entityDesc.config_key)) {
         auto elem = &pair->second;
         auto parsed = Json::from_msgpack(entityDesc.content_next, true, false);
-        if (not parsed.is_discarded())
-        {
+        if (not parsed.is_discarded()) {
             elem->value = move(parsed);
             elem->_bHasUpdate = true;
             elem->_timeSinceUpdate.reset();
-        }
-        else
-        {
+        } else {
             NotifyToast{"System Error"}.Error().String("Unkown config key!");
         }
-    }
-    else
-    {
+    } else {
         NotifyToast{"System Error"}.Error().String("Unkown config key!");
         return;
     }
@@ -318,8 +284,7 @@ void widgets::ConfigWindow::_recursiveConstructCategories(
     category->selfRef = &desc;
     category->parentContext = parent;
 
-    for (auto& entity : desc.entities)
-    {
+    for (auto& entity : desc.entities) {
         rg->entityKeys.push_back(entity.config_key);
 
         auto [iter, bIsNew] = _allEntities.try_emplace(entity.config_key);
@@ -342,8 +307,7 @@ void widgets::ConfigWindow::_recursiveConstructCategories(
             data->optOneOf = Json::from_msgpack(entity.opt_one_of);
     }
 
-    for (auto& subcategory : desc.subcategories)
-    {
+    for (auto& subcategory : desc.subcategories) {
         _recursiveConstructCategories(rg, subcategory, category);
     }
 }
@@ -400,12 +364,9 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
                   ImGui::Spacing();
                   ImGui::SameLine();
 
-                  if (not gEvtThisFrame.bShouldApplyFilter || not entity.bFilterHitSelf)
-                  {
+                  if (not gEvtThisFrame.bShouldApplyFilter || not entity.bFilterHitSelf) {
                       ImGui::TextUnformatted(text.data(), text.data() + text.size());
-                  }
-                  else
-                  {
+                  } else {
                       auto strBeg = text.data();
                       auto strFltBeg = text.data() + entity.FilterCharsRange.first;
                       auto strFltEnd = text.data() + entity.FilterCharsRange.second;
@@ -420,35 +381,29 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
                   }
               };
 
-    if (evt.bHasFilterUpdate)
-    {
+    if (evt.bHasFilterUpdate) {
         // Calculate filtering chars, and update bFilterSelf
         //  If this node hits filter, propagate result to its parent by parent recursion
         self->bFilterHitChild = false;
         self->bFilterHitSelf = false;
 
         auto hitResult = fnCheckFilter(category.name);
-        if (hitResult)
-        {
+        if (hitResult) {
             self->bFilterHitSelf = true;
             self->FilterCharsRange = *hitResult;
             fnPropagateFilterHit(self);
             self->bFilterHitChild = false;
         }
 
-        for (auto& entityDesc : category.entities)
-        {
+        for (auto& entityDesc : category.entities) {
             auto entity = &_allEntities.at(entityDesc.config_key);
 
             // Check for filter
-            if (auto hitRes = fnCheckFilter(entity->name))
-            {
+            if (auto hitRes = fnCheckFilter(entity->name)) {
                 entity->bFilterHitSelf = true;
                 entity->FilterCharsRange = *hitRes;
                 fnPropagateFilterHit(self);
-            }
-            else
-            {
+            } else {
                 entity->bFilterHitSelf = self->bFilterHitSelf;
                 entity->FilterCharsRange = {};
             }
@@ -462,8 +417,7 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
     bool const bShouldOpen = (self->bBaseOpen || evt.bShouldApplyFilter && self->bFilterHitChild) && not bCollapsed;
     bool bTreeIsOpen = false;
 
-    if (not bCollapsed)
-    {
+    if (not bCollapsed) {
         ImGui::SetNextItemOpen(bShouldOpen);
         bTreeIsOpen = ImGui::TreeNodeEx(usprintf("##%p", category.category_id), ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_SpanFullWidth);
         if (ImGui::IsItemToggledOpen()) { self->bBaseOpen = not self->bBaseOpen; }
@@ -472,15 +426,12 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
         fnRenderFilteredLabel(category.name, *self);
     }
 
-    for (auto& subCategory : category.subcategories)
-    {
+    for (auto& subCategory : category.subcategories) {
         recursiveTickSubcategory(rg, subCategory, not bTreeIsOpen);
     }
 
-    if (bTreeIsOpen)
-    {
-        for (auto& entityDesc : category.entities)
-        {
+    if (bTreeIsOpen) {
+        for (auto& entityDesc : category.entities) {
             auto entity = &_allEntities.at(entityDesc.config_key);
             if (evt.bShouldApplyFilter && not entity->bFilterHitSelf) { continue; }
 
@@ -513,23 +464,18 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
             bool const bIsItemClicked = ImGui::IsItemClicked(ImGuiMouseButton_Right);
             bool const bIsItemHovered = ImGui::IsItemHovered();
 
-            if (bIsItemClicked)
-            {
-                if (globalEditContext._editingRef == entity)
-                {
+            if (bIsItemClicked) {
+                if (globalEditContext._editingRef == entity) {
                     globalEditContext.entityRef.reset();
                     globalEditContext.ownerRef.reset();
-                }
-                else
-                {
+                } else {
                     globalEditContext.ownerRef = rg.WrapPtr(this);
                     globalEditContext.entityRef = rg.WrapPtr(entity);
                 }
                 tryRenderEditorContext();
             }
 
-            if (bIsItemHovered)
-            {
+            if (bIsItemHovered) {
                 ImGui::PushTextWrapPos(0);
                 CPPH_FINALLY(ImGui::PopTextWrapPos());
 
@@ -548,8 +494,7 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
             ImGui::SameLine(0, 0);
             fnRenderFilteredLabel(entity->name, *entity, 0xffbbbbbb);
 
-            if (exchange(entity->_bHasUpdate, false))
-            {
+            if (exchange(entity->_bHasUpdate, false)) {
                 entity->_bHasUpdateForEditor = true;
                 entity->_cachedStringify = entity->value.dump();
                 entity->_bIsDirty = false;
@@ -562,8 +507,7 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
 
             bool bHasUpdate = false;
 
-            if (not entity->optOneOf.empty() && entity->optOneOf.is_array())
-            {
+            if (not entity->optOneOf.empty() && entity->optOneOf.is_array()) {
                 // Implement 'OneOf' selector
                 ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ContentColorByJsonType(entity->value));
                 CPPH_FINALLY(ImGui::PopStyleColor());
@@ -573,17 +517,14 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
                         usprintf("##%pComboSelect", entity),
                         entity->_cachedStringify.c_str());
 
-                if (bOpenCombo)
-                {
+                if (bOpenCombo) {
                     CPPH_FINALLY(ImGui::EndCombo());
 
-                    for (auto& e : entity->optOneOf)
-                    {
+                    for (auto& e : entity->optOneOf) {
                         auto str = e.dump();
                         auto bSelected = ImGui::Selectable(str.c_str());
 
-                        if (bSelected)
-                        {
+                        if (bSelected) {
                             bHasUpdate = true;
                             entity->value = e;
 
@@ -591,30 +532,25 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
                         }
                     }
                 }
-            }
-            else
-            {
+            } else {
                 bool bIsClicked = false;
                 bHasUpdate = ImGui::SingleLineJsonEdit(
                         usprintf("##%p", entity),
                         entity->value, entity->_cachedStringify,
                         &bIsClicked);
 
-                if (bIsClicked && (entity->value.is_object() || entity->value.is_array()))
-                {
+                if (bIsClicked && (entity->value.is_object() || entity->value.is_array())) {
                     globalEditContext.ownerRef = rg.WrapPtr(this);
                     globalEditContext.entityRef = rg.WrapPtr(entity);
                     tryRenderEditorContext();
                 }
             }
 
-            if (globalEditContext._editingRef == entity)
-            {
+            if (globalEditContext._editingRef == entity) {
                 tryRenderEditorContext();
             }
 
-            if (bHasUpdate)
-            {
+            if (bHasUpdate) {
                 commitEntity(entity);
             }
         }
@@ -649,8 +585,7 @@ void widgets::ConfigWindow::_collectGarbage()
     for (auto& [key, CPPH_TMP] : _allEntities)
         (*entityRefCnts)[key] = 0;
 
-    for (auto& [CPPH_TMP, ctx] : _ctxs)
-    {
+    for (auto& [CPPH_TMP, ctx] : _ctxs) {
         for (auto entityKey : ctx.entityKeys)
             entityRefCnts->at(entityKey)++;
 

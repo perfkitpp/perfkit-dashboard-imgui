@@ -17,8 +17,7 @@ namespace message = net::message;
 class SessionDiscoverAgent : public std::enable_shared_from_this<SessionDiscoverAgent>,
                              public ISession
 {
-    struct FindMeNode
-    {
+    struct FindMeNode {
         steady_clock::time_point latestRefresh;
         message::find_me_t payload;
     };
@@ -28,8 +27,7 @@ class SessionDiscoverAgent : public std::enable_shared_from_this<SessionDiscover
     asio::ip::udp::socket _sockDiscover{_iocSystem};
     map<asio::ip::udp::endpoint, FindMeNode> _findMe;
 
-    struct AsyncRecvType
-    {
+    struct AsyncRecvType {
         char buffer[1024];
         asio::ip::udp::endpoint endpoint;
     } _asyncRecv;

@@ -18,8 +18,7 @@ namespace widgets {
 class TraceWindow
 {
    private:
-    struct TraceNodeContext
-    {
+    struct TraceNodeContext {
         proto::trace_info_t info;
         proto::trace_update_t data;
 
@@ -33,11 +32,10 @@ class TraceWindow
 
         // Flags
         bool _bCildrenListPendingSort : 1;
-        bool _bPlotting : 1;
+        bool _bPlotting               : 1;
     };
 
-    struct TracerContext
-    {
+    struct TracerContext {
         proto::tracer_descriptor_t info;
         vector<unique_ptr<TraceNodeContext>> nodes;
 

@@ -19,8 +19,7 @@ enum class ESessionType : int;
 
 class Application
 {
-    struct SessionNode
-    {
+    struct SessionNode {
         string Key;
         ESessionType Type;
         shared_ptr<class ISession> Ref;
