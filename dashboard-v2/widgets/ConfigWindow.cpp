@@ -135,7 +135,7 @@ void widgets::ConfigWindow::tryRenderEditorContext()
     }
 
     if (CondInvoke(ImGui::BeginMenuBar(), ImGui::EndMenuBar)) {
-        ImGui::MenuItem("Update on edit", nullptr, &entity->_bUpdateOnEdit);
+        ImGui::MenuItem(LOCTEXT("Update on edit"), nullptr, &entity->_bUpdateOnEdit);
         ImGui::Separator();
 
         if (entity->optOneOf.empty()) {
@@ -143,7 +143,7 @@ void widgets::ConfigWindow::tryRenderEditorContext()
                     = ImGui::IsKeyDown(ImGuiKey_LeftCtrl)
                    && ImGui::IsKeyPressed(ImGuiKey_E);
 
-            if (ImGui::MenuItem("Edit in raw (^E)", nullptr, &entity->_bEditInRaw) || bToggleEditInRaw) {
+            if (ImGui::MenuItem(LOCTEXT("Edit in raw (^E)"), nullptr, &entity->_bEditInRaw) || bToggleEditInRaw) {
                 if (bToggleEditInRaw) { entity->_bEditInRaw = !entity->_bEditInRaw; }
                 _ctx.editor.RawEditMode(&entity->_bEditInRaw);
             }
@@ -152,7 +152,7 @@ void widgets::ConfigWindow::tryRenderEditorContext()
         bDoReload |= ImGui::IsKeyDown(ImGuiKey_LeftCtrl) && ImGui::IsKeyPressed(ImGuiKey_R);
 
         ImGui::PushStyleColor(ImGuiCol_Text, ColorRefs::FrontWarn);
-        bDoReload |= entity->_bHasUpdateForEditor && (ImGui::Spacing(), ImGui::MenuItem("Reload! (^R)"));
+        bDoReload |= entity->_bHasUpdateForEditor && (ImGui::Spacing(), ImGui::MenuItem(LOCTEXT("Reload! (^R)")));
         ImGui::PopStyleColor();
     }
 
@@ -209,7 +209,7 @@ void widgets::ConfigWindow::tryRenderEditorContext()
 
         if (bDisableCommit) { ImGui::BeginDisabled(); }
         bCommitValue |= ImGui::IsKeyDown(ImGuiKey_LeftCtrl) && ImGui::IsKeyPressed(ImGuiKey_S);
-        bCommitValue |= ImGui::Button("Commit (^S)", {-1, 0});
+        bCommitValue |= ImGui::Button(LOCTEXT("Commit (^S)"), {-1, 0});
         if (bDisableCommit) { ImGui::EndDisabled(); }
     }
 
@@ -267,10 +267,10 @@ void widgets::ConfigWindow::_handleConfigsUpdate(config_entity_update_t const& e
             elem->_bHasUpdate = true;
             elem->_timeSinceUpdate.reset();
         } else {
-            NotifyToast{"System Error"}.Error().String("Unkown config key!");
+            NotifyToast{LOCTEXT("System Error")}.Error().String(LOCTEXT("Unkown config key!"));
         }
     } else {
-        NotifyToast{"System Error"}.Error().String("Unkown config key!");
+        NotifyToast{LOCTEXT("System Error")}.Error().String(LOCTEXT("Unkown config key!"));
         return;
     }
 }
@@ -487,7 +487,7 @@ void widgets::ConfigWindow::recursiveTickSubcategory(
                 ImGui::Separator();
 
                 ImGui::PushStyleColor(ImGuiCol_Text, 0xff888888);
-                ImGui::TextWrapped("%s", entity->description.empty() ? "--no description--" : entity->description.c_str());
+                ImGui::TextWrapped("%s", entity->description.empty() ? LOCTEXT("--no description--") : entity->description.c_str());
                 ImGui::PopStyleColor();
             }
 

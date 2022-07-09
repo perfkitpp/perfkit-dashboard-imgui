@@ -24,13 +24,13 @@ void PerfkitTcpRawClient::RenderSessionOpenPrompt()
 {
     switch (_state) {
         case EConnectionState::Offline:
-            if (ImGui::Button(usprintf("Connect##%s", _uri.c_str()), {-1, 0})) {
+            if (ImGui::Button(usprintf(LOCTEXT("Connect##%s"), _uri.c_str()), {-1, 0})) {
                 _sockPtrConnecting.store(nullptr);
 
                 _state = EConnectionState::Connecting;
                 asio::post(bind_front_weak(weak_from_this(), &PerfkitTcpRawClient::startConnection, this));
 
-                NotifyToast{"Now Connecting ..."}
+                NotifyToast{LOCTEXT("Now Connecting ...")}
                         .Permanent()
                         .Spinner()
                         .String("(TCP_RAW) {}", _uri)
@@ -43,7 +43,7 @@ void PerfkitTcpRawClient::RenderSessionOpenPrompt()
                             _sockPtrConnecting.exchange(ptr);
                         });
 
-                _uiStateMessage = fmt::format("Connecting to [{}] ...", _uri);
+                _uiStateMessage = fmt::format(LOCTEXT("Connecting to [{}] ..."), _uri);
             }
             break;
 
@@ -93,7 +93,7 @@ void PerfkitTcpRawClient::startConnection()
     int port;
 
     if (auto pos = uri.find_last_of(':'); pos == uri.npos) {
-        NotifyToast{"Invalid URI"}.Error().String("Colon not found '{}'", uri);
+        NotifyToast{LOCTEXT("Invalid URI")}.Error().String(KEYTEXT(ERROR_ENDPOINT_NOT_FOUND, "Colon not found '{}'"), uri);
         fnTransitTo(EConnectionState::Offline);
         return;
     } else {
@@ -101,7 +101,7 @@ void PerfkitTcpRawClient::startConnection()
         auto portStr = uri.substr(pos + 1);
         auto convResult = std::from_chars(portStr.data(), portStr.data() + portStr.size(), port);
         if (convResult.ec != std::errc{} || port > 65535) {
-            NotifyToast{"Invalid URI"}.Error().String("Port number parsing failed: {}", portStr);
+            NotifyToast{LOCTEXT("Invalid URI")}.Error().String(LOCTEXT("Port number parsing failed: {}"), portStr);
             fnTransitTo(EConnectionState::Offline);
             return;
         }
@@ -113,16 +113,16 @@ void PerfkitTcpRawClient::startConnection()
         addr = asio::ip::make_address(address);
         // TODO: If failed to retrieve address, try resolve host via http
     } catch (asio::system_error& ec) {
-        NotifyToast{"Connection Failed"}
+        NotifyToast{LOCTEXT("Connection Failed")}
                 .Error()
-                .String("Retriving IP failed - '{}'", address)
-                .String(">> ERROR {}", ec.code().value());
+                .String(LOCTEXT("Retriving IP failed - '{}'"), address)
+                .String(LOCTEXT(">> ERROR {}"), ec.code().value());
         fnTransitTo(EConnectionState::Offline);
         return;
     }
 
     _endpoint = {addr, uint16_t(port)};
-    fnUpdateMessage("Connecting to [{}:{}]...", _endpoint.address().to_string(), _endpoint.port());
+    fnUpdateMessage(LOCTEXT("Connecting to [{}:{}]..."), _endpoint.address().to_string(), _endpoint.port());
 
     try {
         tcp::socket sock{_exec};
@@ -131,18 +131,18 @@ void PerfkitTcpRawClient::startConnection()
         _sockPtrConnecting.exchange(&sock);
         sock.connect(_endpoint);
         while (nullptr == _sockPtrConnecting.exchange(nullptr)) { std::this_thread::sleep_for(10ms); }
-        if (not sock.is_open()) { throw std::runtime_error{"User aborted connection"}; }
+        if (not sock.is_open()) { throw std::runtime_error{LOCTEXT("User aborted connection")}; }
 
-        NotifyToast{"Connected"}.String("Connection to session [{}] successfully established.", _uri);
+        NotifyToast{LOCTEXT("Connected")}.String(LOCTEXT("Connection to session [{}] successfully established."), _uri);
         fnTransitTo(EConnectionState::OnlineReadOnly);
 
         auto conn = make_unique<rpc::asio_stream<tcp>>(std::move(sock));
         this->NotifyNewConnection(std::move(conn));
     } catch (asio::system_error& ec) {
-        NotifyToast{"Connection Failed"}.Error().String(">> ERROR {}", ec.code().value());
+        NotifyToast{LOCTEXT("Connection Failed")}.Error().String(LOCTEXT(">> ERROR {}"), ec.code().value());
         fnTransitTo(EConnectionState::Offline);
     } catch (std::exception& ec) {
-        NotifyToast{"Connection Aborted"}.Error().String(">> ERROR {}", ec.what());
+        NotifyToast{LOCTEXT("Connection Aborted")}.Error().String(LOCTEXT(">> ERROR {}"), ec.what());
     }
 }
 

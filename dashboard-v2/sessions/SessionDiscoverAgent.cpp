@@ -88,9 +88,9 @@ void SessionDiscoverAgent::RenderSessionListEntityContent()
                         std::move(keyStr), sessionType, content.payload.alias, true);
 
                 if (pNode) {
-                    NotifyToast{"Registered discovered session"};
+                    NotifyToast{LOCTEXT("Registered discovered session")};
                 } else {
-                    NotifyToast{"Session is already registered"}.Wanrning();
+                    NotifyToast{LOCTEXT("Session is already registered")}.Wanrning();
                 }
             };
 
@@ -109,7 +109,7 @@ void SessionDiscoverAgent::onRecvFindMe(asio::ip::udp::endpoint& ep, message::fi
     // TODO: Add node
     auto iter = _findMe.find(ep);
     if (iter == _findMe.end()) {
-        NotifyToast{"New session discovered"}.String("{} ({}:{})", tm.alias, ep.address().to_string(), tm.port);
+        NotifyToast{LOCTEXT("New session discovered")}.String("{} ({}:{})", tm.alias, ep.address().to_string(), tm.port);
         iter = _findMe.try_emplace(move(ep)).first;
     }
 

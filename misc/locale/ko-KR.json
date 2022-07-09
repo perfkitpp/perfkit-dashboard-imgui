@@ -30,14 +30,9 @@
     "label": "File"
   },
   {
-    "content": "세션 추가 ...",
-    "hash": "mryK3Gy4bvw=",
-    "label": "Add Session..."
-  },
-  {
-    "content": "설정",
-    "hash": "5dxVXdz1nrg=",
-    "label": "Config"
+    "content": "타임 플롯",
+    "hash": "+dvoYz91eZY=",
+    "label": "Time Plot"
   },
   {
     "content": "새 세션",
@@ -45,19 +40,19 @@
     "label": "Add Session"
   },
   {
-    "content": "타임 플롯",
-    "hash": "+dvoYz91eZY=",
-    "label": "Time Plot"
+    "content": "설정",
+    "hash": "5dxVXdz1nrg=",
+    "label": "Config"
   },
   {
-    "content": " 그래픽 ",
-    "hash": "GlmgvItJuao=",
-    "label": " graphics "
+    "content": "세션 추가 ...",
+    "hash": "mryK3Gy4bvw=",
+    "label": "Add Session..."
   },
   {
-    "content": "다른 이름으로 저장",
-    "hash": "8RofqpWEJdg=",
-    "label": "Save workspace as"
+    "content": "Connecting to [{}:{}]...",
+    "hash": "Msi/VQCoXIA=",
+    "label": "Msi/VQCoXIA="
   },
   {
     "content": "설정",
@@ -65,19 +60,19 @@
     "label": "Configure"
   },
   {
+    "content": "다른 이름으로 저장",
+    "hash": "8RofqpWEJdg=",
+    "label": "Save workspace as"
+  },
+  {
+    "content": " 그래픽 ",
+    "hash": "GlmgvItJuao=",
+    "label": " graphics "
+  },
+  {
     "content": "세션",
     "hash": "5DbqKllONBE=",
     "label": "Sessions"
-  },
-  {
-    "content": "Session-List",
-    "hash": "Thk6l8Y6Lf0=",
-    "label": "Session-List"
-  },
-  {
-    "content": "등록 해제##%s-%d",
-    "hash": "+1Brcj3mkD4=",
-    "label": "Unregister##%s-%d"
   },
   {
     "content": "플롯 따라가기",
@@ -85,14 +80,19 @@
     "label": "Follow Plot"
   },
   {
+    "content": "등록 해제##%s-%d",
+    "hash": "+1Brcj3mkD4=",
+    "label": "Unregister##%s-%d"
+  },
+  {
+    "content": "Connection Failed",
+    "hash": "Isl99X6IiNA=",
+    "label": "Isl99X6IiNA="
+  },
+  {
     "content": "설정",
     "hash": "dFbPLks7Pl4=",
     "label": "configs"
-  },
-  {
-    "content": "관리자",
-    "hash": "vNrWw1mIZa8=",
-    "label": "admin"
   },
   {
     "content": " 설정 ",
@@ -100,9 +100,19 @@
     "label": " configs "
   },
   {
+    "content": "관리자",
+    "hash": "vNrWw1mIZa8=",
+    "label": "admin"
+  },
+  {
     "content": "[{}]\n로그인 중 ...",
     "hash": "yc8CJ07C+VA=",
     "label": "[{}]\nLogging in ..."
+  },
+  {
+    "content": "Now Connecting ...",
+    "hash": "q69U9K78uow=",
+    "label": "q69U9K78uow="
   },
   {
     "content": " 트레이스 ",
@@ -115,14 +125,14 @@
     "label": "Scroll Lock"
   },
   {
-    "content": "명령어를 입력하세요!",
-    "hash": "LhMVS/firuI=",
-    "label": "LhMVS/firuI="
-  },
-  {
     "content": "윈도우",
     "hash": "Hji6p30aHcc=",
     "label": "Windows"
+  },
+  {
+    "content": "명령어를 입력하세요!",
+    "hash": "LhMVS/firuI=",
+    "label": "LhMVS/firuI="
   },
   {
     "content": " 지우기 ",
@@ -140,19 +150,14 @@
     "label": "iB3tWuDUp5k="
   },
   {
-    "content": "로그인##%p",
-    "hash": "R0mDsXWdg6Q=",
-    "label": "LOGIN##%p"
-  },
-  {
-    "content": "Remove",
+    "content": "제거",
     "hash": "ByFC6/YRPN0=",
     "label": "Remove"
   },
   {
-    "content": "그래픽",
-    "hash": "kSO8PC9vyWw=",
-    "label": "Graphic"
+    "content": "로그인##%p",
+    "hash": "R0mDsXWdg6Q=",
+    "label": "LOGIN##%p"
   },
   {
     "content": "[{}]\n성공적으로 로그인했습니다.",
@@ -160,14 +165,29 @@
     "label": "xNsdDsQTLi4="
   },
   {
-    "content": "{} 권한을 획득했습니다.",
-    "hash": "rGhmoxr6IT0=",
-    "label": "rGhmoxr6IT0="
+    "content": "그래픽",
+    "hash": "kSO8PC9vyWw=",
+    "label": "Graphic"
+  },
+  {
+    "content": ">> ERROR {}",
+    "hash": "fxUxemgHd8g=",
+    "label": "fxUxemgHd8g="
   },
   {
     "content": "스케일",
     "hash": "g4ucE8cqi5w=",
     "label": "Scale"
+  },
+  {
+    "content": "세션을 정말 삭제합니까?",
+    "hash": "mfHKa8dOdvE=",
+    "label": "Are you sure to unregister this session?"
+  },
+  {
+    "content": "{} 권한을 획득했습니다.",
+    "hash": "rGhmoxr6IT0=",
+    "label": "rGhmoxr6IT0="
   },
   {
     "content": "트레이스",
@@ -180,14 +200,14 @@
     "label": "Relay Server"
   },
   {
+    "content": "Connection to session [{}] successfully established.",
+    "hash": "+yCJK68nCqU=",
+    "label": "+yCJK68nCqU="
+  },
+  {
     "content": "세션 종류",
     "hash": "h0B7eP+gMj8=",
     "label": "Session Type"
-  },
-  {
-    "content": "세션 종료",
-    "hash": "z1jgdskMK+g=",
-    "label": "Session Closed"
   },
   {
     "content": "스타일",
@@ -195,14 +215,19 @@
     "label": "Styles"
   },
   {
+    "content": "세션 종료",
+    "hash": "z1jgdskMK+g=",
+    "label": "Session Closed"
+  },
+  {
+    "content": "제목",
+    "hash": "y16/bKweUsU=",
+    "label": "Title"
+  },
+  {
     "content": "메트릭",
     "hash": "woJ0+jPBYzg=",
     "label": "Metrics"
-  },
-  {
-    "content": "+ 새로 생성",
-    "hash": "aOa7LJ4/WjM=",
-    "label": "+ Create New"
   },
   {
     "content": "가시성",
@@ -210,9 +235,14 @@
     "label": "Visiblity"
   },
   {
-    "content": "제목",
-    "hash": "y16/bKweUsU=",
-    "label": "Title"
+    "content": "+ 새로 생성",
+    "hash": "aOa7LJ4/WjM=",
+    "label": "+ Create New"
+  },
+  {
+    "content": "[{}] 에 연결 중...",
+    "hash": "SsnmsAFXP48=",
+    "label": "SsnmsAFXP48="
   },
   {
     "content": "데모",
@@ -225,6 +255,16 @@
     "label": "Save workspace"
   },
   {
+    "content": "새 세션 발견!",
+    "hash": "7/byNp+vuAA=",
+    "label": "7/byNp+vuAA="
+  },
+  {
+    "content": "어플리케이션 설정을 불러왔습니다.",
+    "hash": "Iyk1DZswzD4=",
+    "label": "APP_CONFIG_LOADED"
+  },
+  {
     "content": "워크스페이스 불러오기",
     "hash": "ACcQp3f6HGI=",
     "label": "Load workspace"
@@ -233,6 +273,11 @@
     "content": "플롯 {}",
     "hash": "ChnSkuZ8fzk=",
     "label": "Plot {}"
+  },
+  {
+    "content": "연결##%s",
+    "hash": "bQvxiF61xRQ=",
+    "label": "bQvxiF61xRQ="
   },
   {
     "content": "타임 플롯 목록",
@@ -245,13 +290,68 @@
     "label": "delete"
   },
   {
-    "content": "Scale: %4.2f",
+    "content": "스케일: %4.2f",
     "hash": "lF4ZOsJF2wo=",
     "label": "Scale: %4.2f"
   },
   {
-    "content": "View On",
+    "content": "보기",
     "hash": "w8aGgmGoAJw=",
     "label": "View On"
+  },
+  {
+    "content": "표시",
+    "hash": "55BZVY0hspQ=",
+    "label": "PLOT_VISIBLE_CHECKBOX"
+  },
+  {
+    "content": "연결됨",
+    "hash": "UBA9w7Jhk7M=",
+    "label": "UBA9w7Jhk7M="
+  },
+  {
+    "content": "시스템 오류",
+    "hash": "ZmIXXV5ZQ9E=",
+    "label": "ZmIXXV5ZQ9E="
+  },
+  {
+    "content": "알 수 없는 Config Key",
+    "hash": "556JdLG2Eoc=",
+    "label": "556JdLG2Eoc="
+  },
+  {
+    "content": "-- 설명 없음 --",
+    "hash": "7PbKBtHdVlM=",
+    "label": "7PbKBtHdVlM="
+  },
+  {
+    "content": "수정 즉시 반영",
+    "hash": "KTpH5TvWwsg=",
+    "label": "KTpH5TvWwsg="
+  },
+  {
+    "content": "Reload! (^R)",
+    "hash": "MuL6ZU2CfMY=",
+    "label": "MuL6ZU2CfMY="
+  },
+  {
+    "content": "제출 (^S)",
+    "hash": "bqGpS2UwlBo=",
+    "label": "bqGpS2UwlBo="
+  },
+  {
+    "content": "JSON 직접 수정 (^E)",
+    "hash": "ZqaJQO98ecU=",
+    "label": "ZqaJQO98ecU="
+  },
+  {
+    "content": "예",
+    "hash": "0PDaeFXKIac=",
+    "label": "Yes"
+  },
+  {
+    "content": "아니오",
+    "hash": "bvZHwxkiZDc=",
+    "label": "No"
   }
 ]
