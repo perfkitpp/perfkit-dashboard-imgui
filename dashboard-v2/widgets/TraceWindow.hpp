@@ -75,7 +75,7 @@ class TraceWindow
    public:
     void BuildService(rpc::service_builder&);
     void Tick();
-    void Render(bool* bKeepOpen);
+    void Render();
 
    private:
     void _fnOnNewTracer(proto::tracer_descriptor_t&);

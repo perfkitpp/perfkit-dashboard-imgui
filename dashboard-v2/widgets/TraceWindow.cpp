@@ -26,7 +26,7 @@ void widgets::TraceWindow::BuildService(rpc::service_builder& s)
     s.route(notify::trace_node_update, bind_front(&Self::_fnOnTraceUpdate, this));
 }
 
-void widgets::TraceWindow::Render(bool* bKeepOpen)
+void widgets::TraceWindow::Render()
 {
     /// Render all tracer roots recursively
     _cachedTpNow = steady_clock::now();

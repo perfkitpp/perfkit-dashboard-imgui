@@ -14,6 +14,7 @@
 #include "interfaces/RpcSessionOwner.hpp"
 #include "interfaces/Session.hpp"
 #include "widgets/ConfigWindow.hpp"
+#include "widgets/GraphicWindow.hpp"
 #include "widgets/TraceWindow.hpp"
 
 using namespace perfkit;
@@ -62,6 +63,7 @@ class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNe
     // Widgets
     widgets::ConfigWindow _wndConfig{this};
     widgets::TraceWindow _wndTrace{this};
+    widgets::GraphicWindow _wndGraphics{this};
 
     // Flags
     struct

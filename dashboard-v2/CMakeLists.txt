@@ -34,6 +34,9 @@ target_sources(
         widgets/ConfigWindow.cpp
         widgets/TraceWindow.cpp
         widgets/TimePlot.cpp
+        widgets/GraphicWindow.cpp
+
+        widgets/graphics/GraphicContext.cpp
 )
 
 #
@@ -47,6 +50,7 @@ target_link_libraries(
         perfkit::core
         perfkit::net-v2::protocol
         perfkit::asio
+        perfkit::remotegl::protocol
 )
 
 target_compile_features(

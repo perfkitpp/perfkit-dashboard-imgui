@@ -50,6 +50,7 @@ BasicPerfkitNetClient::BasicPerfkitNetClient()
                    });
 
     _wndTrace.BuildService(service_info);
+    _wndGraphics.BuildService(service_info);
 
     _notify_handler = service_info.build();
 
@@ -181,12 +182,9 @@ void BasicPerfkitNetClient::RenderTickSession()
                       drawTTY();
               };
 
-    auto fnRenderTrace
-            = [&] {
-                  _wndTrace.Render(&_uiState.bTraceOpen);
-              };
+    auto fnRenderTrace = [&] { _wndTrace.Render(); };
+    auto fnRenderGraphics = [&] { _wndGraphics.Render(); };
 
-    auto fnRenderGraphics = [&] {};
     auto idTTY = ImGui::GetID("TTY");
     auto idTrace = ImGui::GetID("Trace");
     auto idGraphics = ImGui::GetID("Graphics");
@@ -216,7 +214,7 @@ void BasicPerfkitNetClient::TickSession()
 
     _wndConfig.Tick();
     _wndTrace.Tick();
-    // _wndGraphics.TickWindow();
+    _wndGraphics.Tick();
 
     if (_uiState.bConfigOpen)
     {
