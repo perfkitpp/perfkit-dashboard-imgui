@@ -15,7 +15,12 @@
 #include <cpph/utility/functional.hxx>
 #include <cpph/utility/futils.hxx>
 #include <perfkit/fwd.hpp>
+#include <perfkit/localize.h>
 #include <spdlog/fmt/fmt.h>
+
+#define LOCTEXT(...) PERFKIT_LOCTEXT(__VA_ARGS__).c_str()
+#define LOCWORD(...) PERFKIT_LOCWORD(__VA_ARGS__).c_str()
+#define KEYWORD(...) PERFKIT_KEYWORD(__VA_ARGS__).c_str()
 
 using cpph::bind_front;
 using cpph::bind_front_weak;

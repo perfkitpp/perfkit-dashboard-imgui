@@ -215,7 +215,9 @@ static class NotifyContext
 
     void Logging(spdlog::level::level_enum loglevel, string const& content)
     {
-        _logNotify->log(loglevel, content);
+        if (_logNotify) {
+            _logNotify->log(loglevel, content);
+        }
     }
 
    private:

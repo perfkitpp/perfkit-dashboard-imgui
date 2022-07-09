@@ -18,10 +18,15 @@
 #include <imgui_extension.h>
 #include <imgui_internal.h>
 #include <perfkit/configs.h>
+#include <perfkit/localize.h>
 
 #include "interfaces/Session.hpp"
 #include "stdafx.h"
 #include "widgets/TimePlot.hpp"
+
+#define LT(...) PERFKIT_LOCTEXT(__VA_ARGS__).c_str()
+#define LW(...) PERFKIT_LOCWORD(__VA_ARGS__).c_str()
+#define KW(...) PERFKIT_KEYWORD(__VA_ARGS__).c_str()
 
 static auto PersistentNumberStorage()
 {
@@ -36,6 +41,8 @@ void PostAsyncEvent(ufunction<void()> evt)
 
 PERFKIT_CATEGORY(GConfig)
 {
+    PERFKIT_CONFIGURE(Locale, "en-US");
+
     PERFKIT_SUBCATEGORY(Application)
     {
         struct SessionArchive {
@@ -47,8 +54,8 @@ PERFKIT_CATEGORY(GConfig)
             CPPH_REFL_DEFINE_OBJECT_inline_simple(key, type, displayName, bShow);
         };
 
-        PERFKIT_CONFIGURE(ArchivedSessions, vector<SessionArchive>{}).confirm();
-        PERFKIT_CONFIGURE(Numbers, (std::map<string, double, std::less<>>{})).confirm();
+        PERFKIT_CONFIGURE(ArchivedSessions, vector<SessionArchive>{});
+        PERFKIT_CONFIGURE(Numbers, (std::map<string, double, std::less<>>{}));
     }
 
     PERFKIT_SUBCATEGORY(Widgets) {}
@@ -162,6 +169,9 @@ Application::Application()
             [this] {
                 GConfig::update();
 
+                // Load localization
+                perfkit::load_localization_lut(*GConfig::Locale, "rsrc/locale/" + *GConfig::Locale + ".json");
+
                 // Load Sessions
                 _sessions.clear();
 
@@ -185,9 +195,9 @@ Application::Application()
                 // Load global variables
                 *PersistentNumberStorage() = *GConfig::Application::Numbers;
 
-                NotifyToast{"App Config Loaded"}
+                NotifyToast{LW("App Config Loaded")}
                         .Trivial()
-                        .String("{} sessions, {} numbers loaded",
+                        .String(LT("{} sessions, {} numbers loaded"),
                                 _sessions.size(), PersistentNumberStorage()->size());
             },
             perfkit::event_priority::first);
@@ -211,6 +221,8 @@ Application::Application()
 
                 GConfig::Application::ArchivedSessions.commit(std::move(archive));
                 GConfig::Application::Numbers.commit(*PersistentNumberStorage());
+
+                perfkit::dump_localization_lut("rsrc/locale/" + *GConfig::Locale + ".json");
             },
             perfkit::event_priority::last);
 }
@@ -228,32 +240,32 @@ void Application::drawMenuContents()
     if (not ImGui::BeginMainMenuBar()) { return; }
     CPPH_FINALLY(ImGui::EndMainMenuBar());
 
-    if (CondInvoke(ImGui::BeginMenu("File"), &ImGui::EndMenu)) {
-        if (ImGui::MenuItem("Save workspace"))
+    if (CondInvoke(ImGui::BeginMenu(LW("File")), &ImGui::EndMenu)) {
+        if (ImGui::MenuItem(LW("Save workspace")))
             saveWorkspace();
-        if (ImGui::MenuItem("Save workspace as"))
+        if (ImGui::MenuItem(LW("Save workspace as")))
             NotifyToast{}.Fatal().String("Not Implemented: " __FILE__ ":{}", __LINE__);
-        if (ImGui::MenuItem("Load workspace"))
+        if (ImGui::MenuItem(LW("Load workspace")))
             NotifyToast{}.Fatal().String("Not Implemented: " __FILE__ ":{}", __LINE__);
     }
 
-    if (CondInvoke(ImGui::BeginMenu("View"), &ImGui::EndMenu)) {
+    if (CondInvoke(ImGui::BeginMenu(LW("View")), &ImGui::EndMenu)) {
         ImGui::MenuItem("Sessions", "Ctrl+H", &_bDrawSessionList);
 
         ImGui::Separator();
-        ImGui::MenuItem("Metrics", NULL, &_bShowMetrics);
-        ImGui::MenuItem("Styles", NULL, &_bShowStyles);
+        ImGui::MenuItem(LW("Metrics"), NULL, &_bShowMetrics);
+        ImGui::MenuItem(LW("Styles"), NULL, &_bShowStyles);
         ImGui::Separator();
-        ImGui::MenuItem("Demo", NULL, &_bShowDemo);
+        ImGui::MenuItem(LW("Demo"), NULL, &_bShowDemo);
     }
 
-    if (CondInvoke(ImGui::BeginMenu("Configure"), &ImGui::EndMenu)) {
-        if (CondInvoke(ImGui::BeginMenu("Add Session..."), &ImGui::EndMenu))
+    if (CondInvoke(ImGui::BeginMenu(LW("Configure")), &ImGui::EndMenu)) {
+        if (CondInvoke(ImGui::BeginMenu(LW("Add Session...")), &ImGui::EndMenu))
             drawAddSessionMenu();
 
-        if (CondInvoke(ImGui::BeginMenu("Scale"), &ImGui::EndMenu)) {
+        if (CondInvoke(ImGui::BeginMenu(LW("Scale")), &ImGui::EndMenu)) {
             ImGui::SetNextItemWidth(150 * ImGui::GetIO().FontGlobalScale);
-            ImGui::SliderFloat("##Scale", &ImGui::GetIO().FontGlobalScale, 1, 2, "Scale: %4.2f");
+            ImGui::SliderFloat("##Scale", &ImGui::GetIO().FontGlobalScale, 1, 2, LW("Scale: %4.2f"));
         }
     }
 }
@@ -261,15 +273,15 @@ void Application::drawMenuContents()
 void Application::drawSessionList(bool* bKeepOpen)
 {
     CPPH_FINALLY(ImGui::End());
-    if (not ImGui::Begin("Sessions", bKeepOpen)) { return; }
+    if (not ImGui::Begin(LW("Sessions"), bKeepOpen)) { return; }
 
-    if (ImGui::TreeNodeEx("Add Session", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_SpanAvailWidth))
+    if (ImGui::TreeNodeEx(LW("Add Session"), ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_SpanAvailWidth))
         if (CPPH_TMPVAR = ImGui::ScopedChildWindow("Session-AddNew"))
             drawAddSessionMenu();
 
-    ImGui::AlignTextToFramePadding(), ImGui::BulletText("Sessions");
+    ImGui::AlignTextToFramePadding(), ImGui::BulletText(LW("Sessions"));
     CPPH_FINALLY(ImGui::EndChild());
-    ImGui::BeginChild("Session-List", {0, 0}, true);
+    ImGui::BeginChild(LW("Session-List"), {0, 0}, true);
 
     char textBuf[256];
     auto dragDropSwap{optional<pair<int64_t, int64_t>>{}};
@@ -346,14 +358,14 @@ void Application::drawSessionList(bool* bKeepOpen)
             }
         }
 
-        sprintf(textBuf, "Unregister##%s-%d", sess.Key.c_str(), sess.Type);
+        sprintf(textBuf, LW("Unregister##%s-%d"), sess.Key.c_str(), sess.Type);
         if (not bOpenStatus) {
             if (bIsSessionOpen && not sess.bPendingClose) {
                 // If session was originally open, try close session.
                 sess.Ref->CloseSession();
                 sess.bPendingClose = true;
 
-                NotifyToast("Session Closed").String("{}@{}", sess.CachedDisplayName, sess.Key);
+                NotifyToast(LW("Session Closed")).String("{}@{}", sess.CachedDisplayName, sess.Key);
             } else {
                 // Otherwise, popup modal for deleting this session
                 ImGui::OpenPopup(textBuf);
@@ -363,20 +375,20 @@ void Application::drawSessionList(bool* bKeepOpen)
         if (CondInvoke(ImGui::BeginPopup(textBuf), ImGui::EndPopup)) {
             sess.bPendingClose = false;
 
-            ImGui::Text("Are you sure to unregister this session?");
-            if (ImGui::Button("Yes")) {
+            ImGui::TextUnformatted(LW("Are you sure to unregister this session?"));
+            if (ImGui::Button(KW(Yes))) {
                 auto name = iter->Key;
 
                 iter = _sessions.erase(iter);
                 ImGui::CloseCurrentPopup();
                 ImGui::MarkIniSettingsDirty();
 
-                NotifyToast("Session Erased").String(name);
+                NotifyToast(LW("Session Erased")).String(name);
                 continue;
             }
 
             ImGui::SameLine();
-            if (ImGui::Button("No")) {
+            if (ImGui::Button(KW(No))) {
                 ImGui::CloseCurrentPopup();
             }
         }
@@ -394,12 +406,12 @@ void Application::drawSessionList(bool* bKeepOpen)
 
 void Application::drawAddSessionMenu()
 {
-    constexpr char const* ItemNames[] = {"-- NONE --", "Tcp [unsafe]", "Tcp [ssl]", "Relay Server", "websocket"};
+    char const* ItemNames[] = {"-- NONE --", "Tcp [unsafe]", "Tcp [ssl]", LW("Relay Server"), LW("websocket")};
     auto state = &_addSessionModalState;
 
     static_assert(std::size(ItemNames) == int(ESessionType::ENUM_MAX_VALUE));
 
-    if (CondInvoke(ImGui::BeginCombo("Session Type", ItemNames[int(state->Selected)]), &ImGui::EndCombo)) {
+    if (CondInvoke(ImGui::BeginCombo(LW("Session Type"), ItemNames[int(state->Selected)]), &ImGui::EndCombo)) {
         for (int i = 1; i < int(ESessionType::ENUM_MAX_VALUE); ++i) {
             bool bIsSelected = (i == int(state->Selected));
             if (ImGui::Selectable(ItemNames[i], bIsSelected)) {
@@ -436,7 +448,7 @@ void Application::drawAddSessionMenu()
     // Expose add session button only when conditions are valid
     ImGui::Spacing();
 
-    if ((ImGui::Button("Create", {-1, 0}) || ImGui::IsKeyPressed(ImGuiKey_Enter, false))) {
+    if ((ImGui::Button(LW("Create"), {-1, 0}) || ImGui::IsKeyPressed(ImGuiKey_Enter, false))) {
         RegisterSessionMainThread(state->UriBuffer, state->Selected);
         ImGui::MarkIniSettingsDirty();
         state->bActivateButton = false;
@@ -451,9 +463,9 @@ auto Application::RegisterSessionMainThread(
         -> SessionNode*
 {
     if (isSessionExist(keyString, type)) {
-        NotifyToast{"Session Creation Failed"}
+        NotifyToast{LW("Session Creation Failed")}
                 .Error()
-                .String("Session key {} already exist", keyString);
+                .String(LW("Session key {} already exist"), keyString);
         return nullptr;
     }
 
@@ -469,9 +481,9 @@ auto Application::RegisterSessionMainThread(
     }
 
     if (not session) {
-        NotifyToast{"Session Creation Failed"}
+        NotifyToast{LW("Session Creation Failed")}
                 .Error()
-                .String("URI [{}]: Given session type is not implemented yet ...", keyString);
+                .String(LT("URI [{}]: Given session type is not implemented yet ..."), keyString);
 
         return nullptr;
     }
@@ -487,7 +499,7 @@ auto Application::RegisterSessionMainThread(
     elem->Ref->InitializeSession(elem->Key);
     elem->Ref->FetchSessionDisplayName(&elem->CachedDisplayName);
 
-    NotifyToast{"Session Created"}.String("{}@{}", elem->CachedDisplayName, elem->Key);
+    NotifyToast{LW("Session Created")}.String("{}@{}", elem->CachedDisplayName, elem->Key);
 
     return elem;
 }
@@ -503,7 +515,7 @@ bool Application::isSessionExist(std::string_view name, ESessionType type)
 void Application::loadWorkspace()
 {
     if (not perfkit::configs_import(_workspacePath)) {
-        NotifyToast{}.Error().String("Config path '{}' is not a valid file.", _workspacePath);
+        NotifyToast{}.Error().String(LW("Config path '{}' is not a valid file."), _workspacePath);
         return;
     }
 
@@ -545,8 +557,8 @@ void Application::tickSessions()
         ImGui::PopStyleColor(bDrawGreenHeader * 4);
     }
 
-    if (auto wnd = ImGui::FindWindowByName("configs"); wnd && ImGui::GetCurrentContext()->FrameCount == wnd->LastFrameActive) {
-        if (CPPH_FINALLY(ImGui::End()); ImGui::Begin("configs")) {
+    if (auto wnd = ImGui::FindWindowByName(LW("configs")); wnd && ImGui::GetCurrentContext()->FrameCount == wnd->LastFrameActive) {
+        if (CPPH_FINALLY(ImGui::End()); ImGui::Begin(LW("configs"))) {
             ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 600 * DpiScale());
         }
     }

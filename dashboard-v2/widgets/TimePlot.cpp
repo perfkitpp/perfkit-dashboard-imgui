@@ -115,7 +115,7 @@ void TimePlotWindowManager::TickWindow()
 
     /// Render MenuBar
     if (CondInvoke(BeginMainMenuBar(), &EndMainMenuBar)) {
-        if (CondInvoke(BeginMenu("View"), &EndMenu)) {
+        if (CondInvoke(BeginMenu(LOCWORD("View")), &EndMenu)) {
             Separator();
             MenuItem("Time Plots", NULL, &_widget.bShowListPanel);
         }
@@ -127,22 +127,22 @@ void TimePlotWindowManager::TickWindow()
         return;
 
     ImGui::SetNextWindowSize({640, 480}, ImGuiCond_Once);
-    if (CPPH_CLEANUP(&End); Begin("Time Plot List", &_widget.bShowListPanel, ImGuiWindowFlags_MenuBar)) {
+    if (CPPH_CLEANUP(&End); Begin(LOCWORD("Time Plot List"), &_widget.bShowListPanel, ImGuiWindowFlags_MenuBar)) {
         /// Render window management menu
         if (CondInvoke(ImGui::BeginMenuBar(), &ImGui::EndMenuBar)) {
-            if (CondInvoke(ImGui::BeginMenu("Windows"), &ImGui::EndMenu)) {
-                if (ImGui::MenuItem("+ Create New")) {
+            if (CondInvoke(ImGui::BeginMenu(LOCWORD("Windows")), &ImGui::EndMenu)) {
+                if (ImGui::MenuItem(LOCWORD("+ Create New"))) {
                     _createNewPlotWindow();
                 } else if (not _windows.empty()) {
                     ImGui::Separator();
                     for (auto iter = _windows.begin(); iter != _windows.end();) {
                         auto& wnd = *iter;
                         if (CondInvoke(ImGui::BeginMenu(usfmt("{}###{}", wnd->title, wnd->key)), &ImGui::EndMenu)) {
-                            ImGui::Checkbox("Visiblity", &wnd->bIsDisplayed);
+                            ImGui::Checkbox(LOCWORD("Visiblity"), &wnd->bIsDisplayed);
                             ImGui::SameLine();
                             ImGui::SetCursorPosX(ImGui::GetContentRegionMax().x - 80 * DpiScale());
-                            bool bEraseWnd = ImGui::Button("delete", {-1, 0});
-                            ImGui::InputText("Title", wnd->title);
+                            bool bEraseWnd = ImGui::Button(LOCWORD("delete"), {-1, 0});
+                            ImGui::InputText(LOCWORD("Title"), wnd->title);
 
                             if (bEraseWnd) {
                                 iter = _windows.erase(iter);
@@ -211,14 +211,14 @@ void TimePlotWindowManager::TickWindow()
                     slot->bFocusRequested = true;
                 }
 
-                if (CondInvoke(ImGui::BeginMenu("View On"), &ImGui::EndMenu)) {
-                    if (ImGui::MenuItem("+ Create New")) {
+                if (CondInvoke(ImGui::BeginMenu(LOCWORD("View On")), &ImGui::EndMenu)) {
+                    if (ImGui::MenuItem(LOCWORD("+ Create New"))) {
                         // Create new menu, and set this slot to be drawn on given window.
                         auto newWnd = _createNewPlotWindow();
                         slot->targetWindow = newWnd;
                         slot->bTargetWndChanged = true;
                         newWnd->bIsDisplayed = true;
-                    } else if (ImGui::MenuItem("Hide")) {
+                    } else if (ImGui::MenuItem(LOCWORD("Hide"))) {
                         slot->targetWindow = {};
                     } else if (not _windows.empty()) {
                         ImGui::Separator();
@@ -233,7 +233,7 @@ void TimePlotWindowManager::TickWindow()
                     }
                 }
 
-                if (ImGui::MenuItem("Remove")) {
+                if (ImGui::MenuItem(LOCWORD("Remove"))) {
                     slot->bMarkDestroied = true;
                 }
             }
@@ -241,7 +241,7 @@ void TimePlotWindowManager::TickWindow()
             if (CondInvoke(ImGui::BeginPopup("##POPUP_COLOR"), &ImGui::EndPopup)) {
                 ImGui::SetColorEditOptions(ImGuiColorEditFlags_PickerHueWheel);
 
-                ImGui::ColorPicker4("Plot Color", (float*)&slot->plotColor);
+                ImGui::ColorPicker4(LOCWORD("Plot Color"), (float*)&slot->plotColor);
             }
         }  // for (auto& slot : _slots)
     }
@@ -289,8 +289,8 @@ void TimePlotWindowManager::TickWindow()
 
                 ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x / 2);
                 ImGui::InputText("##Title", wnd->title);
-                ImGui::Checkbox("Time Plot", &bIsTimeBuildMode);
-                ImGui::Checkbox(usprintf("%s###CHKBOX", wnd->bFollowGraphMovement ? "Follow Plot" : "Fix Plot"), &wnd->bFollowGraphMovement);
+                ImGui::Checkbox(LOCWORD("Time Plot"), &bIsTimeBuildMode);
+                ImGui::Checkbox(usprintf("%s###CHKBOX", wnd->bFollowGraphMovement ? LOCWORD("Follow Plot") : LOCWORD("Fix Plot")), &wnd->bFollowGraphMovement);
             }
 
             if (CondInvoke(ImPlot::BeginPlot(usprintf("###%p", wnd->title.c_str(), wnd.get()), {-1, -1}), ImPlot::EndPlot)) {
@@ -528,7 +528,7 @@ auto TimePlotWindowManager::_createNewPlotWindow(string key) -> shared_ptr<TimeP
     }
 
     auto ptr = make_shared<TimePlot::WindowContext>();
-    ptr->title = fmt::format("Plot {}", ++_wndCreateIndexer);
+    ptr->title = fmt::format(LOCWORD("Plot {}"), ++_wndCreateIndexer);
     ptr->key = std::move(key);
 
     _windows.push_back(ptr);
