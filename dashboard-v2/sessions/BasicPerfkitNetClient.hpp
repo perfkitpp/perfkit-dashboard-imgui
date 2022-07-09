@@ -69,6 +69,9 @@ class BasicPerfkitNetClient : public std::enable_shared_from_this<BasicPerfkitNe
         bool bConfigOpen = false;
         bool bTraceOpen = false;
         bool bGraphicsOpen = false;
+
+        float TTYSpanWidth = 200;
+        float TraceSpanWidth = 200;
     } _uiState;
 
    public:

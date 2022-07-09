@@ -28,11 +28,6 @@ void widgets::TraceWindow::BuildService(rpc::service_builder& s)
 
 void widgets::TraceWindow::Render(bool* bKeepOpen)
 {
-    CPPH_FINALLY(ImGui::End());
-    ImGui::SetNextWindowSize({480, 272}, ImGuiCond_Once);
-    if (not ImGui::Begin(usprintf("traces [%s]###%s", _host->DisplayString().c_str(), _host->KeyString().c_str()), bKeepOpen))
-        return;
-
     /// Render all tracer roots recursively
     _cachedTpNow = steady_clock::now();
 

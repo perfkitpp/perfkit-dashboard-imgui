@@ -166,19 +166,47 @@ void BasicPerfkitNetClient::RenderTickSession()
         CloseSession();
     }
 
-    {
-        auto bDrawBorder = CondInvokeBody(
-                IsSessionOpen() && ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows),
-                &ImGui::PopStyleColor, 1);
+    auto fnRenderTTY
+            = [&] {
+                  auto bDrawBorder = CondInvokeBody(
+                          IsSessionOpen() && ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows),
+                          &ImGui::PopStyleColor, 1);
 
-        if (bDrawBorder)
-        {
-            ImGui::PushStyleColor(ImGuiCol_Border, 0xff'117712);
-        }
+                  if (bDrawBorder)
+                  {
+                      ImGui::PushStyleColor(ImGuiCol_Border, 0xff'117712);
+                  }
 
-        if (CPPH_FINALLY(ImGui::EndChild()); ImGui::BeginChild("TerminalGroup", {}, true))
-            drawTTY();
-    }
+                  if (CPPH_FINALLY(ImGui::EndChild()); ImGui::BeginChild("TerminalGroup", {}, true))
+                      drawTTY();
+              };
+
+    auto fnRenderTrace
+            = [&] {
+                  _wndTrace.Render(&_uiState.bTraceOpen);
+              };
+
+    auto fnRenderGraphics = [&] {};
+    auto idTTY = ImGui::GetID("TTY");
+    auto idTrace = ImGui::GetID("Trace");
+    auto idGraphics = ImGui::GetID("Graphics");
+
+    float* TTYSpanWidth = &_uiState.TTYSpanWidth;
+    float tmpZeroSpanBody = 0;
+    if (not _uiState.bTraceOpen && not _uiState.bGraphicsOpen) { TTYSpanWidth = &tmpZeroSpanBody; }
+
+    ImGui::SplitRenders(
+            TTYSpanWidth, 0,
+            idTTY, ImGui::GetID("TTY_SIDE"),
+            fnRenderTTY, [&] {
+                if (_uiState.bTraceOpen && _uiState.bGraphicsOpen)
+                    ImGui::SplitRenders(&_uiState.TraceSpanWidth, 0, idTrace, idGraphics, fnRenderTrace, fnRenderGraphics);
+                else if (_uiState.bTraceOpen)
+                    ImGui::BeginChild(idTrace), fnRenderTrace(), ImGui::EndChild();
+                else if (_uiState.bGraphicsOpen)
+                    ImGui::BeginChild(idGraphics), fnRenderGraphics(), ImGui::EndChild();
+            },
+            ImGuiSplitRenderFlags_Vertical);
 }
 
 void BasicPerfkitNetClient::TickSession()
@@ -197,11 +225,6 @@ void BasicPerfkitNetClient::TickSession()
         {
             _wndConfig.Render(&_uiState.bConfigOpen);
         }
-    }
-
-    if (_uiState.bTraceOpen)
-    {
-        _wndTrace.Render(&_uiState.bTraceOpen);
     }
 }
 
