@@ -18,9 +18,10 @@
 #include <perfkit/localize.h>
 #include <spdlog/fmt/fmt.h>
 
-#define LOCTEXT(...) PERFKIT_LOCTEXT(__VA_ARGS__).c_str()
-#define LOCWORD(...) PERFKIT_LOCWORD(__VA_ARGS__).c_str()
-#define KEYWORD(...) PERFKIT_KEYWORD(__VA_ARGS__).c_str()
+#define LOCTEXT PERFKIT_C_LOCTEXT
+#define LOCWORD PERFKIT_C_LOCWORD
+#define KEYTEXT PERFKIT_C_KEYTEXT
+#define KEYWORD PERFKIT_C_KEYWORD
 
 using cpph::bind_front;
 using cpph::bind_front_weak;

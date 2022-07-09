@@ -138,7 +138,7 @@ void TimePlotWindowManager::TickWindow()
                     for (auto iter = _windows.begin(); iter != _windows.end();) {
                         auto& wnd = *iter;
                         if (CondInvoke(ImGui::BeginMenu(usfmt("{}###{}", wnd->title, wnd->key)), &ImGui::EndMenu)) {
-                            ImGui::Checkbox(LOCWORD("Visiblity"), &wnd->bIsDisplayed);
+                            ImGui::Checkbox(KEYTEXT(PLOT_VISIBLE_CHECKBOX, "Visiblity"), &wnd->bIsDisplayed);
                             ImGui::SameLine();
                             ImGui::SetCursorPosX(ImGui::GetContentRegionMax().x - 80 * DpiScale());
                             bool bEraseWnd = ImGui::Button(LOCWORD("delete"), {-1, 0});

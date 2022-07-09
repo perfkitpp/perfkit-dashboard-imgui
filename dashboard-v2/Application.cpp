@@ -24,9 +24,10 @@
 #include "stdafx.h"
 #include "widgets/TimePlot.hpp"
 
-#define LT(...) PERFKIT_LOCTEXT(__VA_ARGS__).c_str()
-#define LW(...) PERFKIT_LOCWORD(__VA_ARGS__).c_str()
-#define KW(...) PERFKIT_KEYWORD(__VA_ARGS__).c_str()
+#define LT PERFKIT_C_LOCTEXT
+#define LW PERFKIT_C_LOCWORD
+#define KW PERFKIT_C_KEYWORD
+#define KT PERFKIT_C_KEYTEXT
 
 static auto PersistentNumberStorage()
 {
@@ -197,7 +198,7 @@ Application::Application()
                 // Load global variables
                 *PersistentNumberStorage() = *GConfig::Application::Numbers;
 
-                NotifyToast{LW("App Config Loaded")}
+                NotifyToast{KT(APP_CONFIG_LOADED, "App Config Loaded")}
                         .Trivial()
                         .String(LT("{} sessions, {} numbers loaded"),
                                 _sessions.size(), PersistentNumberStorage()->size());
@@ -283,7 +284,7 @@ void Application::drawSessionList(bool* bKeepOpen)
 
     ImGui::AlignTextToFramePadding(), ImGui::BulletText(LW("Sessions"));
     CPPH_FINALLY(ImGui::EndChild());
-    ImGui::BeginChild(LW("Session-List"), {0, 0}, true);
+    ImGui::BeginChild("Session-List", {0, 0}, true);
 
     char textBuf[256];
     auto dragDropSwap{optional<pair<int64_t, int64_t>>{}};
