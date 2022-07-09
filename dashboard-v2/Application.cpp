@@ -170,7 +170,9 @@ Application::Application()
                 GConfig::update();
 
                 // Load localization
-                perfkit::load_localization_lut(*GConfig::Locale, "rsrc/locale/" + *GConfig::Locale + ".json");
+                auto localePath = "rsrc/locale/" + *GConfig::Locale + ".json";
+                perfkit::load_localization_lut(*GConfig::Locale, localePath);
+                perfkit::select_locale(*GConfig::Locale);
 
                 // Load Sessions
                 _sessions.clear();

@@ -1,0 +1,257 @@
+[
+  {
+    "content": "{} 세션과 {} 개의 변수를 불러왔습니다.",
+    "hash": "lyeNlDKrP+0=",
+    "label": "lyeNlDKrP+0="
+  },
+  {
+    "content": "세션을 생성했습니다.",
+    "hash": "kdYJLFSKPo4=",
+    "label": "Session Created"
+  },
+  {
+    "content": "어플리케이션 설정을 불러왔습니다.",
+    "hash": "BQ2E5R/wjEA=",
+    "label": "App Config Loaded"
+  },
+  {
+    "content": "뷰",
+    "hash": "KDyu52GUCpA=",
+    "label": "View"
+  },
+  {
+    "content": "웹 소켓",
+    "hash": "MDFnuT7M8i0=",
+    "label": "websocket"
+  },
+  {
+    "content": "파일",
+    "hash": "GZQoouF6PIA=",
+    "label": "File"
+  },
+  {
+    "content": "세션 추가 ...",
+    "hash": "mryK3Gy4bvw=",
+    "label": "Add Session..."
+  },
+  {
+    "content": "설정",
+    "hash": "5dxVXdz1nrg=",
+    "label": "Config"
+  },
+  {
+    "content": "새 세션",
+    "hash": "KNZSYuMw9OU=",
+    "label": "Add Session"
+  },
+  {
+    "content": "타임 플롯",
+    "hash": "+dvoYz91eZY=",
+    "label": "Time Plot"
+  },
+  {
+    "content": " 그래픽 ",
+    "hash": "GlmgvItJuao=",
+    "label": " graphics "
+  },
+  {
+    "content": "다른 이름으로 저장",
+    "hash": "8RofqpWEJdg=",
+    "label": "Save workspace as"
+  },
+  {
+    "content": "설정",
+    "hash": "0QZbvjclAuo=",
+    "label": "Configure"
+  },
+  {
+    "content": "세션",
+    "hash": "5DbqKllONBE=",
+    "label": "Sessions"
+  },
+  {
+    "content": "Session-List",
+    "hash": "Thk6l8Y6Lf0=",
+    "label": "Session-List"
+  },
+  {
+    "content": "등록 해제##%s-%d",
+    "hash": "+1Brcj3mkD4=",
+    "label": "Unregister##%s-%d"
+  },
+  {
+    "content": "플롯 따라가기",
+    "hash": "je5zJg65oXs=",
+    "label": "Follow Plot"
+  },
+  {
+    "content": "설정",
+    "hash": "dFbPLks7Pl4=",
+    "label": "configs"
+  },
+  {
+    "content": "관리자",
+    "hash": "vNrWw1mIZa8=",
+    "label": "admin"
+  },
+  {
+    "content": " 설정 ",
+    "hash": "aj9HNk2/c18=",
+    "label": " configs "
+  },
+  {
+    "content": "[{}]\n로그인 중 ...",
+    "hash": "yc8CJ07C+VA=",
+    "label": "[{}]\nLogging in ..."
+  },
+  {
+    "content": " 트레이스 ",
+    "hash": "ZU2wal3cw8w=",
+    "label": " traces "
+  },
+  {
+    "content": "스크롤 고정",
+    "hash": "kZCuyUVw/Aw=",
+    "label": "Scroll Lock"
+  },
+  {
+    "content": "명령어를 입력하세요!",
+    "hash": "LhMVS/firuI=",
+    "label": "LhMVS/firuI="
+  },
+  {
+    "content": "윈도우",
+    "hash": "Hji6p30aHcc=",
+    "label": "Windows"
+  },
+  {
+    "content": " 지우기 ",
+    "hash": "cNR5pnclYzo=",
+    "label": " clear "
+  },
+  {
+    "content": "생성",
+    "hash": "h5NSvPtQG7Q=",
+    "label": "Create"
+  },
+  {
+    "content": "RPC 세션을 생성했습니다.",
+    "hash": "iB3tWuDUp5k=",
+    "label": "iB3tWuDUp5k="
+  },
+  {
+    "content": "로그인##%p",
+    "hash": "R0mDsXWdg6Q=",
+    "label": "LOGIN##%p"
+  },
+  {
+    "content": "Remove",
+    "hash": "ByFC6/YRPN0=",
+    "label": "Remove"
+  },
+  {
+    "content": "그래픽",
+    "hash": "kSO8PC9vyWw=",
+    "label": "Graphic"
+  },
+  {
+    "content": "[{}]\n성공적으로 로그인했습니다.",
+    "hash": "xNsdDsQTLi4=",
+    "label": "xNsdDsQTLi4="
+  },
+  {
+    "content": "{} 권한을 획득했습니다.",
+    "hash": "rGhmoxr6IT0=",
+    "label": "rGhmoxr6IT0="
+  },
+  {
+    "content": "스케일",
+    "hash": "g4ucE8cqi5w=",
+    "label": "Scale"
+  },
+  {
+    "content": "트레이스",
+    "hash": "ijuTdnQW0F0=",
+    "label": "Trace"
+  },
+  {
+    "content": "중계 서버",
+    "hash": "0/y9557LMmc=",
+    "label": "Relay Server"
+  },
+  {
+    "content": "세션 종류",
+    "hash": "h0B7eP+gMj8=",
+    "label": "Session Type"
+  },
+  {
+    "content": "세션 종료",
+    "hash": "z1jgdskMK+g=",
+    "label": "Session Closed"
+  },
+  {
+    "content": "스타일",
+    "hash": "7So6iYb9bEA=",
+    "label": "Styles"
+  },
+  {
+    "content": "메트릭",
+    "hash": "woJ0+jPBYzg=",
+    "label": "Metrics"
+  },
+  {
+    "content": "+ 새로 생성",
+    "hash": "aOa7LJ4/WjM=",
+    "label": "+ Create New"
+  },
+  {
+    "content": "가시성",
+    "hash": "Gghixc6l7ts=",
+    "label": "Visiblity"
+  },
+  {
+    "content": "제목",
+    "hash": "y16/bKweUsU=",
+    "label": "Title"
+  },
+  {
+    "content": "데모",
+    "hash": "gm3+YdzNLRk=",
+    "label": "Demo"
+  },
+  {
+    "content": "워크스페이스 저장",
+    "hash": "384ACy5JNlk=",
+    "label": "Save workspace"
+  },
+  {
+    "content": "워크스페이스 불러오기",
+    "hash": "ACcQp3f6HGI=",
+    "label": "Load workspace"
+  },
+  {
+    "content": "플롯 {}",
+    "hash": "ChnSkuZ8fzk=",
+    "label": "Plot {}"
+  },
+  {
+    "content": "타임 플롯 목록",
+    "hash": "nxKzES1WPPU=",
+    "label": "Time Plot List"
+  },
+  {
+    "content": "삭제",
+    "hash": "/v9oBOJ9JR8=",
+    "label": "delete"
+  },
+  {
+    "content": "Scale: %4.2f",
+    "hash": "lF4ZOsJF2wo=",
+    "label": "Scale: %4.2f"
+  },
+  {
+    "content": "View On",
+    "hash": "w8aGgmGoAJw=",
+    "label": "View On"
+  }
+]
