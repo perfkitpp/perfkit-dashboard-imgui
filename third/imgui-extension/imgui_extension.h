@@ -24,6 +24,7 @@
 
 #pragma once
 #include <algorithm>
+#include <functional>
 #include <string>
 #include <string_view>
 
@@ -48,6 +49,16 @@ static inline ImVec4 operator-(const ImVec4& lhs, const ImVec4& rhs)            
 static inline ImVec4 operator*(const ImVec4& lhs, const ImVec4& rhs)            { return ImVec4(lhs.x * rhs.x, lhs.y * rhs.y, lhs.z * rhs.z, lhs.w * rhs.w); }
 IM_MSVC_RUNTIME_CHECKS_RESTORE
 // clang-format on
+
+enum ImGuiSplitRenderFlags
+{
+    ImGuiSplitRenderFlags_,
+    ImGuiSplitRenderFlags_Vertical         = 0b0001 << 0,
+    ImGuiSplitRenderFlags_DrawBorderFirst  = 0b0010 << 0,
+    ImGuiSplitRenderFlags_DrawBorderSecond = 0b0100 << 0,
+    ImGuiSplitRenderFlags_DrawBorderAll    = ImGuiSplitRenderFlags_DrawBorderFirst | ImGuiSplitRenderFlags_DrawBorderSecond,
+    ImGuiSplitRenderFlags_PivotFirst       = 0b1000 << 0,
+};
 
 namespace ImGui {
 double GetGlobalTime();
@@ -110,4 +121,9 @@ void        ToggleButton(const char* str_id, bool* v);
 bool        SelectableInput(const char* str_id, bool selected, ImGuiSelectableFlags flags, char* buf, size_t buf_size);
 
 bool        InputText(const char* str_id, std::string& buf, ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback cb = nullptr, void* user = nullptr);
+void        SplitRenders(
+               float* spanSize, float axisSize,
+               ImGuiID firstID, ImGuiID secondID,
+               std::function<void()> const& first, std::function<void()> const& second,
+               int flags = 0, int firstWndFlags = 0, int secondWndFlags = 1);
 }  // namespace ImGui

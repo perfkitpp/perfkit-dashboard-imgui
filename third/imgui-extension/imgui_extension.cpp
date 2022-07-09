@@ -279,7 +279,7 @@ bool InputText(const char* str_id, std::string& str, ImGuiInputTextFlags flags, 
         ImGuiInputTextCallback cb_org;
         void*                  user_org;
     };
-    auto ctx = context_t{&str, str.size(), cb, user};
+    auto ctx      = context_t{&str, str.size(), cb, user};
 
     bValueChanged = ImGui::InputText(
             "##TEDIT",
@@ -311,5 +311,75 @@ bool InputText(const char* str_id, std::string& str, ImGuiInputTextFlags flags, 
 
     str.resize(ctx.text_len);
     return bValueChanged;
+}
+
+void SplitRenders(
+        float* spanSize, float axisSize,
+        ImGuiID firstID, ImGuiID secondID,
+        std::function<void()> const& first, std::function<void()> const& second,
+        int flags, int firstWndFlags, int secondWndFlags)
+{
+    auto handleThickness     = ImGui::GetFontSize() * DpiScale() * 0.72f;
+    auto halfHandleThick     = handleThickness * 0.5f;
+    *spanSize                = max(ImGui::GetFontSize() * DpiScale() * 1.7f, *spanSize);
+
+    bool const bIsHorizontal = not(flags & ImGuiSplitRenderFlags_Vertical);
+    bool const bPivotFirst   = flags & ImGuiSplitRenderFlags_PivotFirst;
+    auto const cursorStartG  = ImGui::GetCursorScreenPos();
+
+    ImVec2     size{*spanSize * (bPivotFirst ? 1 : -1), axisSize};
+    ImVec2     spaceSize = ImGui::GetContentRegionAvail();
+
+    if (bIsHorizontal) { size.x = min(size.x, spaceSize.x - handleThickness); }
+    if (not bIsHorizontal) { swap(size.x, size.y), size.y = min(size.y, spaceSize.y - handleThickness); }
+
+    ImGui::BeginChild(firstID, size, firstWndFlags & ImGuiSplitRenderFlags_DrawBorderFirst, firstWndFlags);
+    first();
+    ImGui::EndChild();
+
+    if (bIsHorizontal) { ImGui::SameLine(0, 0); }
+
+    size.x = handleThickness;
+    size.y = axisSize == 0 ? -1 : axisSize;
+    if (not bIsHorizontal) { swap(size.x, size.y); }
+
+    ImGui::PushID((uint8_t*)spanSize + 1),
+            ImGui::PushStyleColor(ImGuiCol_Button, 0),
+            ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0);
+    bool bIsHeld = false, bIsHover = false;
+
+    ImGui::Button("##SEL", size);
+    ImGui::ButtonBehavior({ImGui::GetItemRectMin(), ImGui::GetItemRectMax()}, ImGui::GetID("##SEL"), &bIsHover, &bIsHeld);
+
+    ImGui::PopID(),
+            ImGui::PopStyleColor(),
+            ImGui::PopStyleVar();
+
+    if (bIsHover || bIsHeld)
+    {
+        ImGui::SetMouseCursor(bIsHorizontal ? ImGuiMouseCursor_ResizeEW : ImGuiMouseCursor_ResizeNS);
+    }
+
+    if (bIsHeld)
+    {
+        auto& io  = ImGui::GetIO();
+        auto  pos = io.MousePos - cursorStartG;
+        auto  hh  = halfHandleThick;
+
+        if (bIsHorizontal)
+            *spanSize = bPivotFirst ? pos.x - hh : spaceSize.x - pos.x + hh;
+        else
+            *spanSize = bPivotFirst ? pos.y - hh : spaceSize.y - pos.y + hh;
+    }
+
+    if (bIsHorizontal) { ImGui::SameLine(0, 0); }
+    size.x = 0;  // fill remaining area
+    size.y = axisSize;
+
+    if (not bIsHorizontal) { swap(size.x, size.y); }
+
+    ImGui::BeginChild(secondID, size, secondWndFlags & ImGuiSplitRenderFlags_DrawBorderSecond, secondWndFlags);
+    second();
+    ImGui::EndChild();
 }
 }  // namespace ImGui

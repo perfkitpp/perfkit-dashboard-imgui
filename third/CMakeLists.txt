@@ -2,7 +2,7 @@ include(FetchContent)
 
 ### CONFIGURE BUNDLED IMGUI
 project(perfkitpp-imgui-bundled)
-add_library(${PROJECT_NAME} STATIC)
+add_library(${PROJECT_NAME} INTERFACE)
 
 FetchContent_Declare(imgui URL https://github.com/ocornut/imgui/archive/refs/heads/docking.zip)
 FetchContent_Populate(imgui)
@@ -17,7 +17,7 @@ add_subdirectory(${glfw_SOURCE_DIR} ${glfw_BINARY_DIR} EXCLUDE_FROM_ALL)
 target_sources(
         ${PROJECT_NAME}
 
-        PUBLIC
+        INTERFACE
         ${imgui_SOURCE_DIR}/imgui.cpp
         ${imgui_SOURCE_DIR}/imgui_tables.cpp
         ${imgui_SOURCE_DIR}/imgui_widgets.cpp
@@ -34,7 +34,7 @@ target_sources(
 target_include_directories(
         ${PROJECT_NAME}
 
-        PUBLIC
+        INTERFACE
         ${imgui_SOURCE_DIR}
         ${imgui_SOURCE_DIR}/backends
         ${implot_SOURCE_DIR}
@@ -46,14 +46,14 @@ target_include_directories(
 target_compile_features(
         ${PROJECT_NAME}
 
-        PUBLIC
+        INTERFACE
         cxx_std_17
 )
 
 target_link_libraries(
         ${PROJECT_NAME}
 
-        PUBLIC
+        INTERFACE
         glfw
         ${OPENGL_LIBRARIES}
         range-v3::range-v3
