@@ -15,6 +15,12 @@ void widgets::GraphicWindow::Tick()
 
 void widgets::GraphicWindow::Render()
 {
+    if (ImGui::BeginPopupModal("PromptForceExec")) {
+        ImGui::Text("");
+
+        ImGui::EndPopup();
+    }
+
     if (not _context) {
     }
 }
