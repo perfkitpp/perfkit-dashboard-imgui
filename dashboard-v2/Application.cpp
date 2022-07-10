@@ -282,7 +282,10 @@ void Application::drawMenuContents()
 
         if (CondInvoke(ImGui::BeginMenu(LW("Scale")), &ImGui::EndMenu)) {
             ImGui::SetNextItemWidth(150 * ImGui::GetIO().FontGlobalScale);
-            ImGui::SliderFloat("##Scale", &ImGui::GetIO().FontGlobalScale, 1, 2, LW("Scale: %4.2f"));
+
+            int scaleFactor = ImGui::GetIO().FontGlobalScale * 4.f;
+            ImGui::DragInt("##Scale", &scaleFactor, 0.005f, 4, 10, LW("Scale: %d"));
+            ImGui::GetIO().FontGlobalScale = scaleFactor / 4.f;
         }
     }
 }
