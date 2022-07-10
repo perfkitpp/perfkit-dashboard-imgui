@@ -209,7 +209,7 @@ void BasicPerfkitNetClient::TickSession()
 
     _wndConfig.Tick();
     _wndTrace.Tick();
-    _wndGraphics.Tick();
+    _wndGraphics.Tick(&_uiState.bGraphicsOpen);
 
     if (_uiState.bConfigOpen) {
         ImGui::SetNextWindowSize({240, 320}, ImGuiCond_Once);

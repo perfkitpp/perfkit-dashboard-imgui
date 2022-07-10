@@ -6,4 +6,8 @@
 
 class GraphicContext
 {
+   public:
+    void RenderContextPane() {}
+    void Tick() {}
+    void Dispose() {}
 };

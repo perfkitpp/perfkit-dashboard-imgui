@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#include "cpph/container/buffer.hxx"
 #include "cpph/refl/rpc/core.hxx"
 #include "interfaces/RpcSessionOwner.hpp"
 
@@ -21,22 +22,31 @@ class GraphicWindow
 {
    private:
     IRpcSessionOwner* _host;
-    ptr<GraphicContext> _context;
+    weak_ptr<GraphicContext> _context;
 
     rpc::request_handle _hActiveConnectRequest;
+    bool _bPreviousEnableState = false;
+    bool _bDisconnected = false;
+
+    struct AsyncContext {
+        shared_ptr<GraphicContext> context;
+    } _async;
 
    public:
     explicit GraphicWindow(IRpcSessionOwner* host);
     ~GraphicWindow();
 
    public:
-    void BuildService(rpc::service_builder&) {}
-    void Tick();
+    void BuildService(rpc::service_builder&);
+    void Tick(bool* bEnableState);
     void Render();
 
    public:
-    void _forceConnect() {}
-    void _createGraphics() {}
-    void _clearGrahpics() {}
+    bool _forceConnect();
+
+   public:
+    void _asyncInitGraphics();
+    void _asyncRecvData(cpph::flex_buffer&);
+    void _asyncDeinitGraphics();
 };
 }  // namespace widgets
