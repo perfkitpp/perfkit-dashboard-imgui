@@ -15,6 +15,7 @@
 
 widgets::ConfigWindow::EditContext widgets::ConfigWindow::globalEditContext;
 static bool bFilterTargetDirty = false;
+static int CursorStartX = 0;
 
 static struct
 {
@@ -88,12 +89,13 @@ void widgets::ConfigWindow::Render(bool* bKeepOpen)
         if (bRenderComponents) {
             CPPH_TMPVAR = ImGui::ScopedChildWindow(usprintf("%s.REGION", _host->KeyString().c_str()));
             ImGui::SetScrollX(0);
+            CursorStartX = ImGui::GetCursorPosX();
 
             for (auto& [key, ctx] : _ctxs)
-                recursiveTickSubcategory(ctx, *ctx.rootCategoryDesc, not bRenderComponents);
+                recursiveTickSubcategory(ctx, *ctx.rootCategoryDesc, false);
         } else {
             for (auto& [key, ctx] : _ctxs)
-                recursiveTickSubcategory(ctx, *ctx.rootCategoryDesc, not bRenderComponents);
+                recursiveTickSubcategory(ctx, *ctx.rootCategoryDesc, true);
         }
     }
 }
@@ -123,6 +125,7 @@ void widgets::ConfigWindow::tryRenderEditorContext()
     // CPPH_FINALLY(ImGui::EndChildAutoHeight(childWndKey));
 
     ImGui::Separator();
+    ImGui::SetCursorPosX(CursorStartX);
     ImGui::PushStyleColor(ImGuiCol_ChildBg, 0xff343434);
     ImGui::PushStyleColor(ImGuiCol_MenuBarBg, 0xff292929);
     ImGui::BeginChildAutoHeight(childWndKey, 0, true, ImGuiWindowFlags_MenuBar);
