@@ -281,11 +281,36 @@ void Application::drawMenuContents()
             drawAddSessionMenu();
 
         if (CondInvoke(ImGui::BeginMenu(LW("Scale")), &ImGui::EndMenu)) {
-            ImGui::SetNextItemWidth(150 * ImGui::GetIO().FontGlobalScale);
+            // TODO: DPI Update application
+            static auto pivotStyleVars = ImGui::GetStyle();
+            static auto previousDpi = 0;
+            bool bDpiUpdate = false;
 
-            int scaleFactor = ImGui::GetIO().FontGlobalScale * 4.f;
-            ImGui::DragInt("##Scale", &scaleFactor, 0.005f, 4, 10, LW("Scale: %d"));
-            ImGui::GetIO().FontGlobalScale = scaleFactor / 4.f;
+            if (previousDpi != ImGui::GetWindowDpiScale()) {
+                previousDpi = exchange(ImGui::GetIO().FontGlobalScale, ImGui::GetWindowDpiScale());
+                bDpiUpdate = true;
+            }
+
+            auto startCursorPos = ImGui::GetCursorPos();
+            int scaleFactor = roundl(ImGui::GetIO().FontGlobalScale * 4.f);
+            ImGui::SetNextItemWidth(250 * DpiScale());
+            ImGui::ProgressBar((scaleFactor - 3) / 7.f, {-FLT_MIN, 0}, "");
+
+            ImGui::SetCursorPos(startCursorPos);
+            ImGui::SetNextItemWidth(250 * DpiScale());
+
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, 0);
+            ImGui::PushStyleColor(ImGuiCol_FrameBgActive, 0);
+            ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, 0);
+            if (bDpiUpdate || ImGui::DragInt("##Scale", &scaleFactor, 0.005, 4, 10)) {
+                auto fScaleFactor = scaleFactor / 4.f;
+                auto style = pivotStyleVars;
+
+                ImGui::GetIO().FontGlobalScale = fScaleFactor;
+                style.ScaleAllSizes(fScaleFactor);
+                ImGui::GetStyle() = style;
+            }
+            ImGui::PopStyleColor(3);
         }
     }
 }
