@@ -282,7 +282,7 @@ void BasicPerfkitNetClient::_onSessionCreate_(rpc::session_profile_view profile)
 
 void BasicPerfkitNetClient::_onSessionDispose_(rpc::session_profile_view profile)
 {
-    NotifyToast("Rpc Session Disposed").Wanrning().String(profile->peer_name);
+    NotifyToast("Rpc Session Disposed").Warning().String(profile->peer_name);
     _ttyQueue.access([&](auto&& str) {
         str.append(fmt::format(
                 std::locale("en_US.utf-8"),

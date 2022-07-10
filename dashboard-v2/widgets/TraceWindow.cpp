@@ -28,6 +28,9 @@ void widgets::TraceWindow::BuildService(rpc::service_builder& s)
 
 void widgets::TraceWindow::Render()
 {
+    ImGui::TextUnformatted(KEYTEXT(Trace, "Trace"));
+    ImGui::Separator();
+
     /// Render all tracer roots recursively
     _cachedTpNow = steady_clock::now();
 

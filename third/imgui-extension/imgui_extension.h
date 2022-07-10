@@ -126,4 +126,7 @@ void        SplitRenders(
                ImGuiID firstID, ImGuiID secondID,
                std::function<void()> const& first, std::function<void()> const& second,
                int flags = 0, int firstWndFlags = 0, int secondWndFlags = 1);
+
+void PushFontScale(float scale);
+void PopFontScale();
 }  // namespace ImGui

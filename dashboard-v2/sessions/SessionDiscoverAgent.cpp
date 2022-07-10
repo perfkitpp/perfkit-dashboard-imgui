@@ -90,7 +90,7 @@ void SessionDiscoverAgent::RenderSessionListEntityContent()
                 if (pNode) {
                     NotifyToast{LOCTEXT("Registered discovered session")};
                 } else {
-                    NotifyToast{LOCTEXT("Session is already registered")}.Wanrning();
+                    NotifyToast{LOCTEXT("Session is already registered")}.Warning();
                 }
             };
 

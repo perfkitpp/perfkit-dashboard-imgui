@@ -356,9 +356,9 @@ void JsonEditor::RetrieveEditing(Json* out)
             _self->editing = *out;
             return;
         } else {
-            NotifyToast{"JSON: Raw editor content parsing failed"}
+            NotifyToast{LOCTEXT("JSON: Raw editor content parsing failed")}
                     .Error()
-                    .String("Cached json content will be used.");
+                    .String(LOCTEXT("Cached json content will be used."));
         }
     }
 
@@ -380,9 +380,9 @@ bool JsonEditor::RawEditMode(bool const* bEnable)
                 if (not json.is_discarded()) {
                     _self->editing = json;
                 } else {
-                    NotifyToast{"JSON: Raw editor content parsing failed"}
+                    NotifyToast{LOCTEXT("JSON: Raw editor content parsing failed")}
                             .Error()
-                            .String("Cached json content will be used.");
+                            .String(LOCTEXT("Cached json content will be used."));
                 }
             }
         }

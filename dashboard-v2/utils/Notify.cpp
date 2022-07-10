@@ -110,7 +110,7 @@ static class NotifyContext
                 auto entityHeight = height + (*iter)->stateHeightOffset;
                 ImVec2 nextPos(posVp.x - PaddingX, posVp.y - PaddingY - entityHeight);
 
-                if (entityHeight + toast->toastHeightCache > sizeVp.y) {
+                if (not toast->bInfinity && entityHeight + toast->toastHeightCache > sizeVp.y) {
                     bExpireAtLeastOne = true;
                     ++iter;
                     break;
@@ -215,12 +215,14 @@ static class NotifyContext
 
     void Logging(spdlog::level::level_enum loglevel, string const& content)
     {
-            _logNotify->log(loglevel, content);
+        _logNotify->log(loglevel, content);
     }
 
    private:
     void preEraseToast(decltype(_toasts)::iterator iter)
     {
+        if ((*iter)->OnClosed) { (*iter)->OnClosed(); };
+
         ImGui::SetWindowSize(usprintf("###PDASH_TOAST%d", (*iter)->stateIdAlloc), {1, 1}, ImGuiCond_Always);
         _idPool.push_back((*iter)->stateIdAlloc);
 
@@ -339,6 +341,24 @@ NotifyToast&& NotifyToast::Spinner() &&
                 ImGui::Spinner("SpinnerCommon", ImGui::GetColorU32(ImGuiCol_ButtonActive));
                 ImGui::SameLine();
                 return true;
+            });
+
+    return _self();
+}
+
+NotifyToast&& NotifyToast::ButtonYesNo(ufunction<void()> onYes, string labelYes, ufunction<void()> onNo, string labelNo) &&
+{
+    _body->ContentDecos.emplace_back(
+            [onYes = move(onYes), labelYes = move(labelYes), onNo = move(onNo), labelNo = move(labelNo)] {
+                if (ImGui::Button(labelYes.c_str())) {
+                    onYes();
+                } else if (ImGui::SameLine(), ImGui::Button(labelNo.c_str())) {
+                    onNo();
+                } else {
+                    // Loop again
+                    return true;
+                }
+                return false;
             });
 
     return _self();

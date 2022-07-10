@@ -5,6 +5,16 @@
     "label": "lyeNlDKrP+0="
   },
   {
+    "content": "연결",
+    "hash": "e5tlEan6Kco=",
+    "label": "e5tlEan6Kco="
+  },
+  {
+    "content": "하트비트 에러",
+    "hash": "hDoCQzRdkB4=",
+    "label": "hDoCQzRdkB4="
+  },
+  {
     "content": "세션을 생성했습니다.",
     "hash": "kdYJLFSKPo4=",
     "label": "Session Created"
@@ -30,6 +40,11 @@
     "label": "File"
   },
   {
+    "content": "이미 같은 서버에서 그래픽 컨텍스트를 사용중인 다른 클라이언트가 있습니다. 계속하면 다른 클라이언트의 그래픽 컨텍스트 연결이 해제됩니다. \n계속할까요?",
+    "hash": "0ucJXObFgp8=",
+    "label": "0ucJXObFgp8="
+  },
+  {
     "content": "타임 플롯",
     "hash": "+dvoYz91eZY=",
     "label": "Time Plot"
@@ -50,7 +65,7 @@
     "label": "Add Session..."
   },
   {
-    "content": "Connecting to [{}:{}]...",
+    "content": "[{}:{}]에 연결 중...",
     "hash": "Msi/VQCoXIA=",
     "label": "Msi/VQCoXIA="
   },
@@ -85,7 +100,7 @@
     "label": "Unregister##%s-%d"
   },
   {
-    "content": "Connection Failed",
+    "content": "연결 실패",
     "hash": "Isl99X6IiNA=",
     "label": "Isl99X6IiNA="
   },
@@ -110,7 +125,7 @@
     "label": "[{}]\nLogging in ..."
   },
   {
-    "content": "Now Connecting ...",
+    "content": "연결 중 ...",
     "hash": "q69U9K78uow=",
     "label": "q69U9K78uow="
   },
@@ -118,6 +133,11 @@
     "content": " 트레이스 ",
     "hash": "ZU2wal3cw8w=",
     "label": " traces "
+  },
+  {
+    "content": "  예  ",
+    "hash": "aAwJOZx71bw=",
+    "label": "  YES  "
   },
   {
     "content": "스크롤 고정",
@@ -170,9 +190,19 @@
     "label": "Graphic"
   },
   {
-    "content": ">> ERROR {}",
+    "content": ">> 오류: {}",
     "hash": "fxUxemgHd8g=",
     "label": "fxUxemgHd8g="
+  },
+  {
+    "content": "{} 권한을 획득했습니다.",
+    "hash": "rGhmoxr6IT0=",
+    "label": "rGhmoxr6IT0="
+  },
+  {
+    "content": "연결 중 ...",
+    "hash": "JYqrNhgya34=",
+    "label": "CONNECTING"
   },
   {
     "content": "스케일",
@@ -185,11 +215,6 @@
     "label": "Are you sure to unregister this session?"
   },
   {
-    "content": "{} 권한을 획득했습니다.",
-    "hash": "rGhmoxr6IT0=",
-    "label": "rGhmoxr6IT0="
-  },
-  {
     "content": "트레이스",
     "hash": "ijuTdnQW0F0=",
     "label": "Trace"
@@ -200,9 +225,14 @@
     "label": "Relay Server"
   },
   {
-    "content": "Connection to session [{}] successfully established.",
+    "content": "세션 [{}]에 성공적으로 연결했습니다.",
     "hash": "+yCJK68nCqU=",
     "label": "+yCJK68nCqU="
+  },
+  {
+    "content": "CONNECTING ...",
+    "hash": "G/0bUH4TApI=",
+    "label": "G/0bUH4TApI="
   },
   {
     "content": "세션 종류",
@@ -213,6 +243,11 @@
     "content": "스타일",
     "hash": "7So6iYb9bEA=",
     "label": "Styles"
+  },
+  {
+    "content": "RPC 실행 실패: {}",
+    "hash": "b9TBpuB2X1I=",
+    "label": "b9TBpuB2X1I="
   },
   {
     "content": "세션 종료",
@@ -353,5 +388,45 @@
     "content": "아니오",
     "hash": "bvZHwxkiZDc=",
     "label": "No"
+  },
+  {
+    "content": "-- OFFLINE --",
+    "hash": "eiICmrmH55w=",
+    "label": "eiICmrmH55w="
+  },
+  {
+    "content": "그래픽",
+    "hash": "mF0yNERsBJc=",
+    "label": "mF0yNERsBJc="
+  },
+  {
+    "content": "-- 오프라인 --",
+    "hash": "eKKtlw/FTPA=",
+    "label": "OFFLINE"
+  },
+  {
+    "content": "({}) Graphics",
+    "hash": "VV7jmWMuNG8=",
+    "label": "VV7jmWMuNG8="
+  },
+  {
+    "content": "({})\n그래픽: 접근 거부됨",
+    "hash": "8KuK8OiOO8I=",
+    "label": "8KuK8OiOO8I="
+  },
+  {
+    "content": "하트비트 실패",
+    "hash": "rNWTsYGWxWo=",
+    "label": "rNWTsYGWxWo="
+  },
+  {
+    "content": "이미 같은 서버에서 그래픽 컨텍스트를 사용중인 다른 클라이언트가 있습니다. 계속하면 다른 클라이언트의 그래픽 컨텍스트 연결이 해제됩니다. \n계속할까요?",
+    "hash": "oTCuhXQj1Vg=",
+    "label": "ERROR_GRAHPICS_SESSION_ACCESS_DENIED"
+  },
+  {
+    "content": "  아니오  ",
+    "hash": "FmgrkvaR4sY=",
+    "label": "  NO  "
   }
 ]

@@ -382,4 +382,19 @@ void SplitRenders(
     second();
     ImGui::EndChild();
 }
+
+thread_local static vector<float> wndScaleStack;
+
+//
+void PushFontScale(float scale)
+{
+    wndScaleStack.push_back(ImGui::GetCurrentWindow()->FontWindowScale);
+    ImGui::GetCurrentWindow()->FontWindowScale *= scale;
+}
+
+void PopFontScale()
+{
+    ImGui::GetCurrentWindow()->FontWindowScale = wndScaleStack.back();
+    wndScaleStack.pop_back();
+}
 }  // namespace ImGui

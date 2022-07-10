@@ -104,6 +104,12 @@ configure_file(
         COPYONLY
 )
 
+configure_file(
+        ${CMAKE_SOURCE_DIR}/misc/locale/ko-KR.json
+        ${CMAKE_CURRENT_BINARY_DIR}/rsrc/locale/ko-KR.json
+        COPYONLY
+)
+
 #
 # Install configuration
 #

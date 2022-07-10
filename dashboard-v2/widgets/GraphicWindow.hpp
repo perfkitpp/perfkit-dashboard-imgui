@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#include "cpph/refl/rpc/core.hxx"
 #include "interfaces/RpcSessionOwner.hpp"
 
 class GraphicContext;
@@ -22,6 +23,8 @@ class GraphicWindow
     IRpcSessionOwner* _host;
     ptr<GraphicContext> _context;
 
+    rpc::request_handle _hActiveConnectRequest;
+
    public:
     explicit GraphicWindow(IRpcSessionOwner* host);
     ~GraphicWindow();
@@ -30,5 +33,10 @@ class GraphicWindow
     void BuildService(rpc::service_builder&) {}
     void Tick();
     void Render();
+
+   public:
+    void _forceConnect() {}
+    void _createGraphics() {}
+    void _clearGrahpics() {}
 };
 }  // namespace widgets

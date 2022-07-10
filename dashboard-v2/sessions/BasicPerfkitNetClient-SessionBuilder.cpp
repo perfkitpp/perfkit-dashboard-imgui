@@ -8,8 +8,8 @@ using namespace cpph;
 
 class EventProcedureImpl : public rpc::if_event_proc
 {
-    cpph::thread_pool _eq_rpc{1, 20 << 10};
-    cpph::thread_pool _eq_hdl{1, 20 << 10};
+    cpph::event_queue_worker _eq_rpc{20 << 10};
+    cpph::event_queue_worker _eq_hdl{20 << 10};
 
    public:
     void post_rpc_completion(ufunction<void()>&& fn) override
