@@ -12,23 +12,23 @@
 #include <asio/io_context.hpp>
 #include <asio/post.hpp>
 #include <cpph/algorithm/std.hxx>
+#include <cpph/app/localize.hpp>
 #include <cpph/helper/macros.hxx>
 #include <cpph/utility/cleanup.hxx>
 #include <imgui.h>
 #include <imgui_extension.h>
 #include <imgui_internal.h>
 #include <perfkit/configs.h>
-#include <perfkit/localize.h>
 #include <spdlog/spdlog.h>
 
 #include "interfaces/Session.hpp"
 #include "stdafx.h"
 #include "widgets/TimePlot.hpp"
 
-#define LT PERFKIT_C_LOCTEXT
-#define LW PERFKIT_C_LOCWORD
-#define KW PERFKIT_C_KEYWORD
-#define KT PERFKIT_C_KEYTEXT
+#define LT CPPH_C_LOCTEXT
+#define LW CPPH_C_LOCWORD
+#define KW CPPH_C_KEYWORD
+#define KT CPPH_C_KEYTEXT
 
 static auto PersistentNumberStorage()
 {

@@ -50,8 +50,8 @@ target_link_libraries(
         perfkit::core
         perfkit::net-v2::protocol
         perfkit::asio
-        perfkit::localization
         perfkit::remotegl::protocol
+        kang-sw::cpph::localization
 )
 
 target_compile_features(

@@ -6,21 +6,16 @@
 
 #include <asio/dispatch.hpp>
 #include <asio/post.hpp>
+#include <cpph/app/localize.hpp>
 #include <cpph/helper/macros.hxx>
 #include <cpph/refl/object.hxx>
 #include <cpph/refl/rpc/rpc.hxx>
 #include <cpph/refl/rpc/service.hxx>
 #include <perfkit/configs.h>
-#include <perfkit/localize.h>
 
 #include "Application.hpp"
 #include "imgui_extension.h"
 #include "utils/Misc.hpp"
-
-#define LT(...) PERFKIT_LOCTEXT(__VA_ARGS__).c_str()
-#define LW(...) PERFKIT_LOCWORD(__VA_ARGS__).c_str()
-#define KT(...) PERFKIT_KEYTEXT(__VA_ARGS__).c_str()
-#define KW(...) PERFKIT_KEYWORD(__VA_ARGS__).c_str()
 
 using namespace perfkit;
 using namespace net::message;
@@ -131,9 +126,9 @@ void BasicPerfkitNetClient::RenderTickSession()
                 };
 
         ImGui::SameLine(0, 10), ImGui::Text("");
-        fnWrapCheckbox(LW(" configs "), &_uiState.bConfigOpen);
-        fnWrapCheckbox(LW(" traces "), &_uiState.bTraceOpen);
-        fnWrapCheckbox(LW(" graphics "), &_uiState.bGraphicsOpen);
+        fnWrapCheckbox(LOCWORD(" configs "), &_uiState.bConfigOpen);
+        fnWrapCheckbox(LOCWORD(" traces "), &_uiState.bTraceOpen);
+        fnWrapCheckbox(LOCWORD(" graphics "), &_uiState.bGraphicsOpen);
     }
 
     if (bOpenSessionInfoHeader)
@@ -213,7 +208,7 @@ void BasicPerfkitNetClient::TickSession()
 
     if (_uiState.bConfigOpen) {
         ImGui::SetNextWindowSize({240, 320}, ImGuiCond_Once);
-        if (CPPH_FINALLY(ImGui::End()); ImGui::Begin(LW("configs"), nullptr, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_AlwaysVerticalScrollbar)) {
+        if (CPPH_FINALLY(ImGui::End()); ImGui::Begin(LOCWORD("configs"), nullptr, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_AlwaysVerticalScrollbar)) {
             _wndConfig.Render(&_uiState.bConfigOpen);
         }
     }
@@ -222,7 +217,7 @@ void BasicPerfkitNetClient::TickSession()
 void BasicPerfkitNetClient::_onSessionCreate_(rpc::session_profile_view profile)
 {
     auto anchor = make_shared<nullptr_t>();
-    NotifyToast(LT("Rpc Session Created")).String(profile->peer_name);
+    NotifyToast(LOCTEXT("Rpc Session Created")).String(profile->peer_name);
 
     try {
         auto rpc = profile->w_self.lock();
@@ -316,7 +311,7 @@ void BasicPerfkitNetClient::tickHeartbeat()
     if (not _timHeartbeat.check_sparse()) { return; }
 
     if (_hrpcHeartbeat && not _hrpcHeartbeat.wait(0ms)) {
-        NotifyToast{LT("Heartbeat failed")}.Error();
+        NotifyToast{LOCTEXT("Heartbeat failed")}.Error();
 
         if (++_heartbeatFailCount == 5) {
             CloseSession();
@@ -329,7 +324,7 @@ void BasicPerfkitNetClient::tickHeartbeat()
         _hrpcHeartbeat = service::heartbeat(_rpc).async_request(
                 [](auto&& ec, auto content) {
                     if (ec)
-                        NotifyToast{LT("Heartbeat returned error")}
+                        NotifyToast{LOCTEXT("Heartbeat returned error")}
                                 .Error()
                                 .String(content);
                 });
@@ -415,10 +410,10 @@ void BasicPerfkitNetClient::drawTTY()
         auto beginCursorPos = ImGui::GetCursorPosY();
 
         if (CPPH_TMPVAR{ImGui::ScopedChildWindow{"ConfPanel"}}) {
-            ImGui::Checkbox(LW("Scroll Lock"), &_.bScrollLock);
+            ImGui::Checkbox(LOCWORD("Scroll Lock"), &_.bScrollLock);
             ImGui::SameLine();
 
-            if (ImGui::Button(LW(" clear "))) {
+            if (ImGui::Button(LOCWORD(" clear "))) {
                 _.colorizeFence = 0;
                 _tty.SetReadOnly(false);
                 _tty.SelectAll();
@@ -466,7 +461,7 @@ void BasicPerfkitNetClient::drawTTY()
 
             auto bEnterPressed = ImGui::InputTextWithHint(
                     "##EnterCommand",
-                    LT("Enter Command Here"),
+                    LOCTEXT("Enter Command Here"),
                     _.cmdBuf,
                     sizeof _.cmdBuf,
                     inputFlags, fnTextCallback, &_);
@@ -513,7 +508,7 @@ void BasicPerfkitNetClient::RenderSessionListEntityContent()
             ImGui::InputText(usprintf("##PW.%p", this), buf, sizeof buf);
 
             ImGui::Spacing();
-            if (ImGui::Button(usprintf(LW("LOGIN##%p"), this), {-1, 0})) {
+            if (ImGui::Button(usprintf(LOCWORD("LOGIN##%p"), this), {-1, 0})) {
                 auto fnOnLogin
                         = [this] {
                               service::request_republish_registries(_rpc).notify();
@@ -522,15 +517,15 @@ void BasicPerfkitNetClient::RenderSessionListEntityContent()
                 auto fnOnRpcComplete
                         = [this, fnOnLogin](auto&& ec, auto content) {
                               if (ec) {
-                                  NotifyToast{LT("[{}]\nLogin Failed"), _key}
+                                  NotifyToast{LOCTEXT("[{}]\nLogin Failed"), _key}
                                           .String(ec.message())
                                           .Error();
 
                                   PostEventMainThreadWeak(
                                           weak_from_this(), [=] { _hrpcLogin.reset(); });
                               } else {
-                                  NotifyToast{LT("[{}]\nLogin Successful"), _key}
-                                          .String(LT("You have {} access"), _authLevel == message::auth_level_t::admin_access ? LW("admin") : LW("basic"));
+                                  NotifyToast{LOCTEXT("[{}]\nLogin Successful"), _key}
+                                          .String(LOCTEXT("You have {} access"), _authLevel == message::auth_level_t::admin_access ? LOCWORD("admin") : LOCWORD("basic"));
                                   PostEventMainThreadWeak(
                                           weak_from_this(), [=] { _hrpcLogin.reset(), fnOnLogin(); });
                               }
@@ -546,7 +541,7 @@ void BasicPerfkitNetClient::RenderSessionListEntityContent()
                         "serialized_content",
                         bind_front_weak(_sessionAnchor, fnOnRpcComplete));
 
-                NotifyToast{LW("[{}]\nLogging in ..."), _key}
+                NotifyToast{LOCWORD("[{}]\nLogging in ..."), _key}
                         .Spinner()
                         .Permanent()
                         .Custom([this] { return _hrpcLogin; })
@@ -554,21 +549,21 @@ void BasicPerfkitNetClient::RenderSessionListEntityContent()
             }
         } else {
             // Draw logging in ... content
-            ImGui::Text(LW("Logging in ..."));
+            ImGui::Text(LOCWORD("Logging in ..."));
         }
     } else {
         ImGui::AlignTextToFramePadding();
-        ImGui::Text(LW("Config")), ImGui::SameLine();
+        ImGui::Text(LOCWORD("Config")), ImGui::SameLine();
         ImGui::ToggleButton("ToggleConfig", &_uiState.bConfigOpen);
 
         ImGui::SameLine();
         ImGui::AlignTextToFramePadding();
-        ImGui::Text(LW("Trace")), ImGui::SameLine();
+        ImGui::Text(LOCWORD("Trace")), ImGui::SameLine();
         ImGui::ToggleButton("ToggleTrace", &_uiState.bTraceOpen);
 
         ImGui::SameLine();
         ImGui::AlignTextToFramePadding();
-        ImGui::Text(LW("Graphic")), ImGui::SameLine();
+        ImGui::Text(LOCWORD("Graphic")), ImGui::SameLine();
         ImGui::ToggleButton("ToggleGraphics", &_uiState.bGraphicsOpen);
     }
 }

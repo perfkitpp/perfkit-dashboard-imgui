@@ -12,16 +12,16 @@
 #include <unordered_set>
 #include <vector>
 
+#include <cpph/app/localize.hpp>
 #include <cpph/utility/functional.hxx>
 #include <cpph/utility/futils.hxx>
 #include <perfkit/fwd.hpp>
-#include <perfkit/localize.h>
 #include <spdlog/fmt/fmt.h>
 
-#define LOCTEXT PERFKIT_C_LOCTEXT
-#define LOCWORD PERFKIT_C_LOCWORD
-#define KEYTEXT PERFKIT_C_KEYTEXT
-#define KEYWORD PERFKIT_C_KEYWORD
+#define LOCTEXT CPPH_C_LOCTEXT
+#define LOCWORD CPPH_C_LOCWORD
+#define KEYTEXT CPPH_C_KEYTEXT
+#define KEYWORD CPPH_C_KEYWORD
 
 using cpph::bind_front;
 using cpph::bind_front_weak;
