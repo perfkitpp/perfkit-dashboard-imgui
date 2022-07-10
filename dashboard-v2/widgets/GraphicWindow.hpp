@@ -28,6 +28,8 @@ class GraphicWindow
     bool _bPreviousEnableState = false;
     bool _bDisconnected = false;
 
+    flex_buffer _dataToServer;
+
     struct AsyncContext {
         shared_ptr<GraphicContext> context;
     } _async;
@@ -43,6 +45,7 @@ class GraphicWindow
 
    public:
     bool _forceConnect();
+    void _commitData(flex_buffer*);
 
    public:
     void _asyncInitGraphics();

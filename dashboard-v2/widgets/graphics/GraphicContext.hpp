@@ -3,11 +3,14 @@
 //
 
 #pragma once
+#include "cpph/container/buffer.hxx"
 
 class GraphicContext
 {
    public:
-    void RenderContextPane() {}
-    void Tick() {}
+    void RenderContextPane(flex_buffer* dataToServer) {}
+    void Tick(flex_buffer* dataToServer) {}
     void Dispose() {}
+
+   public:
 };

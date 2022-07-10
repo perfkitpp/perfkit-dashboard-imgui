@@ -15,6 +15,7 @@
 #include "perfkit/extension/net/protocol.hpp"
 
 namespace proto = perfkit::net::message;
+widgets::GraphicWindow::GraphicWindow(IRpcSessionOwner* host) : _host(host) {}
 
 void widgets::GraphicWindow::BuildService(rpc::service_builder& S)
 {
@@ -89,9 +90,9 @@ void widgets::GraphicWindow::Tick(bool* pEnableState)
     }
 
     if (auto ctx = _context.lock()) {
-        ctx->Tick();
+        ctx->Tick(&_dataToServer);
+        _commitData(&_dataToServer);
     }
-    // TODO: if(_context) { _context->flush(); }
 }
 
 auto constexpr POPUP_PORMPT_FORCE_EXEC = "##PromptForceExec";
@@ -108,7 +109,8 @@ void widgets::GraphicWindow::Render()
     }
 
     if (auto ctx = _context.lock()) {
-        ctx->RenderContextPane();
+        ctx->RenderContextPane(&_dataToServer);
+        _commitData(&_dataToServer);
     }
 }
 
@@ -149,5 +151,13 @@ void widgets::GraphicWindow::_asyncDeinitGraphics()
     }
 }
 
-widgets::GraphicWindow::GraphicWindow(IRpcSessionOwner* host) : _host(host) {}
+void widgets::GraphicWindow::_commitData(flex_buffer*)
+{
+    if (not _dataToServer.empty()) {
+        // TODO: Make this async, to avoid system call inside of primary loop ...
+        proto::service::graphics_send_data(_host->RpcSession()).notify(_dataToServer);
+        _dataToServer.clear();
+    }
+}
+
 widgets::GraphicWindow::~GraphicWindow() = default;
