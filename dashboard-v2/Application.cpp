@@ -19,6 +19,7 @@
 #include <imgui_internal.h>
 #include <perfkit/configs.h>
 #include <perfkit/localize.h>
+#include <spdlog/spdlog.h>
 
 #include "interfaces/Session.hpp"
 #include "stdafx.h"
@@ -81,7 +82,7 @@ void Application::TickMainThread()
     if (_bDrawSessionList) { drawSessionList(&_bDrawSessionList); }
     if (_bShowMetrics) { ImGui::ShowMetricsWindow(&_bShowMetrics); }
     if (_bShowStyles)
-        if (CPPH_FINALLY(ImGui::End()); ImGui::Begin("Styles", &_bShowStyles)) { ImGui::ShowStyleEditor(nullptr); }
+        if (CPPH_FINALLY(ImGui::End()); ImGui::Begin(LOCTEXT("Styles"), &_bShowStyles)) { ImGui::ShowStyleEditor(nullptr); }
     if (_bShowDemo) { ImGui::ShowDemoWindow(&_bShowDemo); }
 
     tickSessions();
@@ -236,7 +237,20 @@ void Application::Initialize()
     _timePlot = make_unique<TimePlotWindowManager>();
 }
 
-Application::~Application() = default;
+Application::~Application()
+{
+    list<weak_ptr<ISession>> sessions;
+    transform(_sessions, back_inserter(sessions), [](decltype(_sessions[0]) s) { return s.Ref; });
+    _sessions.clear();
+
+    SPDLOG_INFO("Waiting all sessions correctly erased ...");
+    for (auto& ws : sessions) {
+        while (not ws.expired()) {
+            std::this_thread::sleep_for(10ms);
+        }
+    }
+    SPDLOG_INFO("Done.");
+}
 
 void Application::drawMenuContents()
 {
@@ -253,7 +267,7 @@ void Application::drawMenuContents()
     }
 
     if (CondInvoke(ImGui::BeginMenu(LW("View")), &ImGui::EndMenu)) {
-        ImGui::MenuItem("Sessions", "Ctrl+H", &_bDrawSessionList);
+        ImGui::MenuItem(LOCTEXT("Sessions"), "Ctrl+H", &_bDrawSessionList);
 
         ImGui::Separator();
         ImGui::MenuItem(LW("Metrics"), NULL, &_bShowMetrics);
