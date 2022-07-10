@@ -133,12 +133,19 @@ bool widgets::GraphicWindow::_forceConnect()
 
 void widgets::GraphicWindow::_asyncInitGraphics()
 {
+    if (_async.context) {
+        PostEventMainThread([this, context = exchange(_async.context, {})] {
+            context->Dispose();  // Cleanup OpenGL buffers, etc ...
+        });
+    }
+
     _async.context = make_shared<GraphicContext>();
     PostEventMainThread([this, context = _async.context] { _context = context; });
 }
 
 void widgets::GraphicWindow::_asyncRecvData(flex_buffer& data)
 {
+    _async.context->asyncRecvData(data);
 }
 
 void widgets::GraphicWindow::_asyncDeinitGraphics()
@@ -160,4 +167,10 @@ void widgets::GraphicWindow::_commitData(flex_buffer*)
     }
 }
 
-widgets::GraphicWindow::~GraphicWindow() = default;
+widgets::GraphicWindow::~GraphicWindow()
+{
+    if (_async.context) {
+        // OpenGL context data must be disposed!
+        _async.context->Dispose();
+    }
+}

@@ -13,4 +13,5 @@ class GraphicContext
     void Dispose() {}
 
    public:
+    void asyncRecvData(flex_buffer& data) {}
 };
