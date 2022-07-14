@@ -296,7 +296,7 @@ void widgets::ConfigWindow::_recursiveConstructCategories(
         auto* data = &iter->second;
         data->configKey = entity.config_key;
         data->name = entity.name;
-        data->description = entity.description.str();
+        data->description = entity.description.view();
         data->_bHasUpdate = true;
 
         if (not entity.initial_value.empty())

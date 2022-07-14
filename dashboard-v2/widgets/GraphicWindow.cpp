@@ -121,7 +121,7 @@ bool widgets::GraphicWindow::_forceConnect()
     auto result = stub.request(false, 1s, ec);
 
     if (ec || not result) {
-        NotifyToast{KEYTEXT(GRAHPICS_FORCECONN_FAILED, "{}) Force Connection has failed."), _host->DisplayString()}
+        NotifyToast{KEYTEXT(GRAHPICS_FORCECONN_FAILED, "{}) Forced Connection has failed."), _host->DisplayString()}
                 .String(ec ? ec.message() : KEYWORD(ERROR_UNKNOWN))
                 .Error();
 
