@@ -52,6 +52,8 @@ target_link_libraries(
         perfkit::asio
         perfkit::remotegl::protocol
         kang-sw::cpph::localization
+        kang-sw::cpph::stb
+        perfkit-bundled-gl3w
 )
 
 target_compile_features(

@@ -3,3 +3,5 @@
 //
 
 #include "GraphicContext.hpp"
+
+#include "GL/gl3w.h"

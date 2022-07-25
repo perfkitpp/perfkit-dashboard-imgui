@@ -58,3 +58,7 @@ target_link_libraries(
         ${OPENGL_LIBRARIES}
         range-v3::range-v3
 )
+
+### CONFIGURE BUNDLED GL3W
+add_subdirectory(gl)
+
