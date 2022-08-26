@@ -50,7 +50,6 @@ target_link_libraries(
         perfkit::core
         perfkit::net-v2::protocol
         perfkit::asio
-        perfkit::remotegl::protocol
         kang-sw::cpph::localization
         kang-sw::cpph::stb
         perfkit-bundled-gl3w

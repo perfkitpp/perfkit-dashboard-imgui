@@ -4,7 +4,6 @@
 
 #pragma once
 #include "cpph/container/buffer.hxx"
-#include "perfkit/remotegl/protocol/command.generic.hpp"
 
 class GraphicContext
 {
